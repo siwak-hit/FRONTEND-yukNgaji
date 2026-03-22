@@ -1,0 +1,430 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+import ModalAlert from '../../components/ModalAlert.astro';
+---
+
+<Layout title="Bank Soal - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
+        
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Bank Soal</h1>
+                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-widest">Manajemen Kuesioner</p>
+            </div>
+            <button id="btnOpenUpload" class="w-12 h-12 bg-green-600 text-white rounded-2xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-lg"></i>
+            </button>
+        </header>
+
+        <section class="mb-6 bg-green-50 p-4 rounded-2xl border border-green-100">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-green-600 mt-1"></i>
+                <div>
+                    <h4 class="text-xs font-bold text-green-800 uppercase">Petunjuk Upload</h4>
+                    <p class="text-[10px] text-green-700 leading-relaxed mt-1">
+                        Gunakan format <b>Q:</b> (Soal), <b>A-D:</b> (Pilihan), dan <b>KUNCI:</b> (Jawaban). 
+                        Pisahkan antar soal dengan satu baris kosong.
+                    </p>
+                    <button id="btnDownloadTemplate" class="mt-3 flex items-center gap-2 text-[10px] font-bold bg-white text-green-600 px-3 py-1.5 rounded-lg border border-green-200 active:scale-95 transition-all">
+                        <i class="fa-solid fa-download"></i>
+                        Unduh Template .txt
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-6">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="searchSoal" 
+                    class="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all shadow-sm" 
+                    placeholder="Cari judul kuesioner...">
+            </div>
+        </section>
+
+        <section class="flex-1">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">Riwayat Upload</h3>
+            <div id="soalContainer" class="space-y-3">
+                <div class="animate-pulse bg-white h-20 rounded-2xl border border-gray-100"></div>
+            </div>
+        </section>
+    </div>
+
+    <div id="modalUpload" class="fixed inset-0 bg-black/40 z-[60] hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-gray-800">Upload Kuesioner Baru</h3>
+                <button onclick="closeUpload()" class="text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="formUpload" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Mata Pelajaran</label>
+                    <select id="upSubject" class="w-full mt-1 px-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500">
+                        <option value="tajwid">Tajwid</option>
+                        <option value="fiqih">Fiqih</option>
+                        <option value="tauhid">Tauhid</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">File Template (.txt)</label>
+                    <input type="file" id="upFile" accept=".txt" class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer">
+                </div>
+                <button type="submit" class="w-full py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all">
+                    Generate Preview
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalPreview" class="fixed inset-0 bg-white z-[60] hidden h-screen flex flex-col overflow-hidden">
+    
+        <header class="fixed top-0 left-0 w-full p-5 border-b flex justify-between items-center bg-white z-20 flex-shrink-0 shadow-sm shadow-gray-50/50">
+            <button onclick="closePreview()" class="text-gray-400 text-xl active:scale-95 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
+            <h3 class="font-bold text-gray-800">Preview & Edit Soal</h3>
+            <button id="btnFinalSave" class="text-green-600 font-bold text-sm active:opacity-70 transition-opacity">Simpan</button>
+        </header>
+
+        <div class="mt-[72px] bg-green-50 p-4 border-b flex items-center gap-2">
+            <label class="text-[10px] font-bold text-green-700 uppercase">Target Pertemuan :</label>
+            <span class="text-[10px] text-gray-500 font-bold">MG-</span>
+            <input type="number" id="targetWeek" value="1" min="1" class="w-12 h-8 rounded-lg border-none text-center font-bold text-green-600 focus:ring-2 focus:ring-green-500">
+        </div>
+        <div class="bg-blue-50 border-b border-blue-100 p-4 flex gap-3 items-start flex-shrink-0">
+            <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
+            <p class="text-[10px] text-blue-800 font-medium leading-relaxed">
+                <b class="uppercase tracking-wider">Info Otak Adaptif AI:</b> <br>
+                Sistem akan otomatis mengacak dan memberikan soal <b>Mudah/Sedang/Sulit</b> secara dinamis kepada santri berdasarkan riwayat nilai minggu sebelumnya.
+            </p>
+        </div>
+
+        <div id="previewContent" class="flex-1 overflow-y-auto p-6 space-y-6 bg-pattern pb-[100px] no-scrollbar">
+            </div>
+    
+        <div class="fixed bottom-0 sm:bottom-[72px] left-0 w-full p-4 bg-gradient-to-t from-white via-white to-transparent z-10 flex-shrink-0">
+            <div class="max-w-md mx-auto">
+                <button id="btnTambahManual" class="w-full py-4 bg-white border-2 border-dashed border-green-200 rounded-2xl text-green-600 font-bold text-xs shadow-lg shadow-gray-100 active:scale-95 transition-all">
+                    <i class="fa-solid fa-plus mr-1"></i> Tambah Soal Manual
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <NavbarGuru activeMenu="exam" />
+    <Toast />
+    <ModalAlert />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    const modalUpload = document.getElementById('modalUpload');
+    const modalPreview = document.getElementById('modalPreview');
+    const formUpload = document.getElementById('formUpload');
+    const soalContainer = document.getElementById('soalContainer');
+
+    // 1. OPEN/CLOSE MODAL
+    document.getElementById('btnOpenUpload').onclick = () => modalUpload.classList.remove('hidden');
+    window.closeUpload = () => modalUpload.classList.add('hidden');
+    window.closePreview = () => modalPreview.classList.add('hidden');
+
+    // Tambahkan ini di dalam <script> Bank Soal
+    const searchInput = document.getElementById('searchSoal');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const cards = document.querySelectorAll('#soalContainer > div');
+        
+        cards.forEach(card => {
+            const title = card.querySelector('h4').innerText.toLowerCase();
+            if (title.includes(term)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // 2. FETCH HISTORY
+    const fetchHistory = async () => {
+        const container = document.getElementById('soalContainer');
+        // Munculkan efek loading
+        container.innerHTML = '<div class="animate-pulse bg-white h-20 rounded-2xl border border-gray-100"></div>';
+
+        const subjects = ['tajwid', 'fiqih', 'tauhid'];
+        const historyData = [];
+
+        try {
+            // Ambil data untuk semua mapel
+            for (const sub of subjects) {
+                const res = await fetch(`${API_URL}/api/onboarding/questions/${sub}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await res.json();
+                
+                // Jika ada soalnya, masukkan ke riwayat
+                if (result.data && result.data.length > 0) {
+                    historyData.push({
+                        title: `Bank Soal ${sub}`,
+                        subject: sub,
+                        total: result.data.length
+                    });
+                }
+            }
+
+            container.innerHTML = ''; // Bersihkan loading
+
+            // Tampilkan jika kosong
+            if (historyData.length === 0) {
+                container.innerHTML = `
+                    <div class="p-5 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Belum ada riwayat soal</p>
+                    </div>`;
+                return;
+            }
+
+            // Render data asli
+            historyData.forEach(item => {
+                container.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 flex justify-between items-center shadow-sm">
+                        <div>
+                            <h4 class="font-bold text-gray-800 capitalize">${item.title}</h4>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold mt-1 tracking-wider">${item.total} Pertanyaan • ${item.subject}</p>
+                        </div>
+                        <button onclick="viewExistingSoal('${item.subject}')" class="w-10 h-10 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white rounded-xl flex items-center justify-center active:scale-95 transition-all">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                `;
+            });
+
+        } catch (e) {
+            console.error("Gagal load history:", e);
+            container.innerHTML = '<p class="text-xs text-red-500 font-bold">Gagal memuat data riwayat.</p>';
+        }
+    };
+
+    window.viewExistingSoal = async (subject) => {
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            if (result.data && result.data.length > 0) {
+                const formattedData = result.data.map(q => ({
+                    q: q.question,
+                    a: q.options.A,
+                    b: q.options.B,
+                    c: q.options.C,
+                    d: q.options.D,
+                    key: q.correct_answer
+                }));
+                // Panggil renderPreview yang sudah ada di window
+                window.renderPreview(formattedData);
+            } else {
+                window.showToast('warning', 'Kosong', 'Belum ada soal untuk mata pelajaran ini.');
+            }
+        } catch (e) {
+            window.showToast('danger', 'Error', 'Gagal memuat data soal.');
+        }
+    };
+
+    document.getElementById('btnDownloadTemplate').onclick = () => {
+        const templateText = `Q: Contoh perbuatan syirik adalah?\nA: Shalat tepat waktu\nB: Berdoa kepada Allah\nC: Meminta kepada kuburan\nD: Membaca Al-Qur’an\nKUNCI: C\nLEVEL: MUDAH\n\nQ: Apa arti dari kalimat “Laa ilaaha illallah”?\nA: Allah Maha Besar\nB: Tiada tuhan selain Allah\nC: Allah Maha Pengasih\nD: Segala puji bagi Allah\nKUNCI: B\nLEVEL: SEDANG\n\nQ: Sebutkan rukun Islam yang ke-5?\nA: Puasa\nB: Zakat\nC: Shalat\nD: Haji bagi yang mampu\nKUNCI: D\nLEVEL: SULIT`;
+        const blob = new Blob([templateText], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'template_soal_yukNgaji.txt';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    // 3. HANDLE UPLOAD & PARSING (Preview)
+    formUpload.onsubmit = async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('upFile');
+        const subject = document.getElementById('upSubject').value;
+
+        if (!fileInput.files[0]) return;
+
+        // Simulasi Parsing (Agar guru bisa edit di FE sebelum beneran ke BE)
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target.result;
+            // Logika parsing sederhana (Split Q:, A:, dst)
+            const questions = parseTextToJSON(text);
+            renderPreview(questions);
+        };
+        reader.readAsText(fileInput.files[0]);
+    };
+
+    const parseTextToJSON = (text) => {
+        const blocks = text.split(/\r?\n\r?\n/);
+        return blocks.map(block => {
+            const lines = block.split('\n').map(l => l.trim());
+            return {
+                q: lines.find(l => l.startsWith('Q:'))?.replace('Q:', '').trim() || '',
+                a: lines.find(l => l.startsWith('A:'))?.replace('A:', '').trim() || '',
+                b: lines.find(l => l.startsWith('B:'))?.replace('B:', '').trim() || '',
+                c: lines.find(l => l.startsWith('C:'))?.replace('C:', '').trim() || '',
+                d: lines.find(l => l.startsWith('D:'))?.replace('D:', '').trim() || '',
+                key: lines.find(l => l.startsWith('KUNCI:'))?.replace('KUNCI:', '').trim() || 'A',
+                // Tangkap level, jadikan lowercase, defaultnya 'sedang' jika tidak ditulis
+                level: lines.find(l => l.startsWith('LEVEL:'))?.replace('LEVEL:', '').trim().toLowerCase() || 'sedang'
+            };
+        }).filter(item => item.q !== ''); // Hindari blok kosong
+    };
+
+    // 3. Daftarkan Fungsi Tambah Manual
+    window.addNewQuestionField = () => {
+        const container = document.getElementById('previewContent');
+        if (!container) return;
+        
+        // Panggil fungsi createSoalCard (berikan form kosong)
+        const card = createSoalCard({}, null); 
+        
+        container.appendChild(card);
+
+        // FITUR SCROLL OTOMATIS: 
+        // Beri sedikit delay agar browser sempat merender kotak soal baru
+        setTimeout(() => {
+            card.scrollIntoView({ 
+                behavior: 'smooth', // Animasi scroll halus
+                block: 'center'     // Posisikan kotak soal di tengah layar biar kelihatan
+            });
+        }, 150); // Delay sedikit lebih lama agar lebih akurat
+    };
+
+    const btnManual = document.getElementById('btnTambahManual');
+    if (btnManual) btnManual.onclick = window.addNewQuestionField;
+
+window.renderPreview = (questions) => {
+        const container = document.getElementById('previewContent');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        questions.forEach((item, index) => {
+            const card = createSoalCard(item, index + 1);
+            container.appendChild(card);
+        });
+
+        document.getElementById('modalUpload').classList.add('hidden');
+        document.getElementById('modalPreview').classList.remove('hidden');
+    };
+
+    const createSoalCard = (item, displayIndex) => {
+        const div = document.createElement('div');
+        div.className = "soal-card bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3";
+        div.innerHTML = `
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">SOAL ${displayIndex || 'BARU'}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <textarea class="q-input w-full text-sm font-bold text-gray-800 border-none bg-gray-50 rounded-xl p-3 focus:ring-0" rows="2">${item.q || ''}</textarea>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" class="opt-a text-xs p-2 bg-gray-50 border-none rounded-lg" placeholder="Opsi A" value="${item.a || ''}">
+                <input type="text" class="opt-b text-xs p-2 bg-gray-50 border-none rounded-lg" placeholder="Opsi B" value="${item.b || ''}">
+                <input type="text" class="opt-c text-xs p-2 bg-gray-50 border-none rounded-lg" placeholder="Opsi C" value="${item.c || ''}">
+                <input type="text" class="opt-d text-xs p-2 bg-gray-50 border-none rounded-lg" placeholder="Opsi D" value="${item.d || ''}">
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-gray-400">KUNCI:</span>
+                    <select class="key-input text-xs font-bold border-none bg-green-50 text-green-700 rounded-lg px-2 py-1">
+                        <option value="A" ${item.key === 'A' ? 'selected' : ''}>A</option>
+                        <option value="B" ${item.key === 'B' ? 'selected' : ''}>B</option>
+                        <option value="C" ${item.key === 'C' ? 'selected' : ''}>C</option>
+                        <option value="D" ${item.key === 'D' ? 'selected' : ''}>D</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-gray-400">LEVEL:</span>
+                    <select class="level-input text-xs font-bold border-none bg-blue-50 text-blue-700 rounded-lg px-2 py-1">
+                        <option value="mudah" ${item.level === 'mudah' ? 'selected' : ''}>Mudah</option>
+                        <option value="sedang" ${item.level === 'sedang' ? 'selected' : (!item.level ? 'selected' : '')}>Sedang</option>
+                        <option value="sulit" ${item.level === 'sulit' ? 'selected' : ''}>Sulit</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        return div;
+    };
+
+    document.getElementById('btnFinalSave').onclick = async () => {
+        const container = document.getElementById('previewContent');
+        const soalCards = container.querySelectorAll('.soal-card');
+        const subject = document.getElementById('upSubject').value; 
+        const week = document.getElementById('targetWeek').value; 
+        
+        const questionsData = [];
+        soalCards.forEach(card => {
+            const question = card.querySelector('.q-input').value;
+            const optA = card.querySelector('.opt-a').value;
+            const optB = card.querySelector('.opt-b').value;
+            const optC = card.querySelector('.opt-c').value;
+            const optD = card.querySelector('.opt-d').value;
+            const key = card.querySelector('.key-input').value;
+            const level = card.querySelector('.level-input').value; // <--- Ambil level dari tiap kartu
+
+            if (question && optA && optB) {
+                questionsData.push({
+                    question,
+                    options: { A: optA, B: optB, C: optC, D: optD },
+                    correct_answer: key,
+                    difficulty_level: level // <--- Sisipkan level di sini
+                });
+            }
+        });
+
+        try {
+            const btn = document.getElementById('btnFinalSave');
+            btn.innerText = "Menyimpan...";
+            btn.disabled = true;
+
+            const response = await fetch(`${API_URL}/api/onboarding/upload-template`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    subject: subject,
+                    week: week,
+                    // Hapus global difficulty di sini
+                    questions: questionsData
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                window.showToast('success', 'Berhasil', 'Soal berhasil disimpan.');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                alert(result.message); 
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            document.getElementById('btnFinalSave').innerText = "Simpan";
+            document.getElementById('btnFinalSave').disabled = false;
+        }
+    };
+
+    fetchHistory();
+</script>
+
+<style>
+    .animate-slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+</style>

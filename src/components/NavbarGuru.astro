@@ -1,0 +1,25 @@
+---
+const { activeMenu = 'home' } = Astro.props;
+---
+
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+    <a href="/dashboard" class={`flex flex-col items-center gap-1 ${activeMenu === 'home' ? 'text-green-600' : 'text-gray-400'}`}>
+        <i class="fa-solid fa-house-chimney text-xl"></i>
+        <span class="text-[10px] font-medium">Beranda</span>
+    </a>
+    <a href="/students" class={`flex flex-col items-center gap-1 ${activeMenu === 'students' ? 'text-green-600' : 'text-gray-400'}`}>
+        <i class="fa-solid fa-user-graduate text-xl"></i>
+        <span class="text-[10px] font-medium">Santri</span>
+    </a>
+    <a href="/bank-soal" class={`flex flex-col items-center gap-1 ${activeMenu === 'exam' ? 'text-green-600' : 'text-gray-400'}`}>
+        <i class="fa-solid fa-book-open-reader text-xl"></i>
+        <span class="text-[10px] font-medium">Bank Soal</span>
+    </a>
+    <a href="/consultations" class={`flex flex-col items-center gap-1 ${activeMenu === 'chat' ? 'text-green-600' : 'text-gray-400'}`}>
+        <div class="relative">
+            <i class="fa-solid fa-comment-dots text-xl"></i>
+            <span id="notifDot" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+        </div>
+        <span class="text-[10px] font-medium">Konsul</span>
+    </a>
+</nav>

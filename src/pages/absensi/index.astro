@@ -1,0 +1,299 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Absensi Kehadiran - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
+        <header class="flex items-center justify-between mb-8 relative z-10">
+            <div class="flex items-center gap-4">
+                <a href="/" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600 active:scale-95 transition-all">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800 tracking-tight">Absensi Kelas</h1>
+                    <p id="monthYearHeader" class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Bulan Ini</p>
+                </div>
+            </div>
+        </header>
+
+        <div id="calendarGrid" class="grid grid-cols-2 gap-3 mb-6">
+            <div class="col-span-2 text-center py-10 text-gray-400 text-sm animate-pulse">Memuat kalender...</div>
+        </div>
+    </div>
+
+    <div id="modalAbsensi" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col relative animate-scale-in">
+            <div class="flex justify-between items-center mb-2 border-b pb-4">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">Input Kehadiran</h3>
+                    <p id="modalSubtitle" class="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">---</p>
+                </div>
+                <button onclick="closeAbsensiModal()" class="text-gray-400 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 mb-5 space-y-2.5 shadow-inner">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-triangle-exclamation text-xl text-red-500"></i>
+                    <h5 class="text-xs font-black uppercase tracking-widest">⚠️ PERHATIAN: Izin TIDAK DIANGGAP (Alpa)</h5>
+                </div>
+                <ul class="text-[11px] list-disc list-inside space-y-1 font-medium leading-relaxed opacity-90 pl-1">
+                    <li>Ada ujian/belajar sekolah (bukan alasan syar'i meninggalkan ngaji).</li>
+                    <li>Ketiduran (kelalaian pribadi).</li>
+                    <li>Pergi nemenin beli sesuatu / jalan-jalan (bukan udzur mendesak).</li>
+                    <li>Malas atau tidak ada kabar.</li>
+                </ul>
+            </div>
+
+            <form id="formAbsensi" class="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
+                <div id="studentListContainer" class="space-y-3">
+                    <p class="text-xs text-center text-gray-400 py-4 animate-pulse">Memuat santri...</p>
+                </div>
+            </form>
+
+            <div class="pt-5 border-t mt-auto">
+                <button form="formAbsensi" type="submit" id="btnSaveAbsensi" class="w-full flex items-center justify-center gap-3 py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg shadow-green-600/30 active:scale-95 transition-all text-sm tracking-wide">
+                    <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                    <span>SIMPAN DATA KEHADIRAN</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <NavbarGuru activeMenu="home" />
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    let allStudents = [];
+    let attendancesData = [];
+    let selectedDateStr = "";
+    let selectedSubject = "";
+
+    const mapelMap = { 1: 'Tajwid (Wajib)', 2: 'Fiqih (Wajib)', 3: 'Tauhid (Wajib)', 5: 'Hafalan Al-Quran (Wajib)' };
+
+    const fetchInitialData = async () => {
+        try {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 text-sm animate-pulse">Memuat kalender...</div>`;
+
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [stdRes, attRes] = await Promise.all([
+                fetch(`${API_URL}/api/students`, { headers }),
+                fetch(`${API_URL}/api/attendances`, { headers })
+            ]);
+            
+            const stdData = await stdRes.json();
+            const attData = await attRes.json();
+            
+            allStudents = stdData.data || [];
+            attendancesData = attData.data || [];
+            
+            generateCalendar();
+        } catch (e) {
+            console.error(e);
+            window.showToast?.('danger', 'Error', 'Gagal memuat data absensi.');
+        }
+    };
+
+    const generateCalendar = () => {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        
+        const now = new Date();
+        const yyyy = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric' });
+        const mm = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', month: '2-digit' });
+        const dd = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', day: '2-digit' });
+        
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const daysInMonth = new Date(yyyy, parseInt(mm), 0).getDate();
+        
+        document.getElementById('monthYearHeader').innerText = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+        for (let i = daysInMonth; i >= 1; i--) { 
+            const dateStr = `${yyyy}-${mm}-${String(i).padStart(2, '0')}`;
+            const dateObj = new Date(dateStr);
+            const dayOfWeek = dateObj.getDay(); 
+            
+            const isToday = dateStr === todayStr;
+            const isFuture = dateStr > todayStr;
+            const isMandatory = [1, 2, 3, 5].includes(dayOfWeek);
+            const subject = mapelMap[dayOfWeek] || 'Sunnah';
+            
+            const dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+            const existingData = attendancesData.find(a => a.date === dateStr);
+            const isDone = !!existingData;
+
+            let cardClass = "bg-white border-gray-100 opacity-60";
+            let actionBtn = "";
+
+            if (isFuture) {
+                cardClass = "bg-gray-50 border-gray-100 opacity-40 cursor-not-allowed";
+                actionBtn = `<span class="text-[9px] text-gray-400 font-bold uppercase"><i class="fa-solid fa-lock"></i> Lock</span>`;
+            } else if (isToday) {
+                cardClass = isDone ? "bg-green-50/50 border-green-200" : "bg-blue-50/50 border-blue-200 ring-2 ring-blue-500/20 shadow-md";
+                actionBtn = `<button onclick="openModal('${dateStr}', '${subject}', '${dayName}')" class="w-full py-2.5 mt-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 ${isDone ? 'bg-white text-green-700 border border-green-200' : 'bg-blue-600 text-white shadow-md shadow-blue-600/30'}">${isDone ? '<i class="fa-solid fa-check mr-1"></i> Edit Absen' : 'Lakukan Absen'}</button>`;
+            } else {
+                if (isDone) {
+                    cardClass = "bg-white border-gray-100 shadow-sm";
+                    actionBtn = `<button onclick="openModal('${dateStr}', '${subject}', '${dayName}')" class="w-full py-2 mt-2 rounded-lg text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-100"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit</button>`;
+                } else {
+                    actionBtn = `<span class="text-[9px] text-gray-400 font-bold uppercase inline-block mt-2"><i class="fa-solid fa-minus mr-1"></i> Kosong</span>`;
+                }
+            }
+
+            grid.innerHTML += `
+                <div class="${isFuture ? 'col-span-1' : (isToday ? 'col-span-2' : 'col-span-1')} p-4 rounded-2xl border ${cardClass} flex flex-col justify-between transition-all">
+                    <div>
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-3xl font-black ${isToday ? 'text-blue-600' : 'text-gray-800'}">${i}</span>
+                            ${isMandatory && !isDone && isToday ? '<span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse mt-1" title="Wajib Absen"></span>' : ''}
+                        </div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">${dayName}</p>
+                        <p class="text-[9px] font-bold ${isMandatory ? 'text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md' : 'text-gray-400'} mt-1.5 truncate inline-block">${subject}</p>
+                    </div>
+                    ${actionBtn}
+                </div>
+            `;
+        }
+    };
+
+    // FUNGSI UNTUK MENAMPILKAN/SEMBUNYIKAN INPUT LAINNYA
+    window.handleStatusChange = (studentId) => {
+        const select = document.getElementById(`status-${studentId}`);
+        const otherInputDiv = document.getElementById(`other-reason-div-${studentId}`);
+        const otherInput = document.getElementById(`reason-other-${studentId}`);
+        
+        if (select.value === 'izin:lainnya') {
+            otherInputDiv.classList.remove('hidden');
+            otherInput.required = true;
+            otherInput.focus();
+        } else {
+            otherInputDiv.classList.add('hidden');
+            otherInput.required = false;
+            otherInput.value = ''; // Reset input
+        }
+    };
+
+    window.openModal = (dateStr, subject, dayName) => {
+        selectedDateStr = dateStr;
+        selectedSubject = subject.replace(' (Wajib)', '');
+        
+        const displayDate = new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('modalSubtitle').innerText = `${dayName}, ${displayDate} • ${selectedSubject}`;
+        
+        const existingData = attendancesData.find(a => a.date === dateStr);
+        // Data format baru: { "student_id": { status: 'sakit', reason: '' }, ... }
+        const currentPresentMap = existingData ? existingData.present_students : {};
+
+        const container = document.getElementById('studentListContainer');
+        container.innerHTML = '';
+
+        if (allStudents.length === 0) {
+            container.innerHTML = '<p class="text-xs text-center text-gray-400 py-6 border border-dashed border-gray-200 rounded-xl">Belum ada data santri aktif.</p>';
+        } else {
+            allStudents.forEach(student => {
+                const stdInfo = currentPresentMap[student.id];
+                const currentStatus = stdInfo ? stdInfo.status : 'hadir'; // Default hadir
+                const currentReason = stdInfo ? stdInfo.reason : '';
+                
+                const isOther = currentStatus === 'izin:lainnya';
+
+                container.innerHTML += `
+                    <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-green-100 text-green-700 font-bold rounded-xl flex items-center justify-center text-lg capitalize">${student.name.substring(0,2)}</div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-bold text-gray-800 capitalize">${student.name}</h4>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${student.grade}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-12 gap-2 items-center">
+                            <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status:</label>
+                            <select id="status-${student.id}" data-student-id="${student.id}" onchange="handleStatusChange('${student.id}')" class="col-span-9 text-xs p-2.5 rounded-lg border border-gray-200 font-bold text-gray-800 bg-white focus:ring-1 focus:ring-green-500">
+                                <option value="hadir" ${currentStatus === 'hadir' ? 'selected' : ''} class="text-green-600 font-bold">Hadir</option>
+                                <option value="izin:sakit" ${currentStatus === 'izin:sakit' ? 'selected' : ''} class="text-amber-600">Izin: Sakit</option>
+                                <option value="izin:pergi" ${currentStatus === 'izin:pergi' ? 'selected' : ''} class="text-amber-600">Izin: Pergi (Mendesak)</option>
+                                <option value="izin:lainnya" ${currentStatus === 'izin:lainnya' ? 'selected' : ''} class="text-amber-600">Izin: Lainnya (Tulis)</option>
+                                <option value="alpa" ${currentStatus === 'alpa' ? 'selected' : ''} class="text-red-600">Alpa / Izin Tidak Dianggap</option>
+                            </select>
+                        </div>
+
+                        <div id="other-reason-div-${student.id}" class="grid grid-cols-12 gap-2 items-start ${isOther ? '' : 'hidden'}">
+                            <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Ket:</label>
+                            <textarea id="reason-other-${student.id}" placeholder="Tulis alasan izin mendesak..." class="col-span-9 p-2.5 text-xs bg-white border border-gray-200 rounded-lg h-16" ${isOther ? 'required' : ''}>${currentReason}</textarea>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('modalAbsensi').classList.replace('hidden', 'flex');
+    };
+
+    window.closeAbsensiModal = () => document.getElementById('modalAbsensi').classList.replace('flex', 'hidden');
+
+    document.getElementById('formAbsensi').onsubmit = async (e) => {
+        e.preventDefault();
+        
+        // Bentuk struktur data baru (Object)
+        const attendanceMap = {};
+        allStudents.forEach(student => {
+            const select = document.getElementById(`status-${student.id}`);
+            const status = select.value;
+            const otherInput = document.getElementById(`reason-other-${student.id}`);
+            
+            attendanceMap[student.id] = {
+                status: status,
+                // Masukkan reason hanya jika statusnya 'izin:lainnya'
+                reason: status === 'izin:lainnya' ? otherInput.value.trim() : ''
+            };
+        });
+
+        const btn = document.getElementById('btnSaveAbsensi');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Memproses...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('http://localhost:3000/api/attendances', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: selectedDateStr,
+                    subject: selectedSubject,
+                    // Kirim object map, backend harus disesuaikan untuk menerima ini
+                    present_students: attendanceMap 
+                })
+            });
+
+            if (res.ok) {
+                window.showToast?.('success', 'Berhasil', 'Data kehadiran berhasil disimpan.');
+                closeAbsensiModal();
+                fetchInitialData(); 
+            } else {
+                window.showToast?.('danger', 'Gagal', 'Terjadi kesalahan server.');
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast?.('danger', 'Error', 'Gagal menyimpan data.');
+        } finally {
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-base"></i><span>SIMPAN DATA KEHADIRAN</span>';
+            btn.disabled = false;
+        }
+    };
+
+    fetchInitialData();
+</script>
+
+<style is:global>
+    #modalAbsensi.hidden { opacity: 0; pointer-events: none; }
+    #modalAbsensi { opacity: 1; transition: opacity 0.3s ease; }
+    .animate-scale-in { animation: scaleIn 0.3s ease-out; }
+    @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>

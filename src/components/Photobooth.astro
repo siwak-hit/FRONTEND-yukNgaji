@@ -1,0 +1,125 @@
+---
+// src/components/PhotoBooth.astro
+---
+
+<div id="pbModal" class="fixed inset-0 bg-black/90 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+    <div class="w-full max-w-sm bg-gray-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative">
+        
+        <div class="px-5 py-4 flex justify-between items-center bg-gray-900/50 absolute top-0 w-full z-10">
+            <h3 class="text-white font-bold text-sm">📸 yukNgaji Booth</h3>
+            <button onclick="window.closePhotoBooth()" class="text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="relative w-full aspect-[3/4] bg-black flex items-center justify-center overflow-hidden">
+            <video id="pbVideo" autoplay playsinline class="w-full h-full object-cover transform -scale-x-100"></video> <div id="pbFrameOverlay" class="absolute inset-0 pointer-events-none transition-all duration-300">
+                </div>
+        </div>
+
+        <div class="p-5 bg-gray-900 space-y-5">
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2 text-center">Pilih Bingkai</label>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar justify-center">
+                    <button onclick="window.setPbFrame('none')" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold active:scale-95">Polos</button>
+                    <button onclick="window.setPbFrame('polaroid')" class="px-4 py-2 bg-white text-gray-900 rounded-xl text-xs font-bold active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.2)]">Polaroid</button>
+                    <button onclick="window.setPbFrame('neon')" class="px-4 py-2 bg-green-500 text-gray-900 rounded-xl text-xs font-bold active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.4)]">Neon</button>
+                </div>
+            </div>
+
+            <button onclick="window.takePhoto()" class="w-full py-4 bg-white text-gray-900 rounded-2xl font-black text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-camera"></i> Jepret!
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let pbStream = null;
+    let currentFrame = 'polaroid';
+    let pbCallback = null;
+    let pbStudentName = "Santri"; // Variabel baru
+    let pbWeek = "1"; // Variabel baru
+
+    // 1. Fungsi Buka Kamera sekarang menerima nama dan minggu
+    window.openPhotoBooth = async (studentName, week, onCaptureCallback) => {
+        pbStudentName = studentName; // Simpan ke memori
+        pbWeek = week;               // Simpan ke memori
+        pbCallback = onCaptureCallback;
+        
+        document.getElementById('pbModal').classList.remove('hidden');
+        document.getElementById('pbModal').classList.add('flex');
+        
+        try {
+            pbStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            document.getElementById('pbVideo').srcObject = pbStream;
+            window.setPbFrame('polaroid'); 
+        } catch (err) {
+            alert("Gagal akses kamera. Pastikan sudah memberikan izin.");
+            window.closePhotoBooth();
+        }
+    };
+
+    window.closePhotoBooth = () => {
+        document.getElementById('pbModal').classList.add('hidden');
+        document.getElementById('pbModal').classList.remove('flex');
+        if (pbStream) pbStream.getTracks().forEach(track => track.stop()); 
+    };
+
+    window.setPbFrame = (type) => {
+        currentFrame = type;
+        const overlay = document.getElementById('pbFrameOverlay');
+        if (type === 'polaroid') {
+            overlay.className = "absolute inset-0 pointer-events-none border-[15px] border-b-[60px] border-white flex items-end justify-center pb-3";
+            // Teks preview di layar HP (diperbarui)
+            overlay.innerHTML = `<span class="text-black font-medium text-sm italic drop-shadow-sm opacity-70">Hai, Aku ${pbStudentName} di pertemuan ${pbWeek}</span>`;
+        } else if (type === 'neon') {
+            overlay.className = "absolute inset-0 pointer-events-none border-[10px] border-green-500 rounded-[2rem] m-4 shadow-[inset_0_0_20px_rgba(34,197,94,0.5)]";
+            overlay.innerHTML = '';
+        } else {
+            overlay.className = "absolute inset-0 pointer-events-none";
+            overlay.innerHTML = '';
+        }
+    };
+
+    window.takePhoto = () => {
+        const video = document.getElementById('pbVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        if (currentFrame === 'polaroid') {
+            const bThick = canvas.width * 0.05; 
+            const bBot = canvas.height * 0.15;  
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, bThick); 
+            ctx.fillRect(0, 0, bThick, canvas.height); 
+            ctx.fillRect(canvas.width - bThick, 0, bThick, canvas.height); 
+            ctx.fillRect(0, canvas.height - bBot, canvas.width, bBot); 
+            
+            // --- BAGIAN INI YANG DIUPDATE ---
+            ctx.fillStyle = '#1f2937'; // Warna abu-abu gelap biar soft
+            ctx.font = `italic ${canvas.width * 0.04}px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif`; // Font dikecilkan dari 0.08 jadi 0.04
+            ctx.textAlign = 'center';
+            // Teks dinamis dibakar ke foto
+            ctx.fillText(`Hai, Aku ${pbStudentName} di pertemuan ${pbWeek}`, canvas.width/2, canvas.height - (bBot * 0.4));
+            // ---------------------------------
+        } else if (currentFrame === 'neon') {
+            ctx.lineWidth = canvas.width * 0.03;
+            ctx.strokeStyle = '#22c55e'; 
+            ctx.strokeRect(ctx.lineWidth, ctx.lineWidth, canvas.width - (ctx.lineWidth*2), canvas.height - (ctx.lineWidth*2));
+        }
+
+        canvas.toBlob((blob) => {
+            const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            if (pbCallback) pbCallback(file); 
+            window.closePhotoBooth();
+        }, 'image/jpeg', 0.9);
+    };
+</script>

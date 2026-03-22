@@ -1,0 +1,351 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+import PhotoBooth from '../../components/PhotoBooth.astro';
+---
+
+<Layout title="Sesi Pengerjaan - yukNgaji">
+    <div class="min-h-screen bg-gray-50 flex flex-col overflow-hidden">
+        
+        <header class="p-6 bg-white border-b flex justify-between items-center z-20">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-green-600 text-white rounded-lg flex items-center justify-center font-bold text-xs" id="headerInitials">--</div>
+                <h2 class="font-bold text-gray-800 text-sm" id="headerName">Memuat...</h2>
+            </div>
+            <div id="timerDisplay" class="hidden px-4 py-2 bg-red-50 text-red-600 rounded-2xl font-mono font-bold text-sm border border-red-100 animate-pulse">
+                01:30
+            </div>
+            <a href="/consultations" class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">Keluar</a>
+        </header>
+
+        <main class="flex-1 relative overflow-y-auto px-6 py-8 pb-32">
+            
+            <div id="startOverlay" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
+                <div class="w-20 h-20 bg-green-50 text-green-600 rounded-3xl flex items-center justify-center text-3xl mb-6 shadow-inner">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Siap Mengerjakan?</h1>
+                <p class="text-sm text-gray-400 mb-8 leading-relaxed">Pastikan fokus. Kamu punya waktu 90 detik untuk bagian pertama.</p>
+                <button id="btnStart" class="w-full max-w-xs py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all">
+                    Mulai Sekarang
+                </button>
+            </div>
+
+            <div id="countdownOverlay" class="hidden absolute inset-0 bg-green-600 z-[60] flex items-center justify-center">
+                <span id="countdownText" class="text-8xl font-black text-white italic animate-ping">3</span>
+            </div>
+
+            <div id="testContent" class="hidden space-y-8 max-w-md mx-auto">
+                
+                <section id="academicSection" class="space-y-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">1</span>
+                        <h3 class="font-bold text-gray-800">Soal Onboarding</h3>
+                    </div>
+                    <div id="questionsList" class="space-y-6">
+                        </div>
+                </section>
+
+                <hr class="border-dashed border-gray-200">
+
+                <section id="consultationSection" class="space-y-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">2</span>
+                        <h3 class="font-bold text-gray-800">Pojok Curhat</h3>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-4">
+                        <label class="block text-sm font-bold text-blue-800">Gimana perasaanmu belajar hari ini? Ceritain dong!</label>
+                        <textarea id="consMessage" class="w-full p-4 bg-white border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 min-h-[120px]" placeholder="Ketikan sesuatu..."></textarea>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 ml-1">FOTO SELFIE (Ada Banyak Bingkai yang lucu lho!)</label>
+                            
+                            <button type="button" onclick="openCameraModal()" id="btnOpenCamera" class="w-full h-32 border-2 border-dashed border-blue-300 rounded-2xl bg-white/50 flex flex-col items-center justify-center hover:bg-blue-100 transition-colors active:scale-95">
+                                <div id="cameraIconBox">
+                                    <i class="fa-solid fa-camera-retro text-3xl text-blue-400 mb-2 drop-shadow-sm"></i>
+                                    <span class="block text-[10px] font-bold text-blue-500 bg-blue-100 px-3 py-1 rounded-full uppercase tracking-wider">Buka Kamera</span>
+                                </div>
+                                <img id="selfiePreview" class="hidden w-full h-full object-cover rounded-xl" />
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <button id="btnSubmit" disabled class="w-full py-5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">
+                    Kirim Semua Jawaban
+                </button>
+            </div>
+        </main>
+    </div>
+    <PhotoBooth />
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+    const subject = urlParams.get('subject');
+    const week = urlParams.get('week');
+    const token = localStorage.getItem('token');
+
+    // Buat kunci unik untuk penyimpanan lokal agar tidak tercampur dengan siswa/mapel lain
+    const timeKey = `timer_${studentId}_${subject}_${week}`;
+    const ansKey = `ans_${studentId}_${subject}_${week}`;
+
+    let timeLeft = 90;
+    let timerInterval = null;
+    let questions = [];
+
+    let selfieFileToUpload = null; // Variabel dari PhotoBooth
+    let currentStudentName = "Si Anak";
+
+    window.openCameraModal = () => {
+        // 3. Panggil PhotoBooth dengan melemparkan Nama dan Minggu
+        window.openPhotoBooth(currentStudentName, week, (capturedFile) => {
+            selfieFileToUpload = capturedFile; 
+            const previewImg = document.getElementById('selfiePreview');
+            const iconBox = document.getElementById('cameraIconBox');
+            
+            previewImg.src = URL.createObjectURL(capturedFile);
+            previewImg.classList.remove('hidden');
+            iconBox.classList.add('hidden');
+        });
+    };
+
+    // 1. Inisialisasi Data
+    const init = async () => {
+        try {
+            const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const student = await stdRes.json();
+            currentStudentName = student.data.name;
+            document.getElementById('headerName').innerText = student.data.name;
+            document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
+
+            const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const qData = await qRes.json();
+            questions = qData.data;
+            
+            renderQuestions();
+            restoreDraftAnswers(); // Pulihkan jawaban jika ada
+            checkExistingSession(); // Cek apakah timer sudah berjalan sebelumnya
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const renderQuestions = () => {
+        const container = document.getElementById('questionsList');
+        container.innerHTML = questions.map((q, idx) => {
+            
+            // LOGIKA SHUFFLE: Ubah object menjadi array, lalu acak urutannya
+            const shuffledOptions = Object.entries(q.options).sort(() => Math.random() - 0.5);
+
+            return `
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}">
+                <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
+                <div class="grid grid-cols-1 gap-2">
+                    ${shuffledOptions.map(([key, val]) => `
+                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50 active:bg-green-50 transition-colors cursor-pointer">
+                            <input type="radio" name="q-${q.id}" value="${key}" class="w-4 h-4 text-green-600 focus:ring-0">
+                            <span class="text-xs text-gray-600 font-medium">${val}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            `;
+        }).join('');
+    };
+
+    // --- FITUR AUTO-SAVE (Mencegah hilang saat refresh) ---
+    const saveDraftAnswers = () => {
+        const answers = {};
+        document.querySelectorAll('.question-block').forEach(block => {
+            const qId = block.getAttribute('data-id');
+            const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
+            if (selected) answers[qId] = selected;
+        });
+        const msg = document.getElementById('consMessage').value;
+        localStorage.setItem(ansKey, JSON.stringify({ answers, msg }));
+    };
+
+    const restoreDraftAnswers = () => {
+        const saved = JSON.parse(localStorage.getItem(ansKey));
+        if (!saved) return;
+
+        // Pulihkan radio button
+        if (saved.answers) {
+            Object.entries(saved.answers).forEach(([qId, val]) => {
+                const radio = document.querySelector(`input[name="q-${qId}"][value="${val}"]`);
+                if (radio) radio.checked = true;
+            });
+        }
+        // Pulihkan textarea
+        if (saved.msg) {
+            document.getElementById('consMessage').value = saved.msg;
+            validate(); 
+        }
+    };
+
+    // Pasang event listener agar setiap kali ngeklik/ngetik, langsung ke-save
+    document.getElementById('questionsList').addEventListener('change', saveDraftAnswers);
+    document.getElementById('consMessage').addEventListener('input', () => {
+        validate();
+        saveDraftAnswers();
+    });
+    // --------------------------------------------------------
+
+    // --- FITUR PERSISTENT TIMER ---
+    const checkExistingSession = () => {
+        const savedEndTime = localStorage.getItem(timeKey);
+        
+        if (savedEndTime) {
+            // Jika sudah ada timer, berarti dia lagi refresh di tengah-tengah
+            document.getElementById('startOverlay').classList.add('hidden'); // Lewati layar awal
+            const now = Date.now();
+            timeLeft = Math.floor((savedEndTime - now) / 1000);
+
+            if (timeLeft > 0) {
+                startTest(false); // Lanjutkan tanpa reset waktu
+            } else {
+                timeLeft = 0;
+                startTest(false);
+                disableAcademicSection(); // Waktu sudah habis saat dia refresh
+            }
+        }
+    };
+
+    document.getElementById('btnStart').onclick = () => {
+        document.getElementById('startOverlay').classList.add('opacity-0', 'pointer-events-none');
+        startCountdown();
+    };
+
+    const startCountdown = () => {
+        const overlay = document.getElementById('countdownOverlay');
+        const text = document.getElementById('countdownText');
+        overlay.classList.remove('hidden');
+        let count = 3;
+        
+        const intv = setInterval(() => {
+            count--;
+            if (count > 0) {
+                text.innerText = count.toString();
+            } else {
+                clearInterval(intv);
+                overlay.classList.add('hidden');
+                startTest(true); // true = Sesi Baru
+            }
+        }, 1000);
+    };
+
+    const startTest = (isNewSession = true) => {
+        document.getElementById('testContent').classList.remove('hidden');
+        document.getElementById('timerDisplay').classList.remove('hidden');
+        
+        // Cuma catat Waktu Selesai (End Time) kalau ini sesi baru
+        if (isNewSession) {
+            const endTime = Date.now() + (timeLeft * 1000);
+            localStorage.setItem(timeKey, endTime);
+        }
+
+        updateTimerUI();
+        if (timeLeft <= 0) return;
+
+        timerInterval = setInterval(() => {
+            // Hitung sisa waktu berdasarkan End Time di memori, bukan sekadar hitung mundur
+            const savedEndTime = localStorage.getItem(timeKey);
+            timeLeft = Math.floor((savedEndTime - Date.now()) / 1000);
+
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                updateTimerUI();
+                clearInterval(timerInterval);
+                disableAcademicSection();
+            } else {
+                updateTimerUI();
+            }
+        }, 1000);
+    };
+
+    const updateTimerUI = () => {
+        const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
+        const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
+        document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+        if (timeLeft <= 10) document.getElementById('timerDisplay').classList.add('bg-red-600', 'text-white');
+    };
+
+    const disableAcademicSection = () => {
+        const section = document.getElementById('academicSection');
+        section.classList.add('opacity-40', 'pointer-events-none', 'grayscale');
+        window.showToast?.('warning', 'Waktu Habis', 'Bagian soal akademik telah ditutup.');
+    };
+
+    // --- SUBMIT LOGIC ---
+    const validate = () => {
+        const msg = document.getElementById('consMessage').value;
+        const btn = document.getElementById('btnSubmit');
+        if (msg.length > 3) {
+            btn.disabled = false;
+            btn.classList.replace('bg-gray-200', 'bg-green-600');
+            btn.classList.replace('text-gray-400', 'text-white');
+            btn.classList.remove('cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.replace('bg-green-600', 'bg-gray-200');
+            btn.classList.replace('text-white', 'text-gray-400');
+        }
+    };
+
+
+    document.getElementById('btnSubmit').onclick = async () => {
+        const formData = new FormData();
+
+        // Collect Answers
+        const answers = [];
+        document.querySelectorAll('.question-block').forEach(block => {
+            const qId = block.getAttribute('data-id');
+            const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value || "";
+            answers.push({ question_id: qId, answer: selected });
+        });
+
+        formData.append('student_id', studentId);
+        formData.append('subject', subject);
+        formData.append('week', week);
+        formData.append('message', document.getElementById('consMessage').value);
+        
+        // Gunakan file dari PhotoBooth jika ada
+        if (selfieFileToUpload) formData.append('image', selfieFileToUpload);
+
+        try {
+            await Promise.all([
+                fetch(`${API_URL}/api/onboarding/submit-grade`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId, subject, week, student_answers: answers })
+                }),
+                fetch(`${API_URL}/api/consultations`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                })
+            ]);
+
+            localStorage.removeItem(timeKey);
+            localStorage.removeItem(ansKey);
+
+            window.showToast?.('success', 'Berhasil', 'Data santri berhasil dikirim.');
+            setTimeout(() => window.location.replace('/consultations'), 1500);
+        } catch (e) {
+            console.error(e);
+            window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.');
+        }
+    };
+
+    init();
+</script>

@@ -1,0 +1,469 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Detail Santri - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
+        
+        <header class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <a href="/students" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                <h1 class="text-xl font-bold text-gray-800">Detail Perkembangan</h1>
+            </div>
+            
+            <button onclick="openRaportModal()" class="w-10 h-10 bg-green-600 text-white rounded-xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all" title="Buat & Download Raport">
+                <i class="fa-solid fa-file-pdf text-lg"></i>
+            </button>
+        </header>
+
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6 relative overflow-hidden">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-4">
+                    <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl">--</div>
+                    <div>
+                        <h2 id="studentName" class="text-lg font-bold text-gray-800">Memuat...</h2>
+                        <p id="studentGrade" class="text-xs text-gray-400 font-medium uppercase tracking-wider">--</p>
+                    </div>
+                </div>
+                <a href="/absensi" id="badgeTodayStatus" class="flex flex-col items-center justify-center bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl transition-all active:scale-95">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hari Ini</span>
+                    <div id="todayStatusUI" class="flex items-center gap-1.5 text-xs font-black text-gray-500">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Cek...
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-3xl p-2 shadow-sm border border-gray-100 mb-6">
+            <div class="flex p-1 bg-gray-50 rounded-2xl mb-2">
+                <button id="tabDashAkademik" class="flex-1 py-2.5 text-[10px] font-bold bg-white text-blue-600 rounded-xl shadow-sm transition-all uppercase tracking-widest">Akademik</button>
+                <button id="tabDashAbsensi" class="flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest">Kehadiran</button>
+            </div>
+
+            <div id="contentDashAkademik" class="p-4 block">
+                <div class="h-48 w-full mb-6">
+                    <canvas id="progressChart"></canvas>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="text-center p-2 bg-green-50 rounded-xl">
+                        <p class="text-[10px] text-green-600 font-bold uppercase">Tajwid</p>
+                        <p id="avgTajwid" class="font-bold text-gray-800">-</p>
+                    </div>
+                    <div class="text-center p-2 bg-blue-50 rounded-xl">
+                        <p class="text-[10px] text-blue-600 font-bold uppercase">Fiqih</p>
+                        <p id="avgFiqih" class="font-bold text-gray-800">-</p>
+                    </div>
+                    <div class="text-center p-2 bg-purple-50 rounded-xl">
+                        <p class="text-[10px] text-purple-600 font-bold uppercase">Tauhid</p>
+                        <p id="avgTauhid" class="font-bold text-gray-800">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="contentDashAbsensi" class="p-4 hidden">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="h-32 w-32 relative flex-shrink-0">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                    <div class="flex-1 space-y-2">
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg"><span class="text-[10px] font-bold text-gray-500 uppercase">Hadir</span><span id="statHadir" class="text-xs font-black text-green-600">0</span></div>
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg"><span class="text-[10px] font-bold text-gray-500 uppercase">Izin/Sakit</span><span id="statIzin" class="text-xs font-black text-amber-500">0</span></div>
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg"><span class="text-[10px] font-bold text-gray-500 uppercase">Alpa</span><span id="statAlpa" class="text-xs font-black text-red-500">0</span></div>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center">
+                    <p class="text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1">Performa Kedisiplinan</p>
+                    <p id="statPerformance" class="text-sm font-black text-blue-700">Memuat...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <div class="flex p-1 bg-gray-100 rounded-2xl mb-6">
+                <button id="tabTodo" class="flex-1 py-3 text-[10px] font-bold bg-white text-green-700 rounded-xl shadow-sm transition-all uppercase tracking-widest"><i class="fa-solid fa-list-check mr-1"></i> Tugas AI</button>
+                <button id="tabCons" class="flex-1 py-3 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest"><i class="fa-regular fa-comments mr-1"></i> Konsultasi</button>
+            </div>
+            <div id="contentTodo" class="block"><div id="todoContainer" class="space-y-3"><p class="text-center text-gray-400 text-sm py-4">Memuat tugas...</p></div></div>
+            <div id="contentCons" class="hidden"><div id="consContainer" class="space-y-4"><p class="text-center text-gray-400 text-sm py-4">Memuat riwayat...</p></div></div>
+        </section>
+
+    </div>
+
+    <div id="modalRaport" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-gray-800">Buat & Download Raport</h3>
+                <button onclick="closeRaportModal()" class="text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="formRaport" class="space-y-4">
+                <input type="text" id="rapName" readonly class="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold text-gray-500">
+
+                <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-800 mb-2">A. Akademik (Otomatis)</h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><label class="text-[9px] text-gray-500">Tajwid</label><input type="text" id="rapTajwid" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
+                        <div><label class="text-[9px] text-gray-500">Fiqih</label><input type="text" id="rapFiqih" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
+                        <div><label class="text-[9px] text-gray-500">Tauhid</label><input type="text" id="rapTauhid" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="text-[10px] font-bold text-blue-800">Al-Quran / Iqro (Manual)</label>
+                        <select id="rapQuran" class="w-full mt-1 px-2 py-1 bg-white rounded text-xs border-none"><option value="A">A (Sangat Baik)</option><option value="B">B (Baik)</option><option value="C">C (Cukup)</option><option value="D">D (Kurang)</option></select>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-green-50 rounded-xl border border-green-100">
+                    <h4 class="text-xs font-bold text-green-800 mb-2">B. Kepribadian</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center"><span class="text-xs">Kedisiplinan</span><select id="rapSikap1" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                        <div class="flex justify-between items-center"><span class="text-xs">Akhlak & Adab</span><select id="rapSikap2" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                        <div class="flex justify-between items-center"><span class="text-xs">Keaktifan</span><select id="rapSikap3" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <h4 class="text-xs font-bold text-amber-800 mb-2">C. Kehadiran (Otomatis dari Absensi)</h4>
+                    <div class="flex justify-between items-center text-xs font-medium"><span class="text-green-600">Hadir: <span id="rapHadir" class="font-bold">0</span></span><span class="text-amber-600">Izin/Sakit: <span id="rapIzin" class="font-bold">0</span></span><span class="text-red-600">Alpa: <span id="rapAlpa" class="font-bold">0</span></span></div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">D. Catatan <span class="text-red-500">*</span></label>
+                        <button type="button" onclick="generateSystemNote()" class="text-[9px] bg-purple-100 text-purple-600 px-2 py-1 rounded-md font-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI</button>
+                    </div>
+                    <textarea id="rapNote" required rows="4" class="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs"></textarea>
+                </div>
+
+                <button type="submit" id="btnSaveRaport" class="w-full py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-save"></i> <span>Simpan & Buka PDF</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <NavbarGuru activeMenu="students" />
+    <Toast />
+</Layout>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" is:inline></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js" is:inline></script>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    const pathParts = window.location.pathname.split('/');
+    const studentId = pathParts[pathParts.length - 1];
+
+    if (!token) window.location.replace('/');
+    
+    let myChart = null;
+    let attChart = null;
+    let currentAvgRaw = 0;
+    let lastRaportData = null;
+    let attendanceStatsGlobal = { hadir: 0, izin: 0, alpa: 0 }; // Menyimpan stats untuk PDF
+
+    // --- CHARTS INIT ---
+    const initChart = (history) => {
+        const canvas = document.getElementById('progressChart');
+        if (!canvas) return;
+        if (myChart) myChart.destroy();
+        
+        myChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: history.tajwid.map(item => `Mg-${item.week}`),
+                datasets: [
+                    { label: 'Tajwid', data: history.tajwid.map(i => i.score), borderColor: '#22c55e', backgroundColor: '#22c55e22', tension: 0.4, fill: true },
+                    { label: 'Fiqih', data: history.fiqih.map(i => i.score), borderColor: '#3b82f6', tension: 0.4 },
+                    { label: 'Tauhid', data: history.tauhid.map(i => i.score), borderColor: '#a855f7', tension: 0.4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+        });
+    };
+
+    const initAttChart = (stats) => {
+        const canvas = document.getElementById('attendanceChart');
+        if (!canvas) return;
+        if (attChart) attChart.destroy();
+        
+        attChart = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Hadir', 'Izin', 'Alpa'],
+                datasets: [{ data: [stats.hadir, stats.izin, stats.alpa], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
+        });
+    };
+
+    // --- FETCH DATA ---
+    const fetchData = async () => {
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [stdRes, progRes, todoRes, consRes, rapRes, attRes] = await Promise.all([
+                fetch(`${API_URL}/api/students/${studentId}`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/progress`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/todos`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/raports`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers })
+            ]);
+
+            const student = await stdRes.json();
+            const progress = await progRes.json();
+            const todos = await todoRes.json();
+            const consultations = await consRes.json();
+            const raports = await rapRes.json();
+            const attendance = await attRes.json();
+
+            if (raports.data?.length > 0) lastRaportData = raports.data[0];
+
+            // Render Profil
+            document.getElementById('studentName').innerText = student.data.name;
+            document.getElementById('studentGrade').innerText = student.data.grade;
+            document.getElementById('studentInitial').innerText = student.data.name.substring(0, 2).toUpperCase();
+
+            // Render Akademik
+            if (progress.data) {
+                initChart(progress.data);
+                const lastT = progress.data.tajwid.slice(-1)[0]?.score || 0;
+                const lastF = progress.data.fiqih.slice(-1)[0]?.score || 0;
+                const lastTh = progress.data.tauhid.slice(-1)[0]?.score || 0;
+                document.getElementById('avgTajwid').innerText = lastT;
+                document.getElementById('avgFiqih').innerText = lastF;
+                document.getElementById('avgTauhid').innerText = lastTh;
+                currentAvgRaw = (lastT + lastF + lastTh) / 3;
+            }
+
+            // Render Absensi
+            if (attendance.data) {
+                const { stats, todayStatus, performance } = attendance.data;
+                attendanceStatsGlobal = stats; // Simpan untuk PDF
+                
+                // UI Dashboard Absensi
+                initAttChart(stats);
+                document.getElementById('statHadir').innerText = stats.hadir;
+                document.getElementById('statIzin').innerText = stats.izin;
+                document.getElementById('statAlpa').innerText = stats.alpa;
+                document.getElementById('statPerformance').innerText = performance;
+
+                // UI Today Badge
+                const badgeUI = document.getElementById('todayStatusUI');
+                if (todayStatus === 'hadir') badgeUI.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> <span class="text-green-600">Hadir</span>';
+                else if (todayStatus?.startsWith('izin')) badgeUI.innerHTML = '<i class="fa-solid fa-envelope text-amber-500"></i> <span class="text-amber-600">Izin</span>';
+                else if (todayStatus === 'alpa') badgeUI.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> <span class="text-red-600">Alpa</span>';
+                else badgeUI.innerHTML = '<i class="fa-solid fa-circle-question text-gray-400"></i> <span class="text-gray-500">Belum</span>';
+            }
+
+            // Render Todos & Cons
+            const todoContainer = document.getElementById('todoContainer');
+            todoContainer.innerHTML = todos.data.length ? todos.data.map(item => `
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
+                    <button onclick="toggleTodo('${item.id}', '${item.status}')" class="mt-1 w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-colors ${item.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent'}"><i class="fa-solid fa-check text-[10px]"></i></button>
+                    <div><h4 class="font-bold text-gray-800 text-sm ${item.status === 'done' ? 'line-through opacity-50' : ''}">${item.title}</h4><p class="text-xs text-gray-500 mt-1">${item.description}</p></div>
+                </div>
+            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada tugas.</p>';
+
+            const consContainer = document.getElementById('consContainer');
+            consContainer.innerHTML = consultations.data.length ? consultations.data.map(item => `
+                <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
+                    <div class="flex justify-between items-center"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Mg ${item.week} • ${item.subject}</span><span class="text-[10px] text-gray-400 font-bold uppercase">${new Date(item.created_at).toLocaleDateString('id-ID')}</span></div>
+                    <p class="text-sm text-gray-700 leading-relaxed italic">"${item.message}"</p>
+                    ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
+                </div>
+            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat konsultasi.</p>';
+
+        } catch (error) { console.error('fetchData Error:', error); }
+    };
+
+    window.toggleTodo = async (id, status) => { /* logic update todo... */ await fetchData(); };
+
+    // --- SWITCHERS ---
+    const setupTabs = (btn1, btn2, cnt1, cnt2) => {
+        const btnAct = "flex-1 py-2.5 text-[10px] font-bold bg-white text-blue-600 rounded-xl shadow-sm transition-all uppercase tracking-widest";
+        const btnPas = "flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest";
+        document.getElementById(btn1).onclick = () => { document.getElementById(btn1).className = btnAct.replace('blue-600', btn1.includes('Todo') ? 'green-700' : 'blue-600'); document.getElementById(btn2).className = btnPas; document.getElementById(cnt1).classList.replace('hidden', 'block'); document.getElementById(cnt2).classList.replace('block', 'hidden'); };
+        document.getElementById(btn2).onclick = () => { document.getElementById(btn2).className = btnAct.replace('blue-600', btn2.includes('Cons') ? 'green-700' : 'blue-600'); document.getElementById(btn1).className = btnPas; document.getElementById(cnt2).classList.replace('hidden', 'block'); document.getElementById(cnt1).classList.replace('block', 'hidden'); };
+    };
+    setupTabs('tabDashAkademik', 'tabDashAbsensi', 'contentDashAkademik', 'contentDashAbsensi');
+    setupTabs('tabTodo', 'tabCons', 'contentTodo', 'contentCons');
+
+    // --- LOGIKA RAPORT ---
+    const convertToGrade = (s) => s >= 85 ? 'A' : s >= 70 ? 'B' : s >= 60 ? 'C' : 'D';
+
+    window.openRaportModal = () => {
+        document.getElementById('rapName').value = document.getElementById('studentName').innerText;
+        document.getElementById('rapTajwid').value = convertToGrade(parseInt(document.getElementById('avgTajwid').innerText));
+        document.getElementById('rapFiqih').value = convertToGrade(parseInt(document.getElementById('avgFiqih').innerText));
+        document.getElementById('rapTauhid').value = convertToGrade(parseInt(document.getElementById('avgTauhid').innerText));
+
+        // Inject Data Kehadiran
+        document.getElementById('rapHadir').innerText = attendanceStatsGlobal.hadir;
+        document.getElementById('rapIzin').innerText = attendanceStatsGlobal.izin;
+        document.getElementById('rapAlpa').innerText = attendanceStatsGlobal.alpa;
+
+        if (lastRaportData) {
+            document.getElementById('rapQuran').value = lastRaportData.academic_grades.quran || 'A';
+            document.getElementById('rapSikap1').value = lastRaportData.behavior_grades.kedisiplinan || 'A';
+            document.getElementById('rapSikap2').value = lastRaportData.behavior_grades.akhlak || 'A';
+            document.getElementById('rapSikap3').value = lastRaportData.behavior_grades.keaktifan || 'A';
+            document.getElementById('rapNote').value = lastRaportData.teacher_note || '';
+        } else {
+            document.getElementById('rapQuran').value = 'A'; document.getElementById('rapSikap1').value = 'A'; document.getElementById('rapSikap2').value = 'A'; document.getElementById('rapSikap3').value = 'A'; document.getElementById('rapNote').value = '';
+        }
+        document.getElementById('modalRaport').classList.replace('hidden', 'flex');
+    };
+
+    window.closeRaportModal = () => document.getElementById('modalRaport').classList.replace('flex', 'hidden');
+    window.generateSystemNote = async () => {
+        const name = document.getElementById('rapName').value;
+        const btn = document.querySelector('button[onclick="generateSystemNote()"]');
+        
+        try {
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+            
+            const res = await fetch(`${API_URL}/api/raports/generate-note`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentName: name, avgScore: currentAvgRaw })
+            });
+            const result = await res.json();
+            
+            if (res.ok) {
+                document.getElementById('rapNote').value = result.data;
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI';
+        }
+    };
+
+    // --- PDF GENERATOR (Font Diperbesar & Ditambah Kehadiran) ---
+    const generatePdfWithJsPDF = (payload, studentName) => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        const contentW = pageW - margin * 2;
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14); // UPDATE DARI 13
+        doc.text('MUSHOLA NURUL HIDAYAH', pageW / 2, 20, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10); // UPDATE DARI 9
+        doc.text('Pengajian Perumahan Bumi Rahayu 5 - Bekasi', pageW / 2, 26, { align: 'center' });
+        doc.setLineWidth(0.5); doc.line(margin, 30, pageW - margin, 30);
+
+        doc.setFontSize(10); // UPDATE DARI 9
+        doc.text('Nama', margin, 38); doc.text(`: ${studentName}`, margin + 20, 38);
+        doc.text(`Tanggal: ${today}`, pageW - margin, 38, { align: 'right' });
+
+        let curY = 48; // Spasi ditambah
+
+        // A. AKADEMIK
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); // UPDATE DARI 10
+        doc.text('A. PENCAPAIAN AKADEMIK', margin, curY); curY += 6;
+        const akdRows = [['Tajwid', payload.academic_grades.tajwid], ['Fiqih', payload.academic_grades.fiqih], ['Tauhid', payload.academic_grades.tauhid], ['Al-Quran / Iqro', payload.academic_grades.quran]];
+        
+        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); // UPDATE DARI 8
+        doc.text('Mata Pelajaran', margin + 3, curY + 5.5); doc.text('Nilai', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
+        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
+
+        doc.setFont('helvetica', 'normal');
+        akdRows.forEach(([lbl, val]) => {
+            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
+            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
+        }); curY += 6;
+
+        // B. KEPRIBADIAN
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('B. PENILAIAN KEPRIBADIAN', margin, curY); curY += 6;
+        const bhrRows = [['Kedisiplinan', payload.behavior_grades.kedisiplinan], ['Akhlak & Adab', payload.behavior_grades.akhlak], ['Keaktifan', payload.behavior_grades.keaktifan]];
+        
+        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.text('Aspek Penilaian', margin + 3, curY + 5.5); doc.text('Nilai', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
+        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
+
+        doc.setFont('helvetica', 'normal');
+        bhrRows.forEach(([lbl, val]) => {
+            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
+            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
+        }); curY += 6;
+
+        // C. KEHADIRAN (BAGIAN BARU)
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('C. KEHADIRAN', margin, curY); curY += 6;
+        const attRows = [['Hadir', attendanceStatsGlobal.hadir + ' Hari'], ['Izin / Sakit', attendanceStatsGlobal.izin + ' Hari'], ['Alpa', attendanceStatsGlobal.alpa + ' Hari']];
+        
+        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.text('Keterangan', margin + 3, curY + 5.5); doc.text('Jumlah', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
+        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
+
+        doc.setFont('helvetica', 'normal');
+        attRows.forEach(([lbl, val]) => {
+            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
+            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
+        }); curY += 6;
+
+        // D. CATATAN
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('D. CATATAN USTADZ/USTADZAH', margin, curY); curY += 6;
+
+        const noteLines = doc.splitTextToSize(payload.teacher_note || '-', contentW - 6);
+        const noteBoxH = Math.max(25, noteLines.length * 5 + 8);
+        doc.rect(margin, curY, contentW, noteBoxH);
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9); // UPDATE DARI 8
+        doc.text(noteLines, margin + 3, curY + 6.5); curY += noteBoxH + 12;
+
+        // TTD
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); // UPDATE DARI 9
+        doc.text(`Bekasi, ${today}`, pageW - margin, curY, { align: 'right' }); curY += 6;
+        doc.text('Ustadz / Ustadzah', pageW - margin, curY, { align: 'right' }); curY += 22;
+        doc.text('( _____________________ )', pageW - margin, curY, { align: 'right' });
+
+        return doc;
+    };
+
+    document.getElementById('formRaport').onsubmit = async (e) => {
+        e.preventDefault();
+        const pdfWindow = window.open('', '_blank');
+        if (pdfWindow) pdfWindow.document.write('<html><body style="font-family:sans-serif;text-align:center;margin-top:20vh;"><h3>Memproses PDF Raport...</h3></body></html>');
+        
+        const payload = {
+            id: lastRaportData ? lastRaportData.id : null, student_id: studentId,
+            academic_grades: { tajwid: document.getElementById('rapTajwid').value, fiqih: document.getElementById('rapFiqih').value, tauhid: document.getElementById('rapTauhid').value, quran: document.getElementById('rapQuran').value },
+            behavior_grades: { kedisiplinan: document.getElementById('rapSikap1').value, akhlak: document.getElementById('rapSikap2').value, keaktifan: document.getElementById('rapSikap3').value },
+            teacher_note: document.getElementById('rapNote').value
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/api/raports`, { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            if (!res.ok) throw new Error();
+            lastRaportData = (await res.json()).data;
+            
+            const doc = generatePdfWithJsPDF(payload, document.getElementById('rapName').value);
+            const pdfUrl = URL.createObjectURL(doc.output('blob'));
+            if (pdfWindow && !pdfWindow.closed) pdfWindow.location.href = pdfUrl;
+            
+            closeRaportModal(); window.showToast?.('success', 'Berhasil', 'Raport tersimpan.');
+        } catch (err) {
+            if (pdfWindow) pdfWindow.close(); closeRaportModal(); window.showToast?.('danger', 'Error', 'Gagal memproses raport.');
+        }
+    };
+
+    fetchData();
+</script>

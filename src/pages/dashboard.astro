@@ -1,0 +1,214 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Toast from '../components/Toast.astro';
+import ModalAlert from '../components/ModalAlert.astro';
+import NavbarGuru from '../components/NavbarGuru.astro';
+---
+
+<Layout title="Dashboard Guru - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
+
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-green-600 tracking-tight" id="greetingName">yukNgaji</h1>
+                <p class="text-xs text-gray-500 font-medium" id="welcomeMsg">Assalamu'alaikum, Ustadz!</p>
+            </div>
+            <button id="btnLogout" class="text-red-500 bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+        </header>
+
+        <section class="mb-10">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Ringkasan Kelas</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/30">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-green-100 text-sm font-medium mb-1">Total Santri</p>
+                            <h3 class="text-4xl font-bold" id="statStudents">-</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col justify-between">
+                    <div class="w-8 h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-clipboard-list text-xs"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800" id="statTasks">-</h3>
+                        <p class="text-[10px] text-gray-500 font-medium mt-0.5 uppercase">Tugas Pending</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col justify-between">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-envelope text-xs"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-800" id="statMessages">-</h3>
+                        <p class="text-[10px] text-gray-500 font-medium mt-0.5 uppercase">Konsul Baru</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <a href="/absensi" id="btnAbsensi" class="relative block w-full bg-white border border-gray-100 p-4 rounded-2xl shadow-sm overflow-hidden mb-6">
+            <div class="flex items-center justify-between z-10 relative">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-check text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-sm">Absensi Hari Ini</h3>
+                        <p id="absensiStatusText" class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Mengecek status...</p>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+            </div>
+            <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
+        </a>
+
+        <section class="flex-1">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Daftar Santri</h2>
+                <button class="text-sm font-medium text-green-600 hover:text-green-700">Lihat Semua</button>
+            </div>
+
+            <div id="studentList" class="space-y-3">
+                <div class="animate-pulse flex items-center space-x-4 bg-white p-4 rounded-2xl border border-gray-100">
+                    <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <Toast />
+    <ModalAlert />
+    <NavbarGuru activeMenu="home" />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // 1. Proteksi
+    if (!token) {
+        window.location.replace('/');
+    }
+
+    // 2. Greeting
+    const greetingEl = document.getElementById('greetingName');
+    if (greetingEl) {
+        greetingEl.innerText = `Ahlan, Ustadz ${userData.username || ''}!`;
+    }
+
+    // 3. Data Fetching
+    const fetchDashboardData = async () => {
+        try {
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            const [dashRes, studentRes] = await Promise.all([
+                fetch('http://localhost:3000/api/insights/dashboard', { headers }),
+                fetch('http://localhost:3000/api/students', { headers })
+            ]);
+
+            if (dashRes.status === 401 || studentRes.status === 401) {
+                throw new Error('Sesi habis');
+            }
+
+            const dashData = await dashRes.json();
+            const studentData = await studentRes.json();
+
+            // Render Stats
+            document.getElementById('statStudents').innerText = dashData.data.total_students || 0;
+            document.getElementById('statTasks').innerText = dashData.data.pending_tasks || 0;
+            document.getElementById('statMessages').innerText = dashData.data.unread_messages || 0;
+
+            // Render Students
+            const studentContainer = document.getElementById('studentList');
+            studentContainer.innerHTML = ''; 
+
+            if (!studentData.data || studentData.data.length === 0) {
+                studentContainer.innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-3xl border border-gray-100 border-dashed">
+                        <i class="fa-solid fa-folder-open text-gray-200 text-5xl mb-4"></i>
+                        <p class="text-gray-400 text-sm">Belum ada data santri.</p>
+                    </div>
+                `;
+            } else {
+                studentData.data.forEach(student => {
+                    const initials = student.name.substring(0, 2).toUpperCase();
+                    studentContainer.innerHTML += `
+                        <div class="bg-white p-4 rounded-2xl border border-gray-50 shadow-sm flex items-center justify-between mb-1 active:scale-[0.98] transition-all cursor-pointer" onclick="window.location.href='/student/${student.id}'">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-green-50 text-green-600 font-bold rounded-2xl flex items-center justify-center text-lg">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">${student.name}</h4>
+                                    <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wider">${student.grade}</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                        </div>
+                    `;
+                });
+            }
+
+        } catch (error) {
+            console.error(error);
+            if (window.showToast) {
+                window.showToast('danger', 'Error', 'Gagal memuat data dashboard.');
+            }
+        }
+    };
+
+    fetchDashboardData();
+
+    // 4. Logout
+    document.getElementById('btnLogout')?.addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('/');
+    });
+
+
+    // Tambahkan di dalam <script> dashboard
+    const checkAbsensiStatus = async () => {
+        try {
+            const res = await fetch('http://localhost:3000/api/attendances/today-status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            const statusText = document.getElementById('absensiStatusText');
+            const pulseBox = document.getElementById('absensiPulse');
+
+            if (result.isDone) {
+                statusText.innerText = "Selesai (Sudah Absen)";
+                statusText.classList.replace('text-gray-400', 'text-green-500');
+            } else {
+                statusText.innerText = result.isMandatory ? "Wajib Absen Sekarang!" : "Absensi Sunnah";
+                if (result.isMandatory) {
+                    statusText.classList.replace('text-gray-400', 'text-red-500');
+                    pulseBox.classList.replace('border-transparent', 'border-red-500/50');
+                    pulseBox.classList.add('animate-pulse');
+                }
+            }
+        } catch (e) {
+            console.error("Gagal cek status absensi");
+        }
+    };
+    checkAbsensiStatus();
+</script>

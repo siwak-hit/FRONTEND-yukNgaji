@@ -1,0 +1,212 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Sesi Belajar - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen">
+        
+        <header class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Mulai Sesi</h1>
+            <p class="text-xs text-gray-500 font-medium mt-1 uppercase tracking-widest">Input nilai onboarding santri</p>
+        </header>
+
+        <section class="mb-8">
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">1. Pilih Mata Pelajaran</h3>
+            <div class="grid grid-cols-3 gap-3">
+                {['tajwid', 'fiqih', 'tauhid'].map((subject) => (
+                    <button class="subject-btn p-4 bg-white border border-gray-100 rounded-2xl flex flex-col items-center gap-2 transition-all active:scale-95 shadow-sm" data-value={subject}>
+                        <div class={`w-10 h-10 rounded-xl flex items-center justify-center ${subject === 'tajwid' ? 'bg-green-50 text-green-600' : subject === 'fiqih' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                            <i class={`fa-solid ${subject === 'tajwid' ? 'fa-book-quran' : subject === 'fiqih' ? 'fa-hand-holding-heart' : 'fa-star-and-crescent'}`}></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-700 capitalize">{subject}</span>
+                    </button>
+                ))}
+            </div>
+        </section>
+
+        <section id="weekSection" class="mb-8 opacity-30 pointer-events-none transition-all duration-500">
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">2. Pertemuan Ke-</h3>
+            <div id="weekContainer" class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                </div>
+        </section>
+
+        <section id="studentSection" class="hidden animate-slide-up">
+            <div class="flex flex-col gap-4 mb-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">3. Pilih Santri</h3>
+                    <span id="sessionBadge" class="text-[9px] bg-green-600 text-white px-3 py-1 rounded-full font-bold shadow-sm shadow-green-200"></span>
+                </div>
+
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="studentSearch" 
+                        class="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-2 focus:ring-green-500 transition-all shadow-sm" 
+                        placeholder="Cari nama santri...">
+                </div>
+            </div>
+            
+            <div id="studentGrid" class="grid grid-cols-2 gap-3">
+                </div>
+        </section>
+
+    </div>
+
+    <NavbarGuru activeMenu="chat" />
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    let selectedSubject = null;
+    let selectedWeek = null;
+    let allStudents = []; // Variabel ini harus diisi saat fetch
+    let finishedStudentIds = []; // Simpan ID yang sudah selesai di sini
+    const token = localStorage.getItem('token');
+
+    if (!token) window.location.replace('/');
+
+    // 1. Logic Pilih Mapel (Tetap sama, hanya pastikan panggil render)
+    document.querySelectorAll('.subject-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.subject-btn').forEach(b => {
+                b.classList.remove('border-green-600', 'ring-2', 'ring-green-100');
+                b.classList.add('border-gray-100');
+            });
+            btn.classList.replace('border-gray-100', 'border-green-600');
+            btn.classList.add('ring-2', 'ring-green-100');
+            
+            selectedSubject = btn.getAttribute('data-value');
+            
+            try {
+                const res = await fetch(`${API_URL}/api/onboarding/available-weeks/${selectedSubject}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await res.json();
+                
+                renderWeekButtons(result.data);
+
+                const weekSection = document.getElementById('weekSection');
+                weekSection.classList.remove('opacity-30', 'pointer-events-none');
+                
+                // Sembunyikan grid jika ganti mapel tapi belum pilih minggu
+                document.getElementById('studentSection').classList.add('hidden');
+            } catch (e) {
+                console.error("Gagal fetch week:", e);
+            }
+        });
+    });
+
+    // 2. Render Tombol Minggu
+    const renderWeekButtons = (weeksArray) => {
+        const container = document.getElementById('weekContainer');
+        container.innerHTML = '';
+
+        if (!weeksArray || weeksArray.length === 0) {
+            container.innerHTML = `<div class="p-4 text-xs text-orange-500 bg-orange-50 rounded-xl w-full">Belum ada materi...</div>`;
+            return;
+        }
+
+        weeksArray.forEach(weekNum => {
+            const btn = document.createElement('button');
+            btn.className = "week-btn flex-shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-xl font-bold text-gray-500 transition-all active:scale-90 shadow-sm";
+            btn.innerText = weekNum;
+            btn.onclick = () => {
+                document.querySelectorAll('.week-btn').forEach(b => {
+                    b.classList.remove('bg-green-600', 'text-white', 'border-green-600');
+                    b.classList.add('bg-white', 'text-gray-500');
+                });
+                btn.classList.add('bg-green-600', 'text-white', 'border-green-600');
+                
+                selectedWeek = weekNum;
+                fetchStudents(); // Trigger fetch nama santri
+            };
+            container.appendChild(btn);
+        });
+    };
+
+    // 3. Fetch & Simpan Data ke allStudents
+    const fetchStudents = async () => {
+        if (!selectedSubject || !selectedWeek) return;
+
+        try {
+            // Tampilkan section dulu
+            const studentSection = document.getElementById('studentSection');
+            studentSection.classList.remove('hidden');
+            document.getElementById('sessionBadge').innerText = `${selectedSubject.toUpperCase()} - MG ${selectedWeek}`;
+
+            // Fetch Status (Siapa yang sudah beres)
+            const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            const status = await resStatus.json();
+            finishedStudentIds = status.data || [];
+
+            // Fetch Semua Santri
+            const resStd = await fetch(`${API_URL}/api/students`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            const students = await resStd.json();
+            
+            // KUNCI PERBAIKAN: Isi variabel global allStudents agar bisa difilter di search
+            allStudents = students.data; 
+            
+            renderStudentGrid(allStudents, finishedStudentIds);
+            
+            // Auto scroll ke bawah biar kelihatan gridnya
+            studentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (e) {
+            console.error("Gagal sinkronisasi data:", e);
+        }
+    };
+
+    // 4. Render Grid (Pakai data dari parameter agar fleksibel untuk filter)
+    const renderStudentGrid = (students, doneIds) => {
+        const grid = document.getElementById('studentGrid');
+        grid.innerHTML = '';
+
+        if (!students || students.length === 0) {
+            grid.innerHTML = '<p class="col-span-2 text-center py-10 text-gray-400 text-xs italic">Nama tidak ditemukan...</p>';
+            return;
+        }
+
+        students.forEach(student => {
+            const isFinished = doneIds.includes(student.id);
+
+            grid.innerHTML += `
+                <div class="student-card ${isFinished ? 'opacity-40 grayscale pointer-events-none' : 'active:scale-95 cursor-pointer'} bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex flex-col items-center text-center gap-3 transition-all"
+                    ${!isFinished ? `onclick="window.location.href='/consultations/fill?id=${student.id}&subject=${selectedSubject}&week=${selectedWeek}'"` : ''}>
+                    
+                    <div class="relative">
+                        <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-lg font-bold">
+                            ${student.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        ${isFinished ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm"><i class="fa-solid fa-check"></i></div>' : ''}
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-[11px] line-clamp-1 capitalize">${student.name}</h4>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">${isFinished ? 'SELESAI' : student.grade}</p>
+                    </div>
+                </div>
+            `;
+        });
+    };
+
+    // 5. Live Search Logic (Menggunakan data allStudents yang sudah terisi)
+    document.getElementById('studentSearch').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+        renderStudentGrid(filtered, finishedStudentIds);
+    });
+</script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .animate-slide-up { animation: slideUp 0.4s ease-out; }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>

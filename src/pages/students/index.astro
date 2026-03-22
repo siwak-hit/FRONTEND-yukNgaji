@@ -1,0 +1,330 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen ini di-import
+---
+
+<Layout title="Daftar Santri - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
+        
+        <header class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Data Santri</h1>
+                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-widest">Manajemen Kelas</p>
+            </div>
+            <button onclick="openAddModal()" class="w-12 h-12 bg-green-600 text-white rounded-2xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-lg"></i>
+            </button>
+        </header>
+
+        <section class="space-y-3 mb-6">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="searchInput" 
+                    class="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all shadow-sm" 
+                    placeholder="Cari nama santri...">
+            </div>
+            
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button class="filter-btn active flex-shrink-0 px-5 py-2 rounded-xl text-xs font-bold border transition-all bg-green-500 border-green-500 text-white shadow-md shadow-green-500/20" data-grade="all">
+                    Semua
+                </button>
+                <button class="filter-btn flex-shrink-0 px-5 py-2 rounded-xl text-xs font-bold border transition-all bg-white border-gray-100 text-gray-400" data-grade="Iqro 1-3">
+                    Iqro 1-3
+                </button>
+                <button class="filter-btn flex-shrink-0 px-5 py-2 rounded-xl text-xs font-bold border transition-all bg-white border-gray-100 text-gray-400" data-grade="Iqro 4-6">
+                    Iqro 4-6
+                </button>
+                <button class="filter-btn flex-shrink-0 px-5 py-2 rounded-xl text-xs font-bold border transition-all bg-white border-gray-100 text-gray-400" data-grade="Al-Quran">
+                    Al-Quran
+                </button>
+            </div>
+        </section>
+
+        <section class="flex-1">
+            <div id="studentContainer" class="space-y-3">
+                <div class="animate-pulse bg-white p-4 rounded-2xl border border-gray-100 h-20"></div>
+                <div class="animate-pulse bg-white p-4 rounded-2xl border border-gray-100 h-20"></div>
+            </div>
+
+            <div id="pagination" class="mt-8 flex justify-center items-center gap-4 hidden">
+                <button id="prevPage" class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 disabled:opacity-30">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="pageInfo" class="text-xs font-bold text-gray-500 uppercase tracking-tighter">Hal 1 dari 1</span>
+                <button id="nextPage" class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 disabled:opacity-30">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <div id="modalStudent" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="font-bold text-gray-800 text-lg">Tambah Santri Baru</h3>
+                <button onclick="closeStudentModal()" class="text-gray-400 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="formStudent" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Nama Lengkap</label>
+                    <input type="text" id="inpName" required class="w-full mt-1 px-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500 font-bold text-gray-700" placeholder="Misal: Budi Santoso">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tingkat Kelas</label>
+                    <select id="inpGrade" class="w-full mt-1 px-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500 font-bold text-gray-700">
+                        <option value="Iqro 1-3">Iqro 1-3</option>
+                        <option value="Iqro 4-6">Iqro 4-6</option>
+                        <option value="Al-Quran">Al-Quran</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Umur (Opsional)</label>
+                    <input type="number" id="inpAge" min="3" max="99" class="w-full mt-1 px-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500 font-bold text-gray-700" placeholder="Misal: 8">
+                </div>
+                
+                <button type="submit" id="btnSaveStudent" class="w-full mt-4 py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all">
+                    Simpan Data
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <NavbarGuru activeMenu="students" />
+    <Toast />
+    <ModalAlert />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    let allStudents = [];
+    let filteredStudents = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentFilter = 'all';
+
+    // State untuk Form Modal
+    let isEditMode = false;
+    let currentStudentId = null;
+
+    const token = localStorage.getItem('token');
+    const container = document.getElementById('studentContainer');
+    const searchInput = document.getElementById('searchInput');
+
+    if (!token) window.location.replace('/');
+
+    const renderData = () => {
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const paginatedData = filteredStudents.slice(start, end);
+
+        container.innerHTML = '';
+
+        if (paginatedData.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16">
+                    <i class="fa-solid fa-user-slash text-gray-200 text-5xl mb-4"></i>
+                    <p class="text-gray-400 text-sm font-medium">Santri tidak ditemukan.</p>
+                </div>
+            `;
+            document.getElementById('pagination').classList.add('hidden');
+            return;
+        }
+
+        paginatedData.forEach(student => {
+            const initials = student.name.substring(0, 2).toUpperCase();
+            container.innerHTML += `
+                <div class="bg-white p-4 rounded-2xl border border-gray-50 shadow-sm flex items-center justify-between mb-2 transition-all group">
+                    <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="window.location.href='/student/${student.id}'">
+                        <div class="w-12 h-12 bg-green-50 text-green-600 font-bold rounded-2xl flex items-center justify-center text-lg">
+                            ${initials}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-sm capitalize">${student.name}</h4>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">${student.grade} ${student.age ? `• ${student.age} th` : ''}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button onclick="openEditModal('${student.id}')" class="w-9 h-9 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center active:scale-95 transition-all">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="confirmDelete('${student.id}')" class="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center active:scale-95 transition-all">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Update Pagination Info
+        const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+        document.getElementById('pagination').classList.remove('hidden');
+        document.getElementById('pageInfo').innerText = `Hal ${currentPage} dari ${totalPages || 1}`;
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+    };
+
+    const applyFilterAndSearch = () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        filteredStudents = allStudents.filter(student => {
+            const matchSearch = student.name.toLowerCase().includes(searchTerm);
+            const matchFilter = currentFilter === 'all' || student.grade === currentFilter;
+            return matchSearch && matchFilter;
+        });
+        currentPage = 1; 
+        renderData();
+    };
+
+    // Filter Logic
+    searchInput.addEventListener('input', applyFilterAndSearch);
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active', 'bg-green-500', 'border-green-500', 'text-white', 'shadow-md', 'shadow-green-500/20');
+                b.classList.add('bg-white', 'border-gray-100', 'text-gray-400');
+            });
+            btn.classList.add('active', 'bg-green-500', 'border-green-500', 'text-white', 'shadow-md', 'shadow-green-500/20');
+            btn.classList.remove('bg-white', 'border-gray-100', 'text-gray-400');
+            currentFilter = btn.getAttribute('data-grade');
+            applyFilterAndSearch();
+        });
+    });
+
+    // Pagination Logic
+    document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderData(); } });
+    document.getElementById('nextPage').addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+        if (currentPage < totalPages) { currentPage++; renderData(); }
+    });
+
+    // --- CRUD LOGIC START ---
+
+    // Fetch Semua Siswa
+    const fetchStudents = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            allStudents = result.data;
+            filteredStudents = [...allStudents];
+            applyFilterAndSearch(); // Supaya urutan & filter aman
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // Buka Modal Tambah
+    window.openAddModal = () => {
+        isEditMode = false;
+        currentStudentId = null;
+        document.getElementById('modalTitle').innerText = 'Tambah Santri Baru';
+        document.getElementById('formStudent').reset();
+        document.getElementById('modalStudent').classList.remove('hidden');
+    };
+
+    // Buka Modal Edit
+    window.openEditModal = (id) => {
+        isEditMode = true;
+        currentStudentId = id;
+        document.getElementById('modalTitle').innerText = 'Edit Data Santri';
+        
+        // Cari data di state lokal
+        const student = allStudents.find(s => s.id === id);
+        if(student) {
+            document.getElementById('inpName').value = student.name;
+            document.getElementById('inpGrade').value = student.grade;
+            document.getElementById('inpAge').value = student.age || '';
+        }
+        document.getElementById('modalStudent').classList.remove('hidden');
+    };
+
+    // Tutup Modal
+    window.closeStudentModal = () => {
+        document.getElementById('modalStudent').classList.add('hidden');
+    };
+
+    // Submit Form (POST & PUT)
+    document.getElementById('formStudent').onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            name: document.getElementById('inpName').value,
+            grade: document.getElementById('inpGrade').value,
+            age: document.getElementById('inpAge').value ? parseInt(document.getElementById('inpAge').value) : null
+        };
+
+        const url = isEditMode ? `${API_URL}/api/students/${currentStudentId}` : `${API_URL}/api/students`;
+        const method = isEditMode ? 'PUT' : 'POST';
+        const btn = document.getElementById('btnSaveStudent');
+
+        try {
+            btn.innerText = "Menyimpan...";
+            btn.disabled = true;
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                window.showToast?.('success', 'Berhasil', `Santri berhasil ${isEditMode ? 'diperbarui' : 'ditambahkan'}.`);
+                closeStudentModal();
+                fetchStudents(); // Refresh data grid
+            } else {
+                window.showToast?.('danger', 'Gagal', 'Terjadi kesalahan pada server.');
+            }
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', 'Koneksi terputus.');
+        } finally {
+            btn.innerText = "Simpan Data";
+            btn.disabled = false;
+        }
+    };
+
+    // Hapus Data (DELETE)
+    window.confirmDelete = (id) => {
+        currentStudentId = id;
+        // Panggil fungsi global ModalAlert
+        if(window.showModalAlert) {
+            window.showModalAlert(
+                'Hapus Data Santri?',
+                'Data santri beserta riwayat konsultasi dan ujian akan dihapus permanen. Lanjutkan?',
+                'Hapus Permanen',
+                'Batal',
+                () => executeDelete()
+            );
+        }
+    };
+
+    const executeDelete = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students/${currentStudentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+                window.showToast?.('success', 'Dihapus', 'Data santri berhasil dihapus dari sistem.');
+                fetchStudents();
+            } else {
+                window.showToast?.('danger', 'Gagal', 'Gagal menghapus santri.');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // --- CRUD LOGIC END ---
+
+    // Initial load
+    fetchStudents();
+</script>
