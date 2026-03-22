@@ -131,11 +131,14 @@ import Toast from '../../components/Toast.astro';
                 </div>
 
                 <div class="p-3 bg-green-50 rounded-xl border border-green-100">
-                    <h4 class="text-xs font-bold text-green-800 mb-2">B. Kepribadian</h4>
+                    <div class="flex items-center gap-2 mb-2">
+                        <h4 class="text-xs font-bold text-green-800">B. Kepribadian</h4>
+                        <span class="text-[8px] font-bold text-green-600 bg-green-200/50 px-1.5 py-0.5 rounded border border-green-200 uppercase tracking-widest">Bisa Diubah</span>
+                    </div>
                     <div class="space-y-2">
-                        <div class="flex justify-between items-center"><span class="text-xs">Kedisiplinan</span><select id="rapSikap1" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
-                        <div class="flex justify-between items-center"><span class="text-xs">Akhlak & Adab</span><select id="rapSikap2" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
-                        <div class="flex justify-between items-center"><span class="text-xs">Keaktifan</span><select id="rapSikap3" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                        <div class="flex justify-between items-center"><span class="text-xs">Kedisiplinan</span><select id="rapSikap1" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+                        <div class="flex justify-between items-center"><span class="text-xs">Akhlak & Adab</span><select id="rapSikap2" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+                        <div class="flex justify-between items-center"><span class="text-xs">Keaktifan</span><select id="rapSikap3" class="text-xs p-1 rounded border-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
                     </div>
                 </div>
 
@@ -178,7 +181,8 @@ import Toast from '../../components/Toast.astro';
     let attChart = null;
     let currentAvgRaw = 0;
     let lastRaportData = null;
-    let attendanceStatsGlobal = { hadir: 0, izin: 0, alpa: 0 }; // Menyimpan stats untuk PDF
+    let attendanceStatsGlobal = { hadir: 0, izin: 0, alpa: 0 };
+    let globalConsultations = null; // Variabel global untuk menyimpan data kuesioner
 
     // --- CHARTS INIT ---
     const initChart = (history) => {
@@ -281,7 +285,7 @@ import Toast from '../../components/Toast.astro';
             const student = await stdRes.json();
             const progress = await progRes.json();
             const todos = await todoRes.json();
-            const consultations = await consRes.json();
+            globalConsultations = await consRes.json();
             const raports = await rapRes.json();
             const attendance = await attRes.json();
 
@@ -354,13 +358,19 @@ import Toast from '../../components/Toast.astro';
             `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada tugas.</p>';
 
             const consContainer = document.getElementById('consContainer');
-            consContainer.innerHTML = consultations.data.length ? consultations.data.map(item => `
+            consContainer.innerHTML = globalConsultations.data.length ? globalConsultations.data.map(item => `
                 <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
                     <div class="flex justify-between items-center"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Mg ${item.week} • ${item.subject}</span><span class="text-[10px] text-gray-400 font-bold uppercase">${new Date(item.created_at).toLocaleDateString('id-ID')}</span></div>
-                    <p class="text-sm text-gray-700 leading-relaxed italic">"${item.message}"</p>
+                    
+                    <div class="grid grid-cols-3 gap-2 py-2 border-y border-dashed border-gray-100">
+                        <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Akhlak</p><p class="text-sm font-black text-green-600">${item.akhlak_score}</p></div>
+                        <div class="text-center border-x border-dashed border-gray-100"><p class="text-[9px] text-gray-400 font-bold uppercase">Disiplin</p><p class="text-sm font-black text-blue-600">${item.disiplin_score}</p></div>
+                        <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Keaktifan</p><p class="text-sm font-black text-purple-600">${item.aktif_score}</p></div>
+                    </div>
+
                     ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
                 </div>
-            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat konsultasi.</p>';
+            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat kuesioner.</p>';
 
         } catch (error) { console.error('fetchData Error:', error); }
     };
@@ -382,14 +392,52 @@ import Toast from '../../components/Toast.astro';
 
     window.openRaportModal = () => {
         document.getElementById('rapName').value = document.getElementById('studentName').innerText;
-        document.getElementById('rapTajwid').value = convertToGrade(parseInt(document.getElementById('avgTajwid').innerText));
-        document.getElementById('rapFiqih').value = convertToGrade(parseInt(document.getElementById('avgFiqih').innerText));
-        document.getElementById('rapTauhid').value = convertToGrade(parseInt(document.getElementById('avgTauhid').innerText));
+        
+        // IMPROVEMENT 1: Cegah error NaN jika nilai akademik masih '-' (belum ada ujian)
+        const valT = parseInt(document.getElementById('avgTajwid').innerText) || 0;
+        const valF = parseInt(document.getElementById('avgFiqih').innerText) || 0;
+        const valTh = parseInt(document.getElementById('avgTauhid').innerText) || 0;
+
+        document.getElementById('rapTajwid').value = convertToGrade(valT);
+        document.getElementById('rapFiqih').value = convertToGrade(valF);
+        document.getElementById('rapTauhid').value = convertToGrade(valTh);
 
         // Inject Data Kehadiran
         document.getElementById('rapHadir').innerText = attendanceStatsGlobal.hadir;
         document.getElementById('rapIzin').innerText = attendanceStatsGlobal.izin;
         document.getElementById('rapAlpa').innerText = attendanceStatsGlobal.alpa;
+
+        // KALKULASI RATA-RATA DARI KUESIONER GLOBAL
+        let avgAkhlak = 0, avgDisiplinKuesioner = 0, avgAktif = 0;
+        let hasKonsulData = false;
+
+        if (globalConsultations && globalConsultations.data && globalConsultations.data.length > 0) {
+            hasKonsulData = true;
+            const total = globalConsultations.data.length;
+            avgAkhlak = globalConsultations.data.reduce((sum, c) => sum + c.akhlak_score, 0) / total;
+            avgDisiplinKuesioner = globalConsultations.data.reduce((sum, c) => sum + c.disiplin_score, 0) / total;
+            avgAktif = globalConsultations.data.reduce((sum, c) => sum + c.aktif_score, 0) / total;
+        }
+
+        // --- LOGIKA BARU: GABUNGAN ABSENSI & KUESIONER (KEDISIPLINAN) ---
+        let finalDisiplin = 0;
+        // Total valid days = jumlah semua record absen yang masuk hitungan
+        const totalValidDays = attendanceStatsGlobal.hadir + attendanceStatsGlobal.izin + attendanceStatsGlobal.alpa;
+        
+        let attendanceScore = 100; // Default 100 jika anak baru masuk dan belum ada absen
+        if (totalValidDays > 0) {
+            // Persentase Kehadiran (Makin sering hadir / jarang alpa = makin mendekati 100)
+            // Kehadiran di hari sunnah akan membuat "hadir" bertambah tanpa menambah pembagi (izin/alpa), sehingga mendongkrak nilai!
+            attendanceScore = (attendanceStatsGlobal.hadir / totalValidDays) * 100; 
+        }
+
+        if (hasKonsulData) {
+            // Jika punya data kuesioner: Gabungkan (50% Kuesioner + 50% Absensi)
+            finalDisiplin = (avgDisiplinKuesioner + attendanceScore) / 2;
+        } else {
+            // Jika belum pernah kuesioner: Nilai murni dari rajin/tidaknya dia absen
+            finalDisiplin = attendanceScore;
+        }
 
         if (lastRaportData) {
             document.getElementById('rapQuran').value = lastRaportData.academic_grades.quran || 'A';
@@ -398,8 +446,17 @@ import Toast from '../../components/Toast.astro';
             document.getElementById('rapSikap3').value = lastRaportData.behavior_grades.keaktifan || 'A';
             document.getElementById('rapNote').value = lastRaportData.teacher_note || '';
         } else {
-            document.getElementById('rapQuran').value = 'A'; document.getElementById('rapSikap1').value = 'A'; document.getElementById('rapSikap2').value = 'A'; document.getElementById('rapSikap3').value = 'A'; document.getElementById('rapNote').value = '';
+            document.getElementById('rapQuran').value = 'A';
+            
+            // AUTO-FILL
+            // rapSikap1 (Kedisiplinan) sekarang mengambil dari `finalDisiplin` yang sudah dicampur absensi!
+            document.getElementById('rapSikap1').value = (totalValidDays > 0 || hasKonsulData) ? convertToGrade(finalDisiplin) : 'C';
+            document.getElementById('rapSikap2').value = hasKonsulData ? convertToGrade(avgAkhlak) : 'C';
+            document.getElementById('rapSikap3').value = hasKonsulData ? convertToGrade(avgAktif) : 'C';
+            
+            document.getElementById('rapNote').value = '';
         }
+
         document.getElementById('modalRaport').classList.replace('hidden', 'flex');
     };
 
@@ -408,13 +465,28 @@ import Toast from '../../components/Toast.astro';
         const name = document.getElementById('rapName').value;
         const btn = document.querySelector('button[onclick="generateSystemNote()"]');
         
+        // AMBIL SEMUA NILAI TERBARU DARI DROPDOWN & INPUT
+        const payload = {
+            studentName: name,
+            academic: {
+                tajwid: document.getElementById('rapTajwid').value,
+                fiqih: document.getElementById('rapFiqih').value,
+                tauhid: document.getElementById('rapTauhid').value,
+                quran: document.getElementById('rapQuran').value
+            },
+            behavior: {
+                kedisiplinan: document.getElementById('rapSikap1').value,
+                akhlak: document.getElementById('rapSikap2').value,
+                keaktifan: document.getElementById('rapSikap3').value
+            }
+        };
+        
         try {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
-            
             const res = await fetch(`${API_URL}/api/raports/generate-note`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentName: name, avgScore: currentAvgRaw })
+                body: JSON.stringify(payload)
             });
             const result = await res.json();
             
@@ -503,18 +575,55 @@ import Toast from '../../components/Toast.astro';
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
         doc.text('D. CATATAN USTADZ/USTADZAH', margin, curY); curY += 6;
 
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
         const noteLines = doc.splitTextToSize(payload.teacher_note || '-', contentW - 6);
-        const noteBoxH = Math.max(25, noteLines.length * 5 + 8);
+        
+        // PERBAIKAN: Ubah pengali dari 5 menjadi 4 karena font-nya kecil (ukuran 9).
+        // Ditambah 4 sebagai padding pelengkap untuk atas dan bawah.
+        const noteBoxH = Math.max(25, noteLines.length * 4 + 4); 
+        
         doc.rect(margin, curY, contentW, noteBoxH);
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(9); // UPDATE DARI 8
-        doc.text(noteLines, margin + 3, curY + 6.5); curY += noteBoxH + 12;
+        
+        // Posisi awalan teks (curY) juga saya naikkan sedikit jadi + 5 agar center
+        doc.text(noteLines, margin + 3, curY + 5);
+        curY += noteBoxH + 12;
 
-        // TTD
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); // UPDATE DARI 9
-        doc.text(`Bekasi, ${today}`, pageW - margin, curY, { align: 'right' }); curY += 6;
-        doc.text('Ustadz / Ustadzah', pageW - margin, curY, { align: 'right' }); curY += 22;
-        doc.text('( _____________________ )', pageW - margin, curY, { align: 'right' });
+// --- TTD / MENGETAHUI ---
+curY += 5; // Beri sedikit jarak aman dari kotak catatan
+        
+        doc.setFont('helvetica', 'normal'); 
+        doc.setFontSize(10); 
+        
+        // 1. Tanggal tetap di kanan atas area TTD
+        doc.text(`Bekasi, ${today}`, pageW - margin, curY, { align: 'right' }); 
+        curY += 6;
 
+        // 2. Teks "Mengetahui," di tengah
+        doc.text('Mengetahui,', pageW / 2, curY, { align: 'center' }); 
+        curY += 8;
+
+        // 3. Menghitung 3 titik koordinat (X) untuk membagi kertas jadi 3 kolom proporsional
+        const col1X = margin + (contentW / 6); // Sepertiga kiri
+        const col2X = pageW / 2;               // Tengah persis
+        const col3X = pageW - margin - (contentW / 6); // Sepertiga kanan
+
+        // 4. Baris Jabatan (Normal, Ukuran 10)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text('Guru Pengajar', col1X, curY, { align: 'center' });
+        doc.text('Ketua DKM Nurul Hidayah', col2X, curY, { align: 'center' });
+        doc.text('Pembina Pengajian', col3X, curY, { align: 'center' });
+        
+        // Beri jarak vertikal seakan-akan ada area untuk tanda tangan asli (20 unit)
+        curY += 5; 
+
+        // 5. Baris Nama Lengkap (Bold, Ukuran 11 -> lebih besar 1px/pt)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('Kak Wakhid Khoirul Aziz', col1X, curY, { align: 'center' });
+        doc.text('Bp. Ust. Suyatno', col2X, curY, { align: 'center' });
+        doc.text('Bp. Ust. Idris', col3X, curY, { align: 'center' });
+        
         return doc;
     };
 

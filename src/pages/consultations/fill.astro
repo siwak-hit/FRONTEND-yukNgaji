@@ -55,9 +55,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     </div>
                     
                     <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-4">
-                        <label class="block text-sm font-bold text-blue-800">Gimana perasaanmu belajar hari ini? Ceritain dong!</label>
-                        <textarea id="consMessage" class="w-full p-4 bg-white border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 min-h-[120px]" placeholder="Ketikan sesuatu..."></textarea>
-                        
+                        <div id="kuesionerContainer" class="space-y-4 mb-4"></div>
+                        <input type="hidden" id="akhlak_score" name="akhlak_score" value="0">
+                        <input type="hidden" id="disiplin_score" name="disiplin_score" value="0">
+                        <input type="hidden" id="aktif_score" name="aktif_score" value="0">
                         <div>
                             <label class="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 ml-1">FOTO SELFIE (Ada Banyak Bingkai yang lucu lho!)</label>
                             
@@ -81,6 +82,62 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     <PhotoBooth />
     <Toast />
 </Layout>
+
+<script>
+    // BANK PERTANYAAN (Skor: 100 = Baik, 50 = Sedang, 0 = Kurang)
+    const questionBank = {
+        akhlak: [
+            { q: "Pas Kak Aziz lagi nerangin, apa yang kamu lakuin tadi?", opts: [{t: "Perhatiin dong!", s: 100}, {t: "Kadang ngobrol", s: 50}, {t: "Sibuk main sendiri", s: 0}] },
+            { q: "Jujur, kadang kamu suka lupa salim ke guru gak pas datang?", opts: [{t: "Selalu salim dong", s: 100}, {t: "Kadang lupa", s: 50}, {t: "Sering lupa", s: 0}] },
+            { q: "Kalau kamu ditegur guru karena salah, perasaan kamu gimana?", opts: [{t: "Biasa aja (nerima)", s: 100}, {t: "Agak bete", s: 50}, {t: "Marah / Gak terima", s: 0}] }
+        ],
+        disiplin: [
+            { q: "Lebih sering dateng duluan ke sekolah atau tempat ngaji?", opts: [{t: "Tempat ngaji", s: 100}, {t: "Sekolah", s: 50}, {t: "Sering telat dua-duanya", s: 0}] },
+            { q: "Habis ngaji, kamu langsung pulang atau bantu beresin meja?", opts: [{t: "Bantu beresin", s: 100}, {t: "Langsung kabur pulang", s: 0}] },
+            { q: "Kalau ada PR ngaji tapi kamu belum ngerjain, itu salah siapa?", opts: [{t: "Salahku sendiri", s: 100}, {t: "Salah temen gak ngingetin", s: 0}] }
+        ],
+        aktif: [
+            { q: "Pas guru nanya ke kelas, kamu biasanya ngapain?", opts: [{t: "Langsung jawab dong!", s: 100}, {t: "Mau jawab tapi malu", s: 50}, {t: "Diem aja nunggu temen", s: 0}] },
+            { q: "Kalau ada temen yang sering nanya ke guru, menurutmu dia...", opts: [{t: "Hebat dan pintar", s: 100}, {t: "Caper banget", s: 0}] },
+            { q: "Apa yang bikin kamu kadang gak mau nanya pelajaran?", opts: [{t: "Gak malu kok (Sering nanya)", s: 100}, {t: "Takut salah / diketawain", s: 50}, {t: "Gak peduli / Gak dengerin", s: 0}] }
+        ]
+    };
+
+    // Fungsi Pengacak Array
+    const shuffle = (array) => array.sort(() => 0.5 - Math.random());
+
+    // Pilih 1 pertanyaan acak dari setiap kategori
+    const selectedQ = [
+        { cat: 'akhlak', ...shuffle(questionBank.akhlak)[0] },
+        { cat: 'disiplin', ...shuffle(questionBank.disiplin)[0] },
+        { cat: 'aktif', ...shuffle(questionBank.aktif)[0] }
+    ];
+
+    // Render ke HTML
+    const container = document.getElementById('kuesionerContainer');
+    container.innerHTML = selectedQ.map((item, index) => `
+        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+            <p class="text-sm font-bold text-gray-800 mb-3">${index + 1}. ${item.q}</p>
+            <div class="space-y-2">
+                ${shuffle(item.opts).map((opt, i) => `
+                    <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all">
+                        <input type="radio" name="q_${item.cat}" value="${opt.s}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" required>
+                        <span class="text-xs font-semibold text-gray-700">${opt.t}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    // Listener saat Form dikirim (Masukkan skor ke hidden input)
+    document.getElementById('formKonsultasi').addEventListener('submit', (e) => {
+        document.getElementById('akhlak_score').value = document.querySelector('input[name="q_akhlak"]:checked').value;
+        document.getElementById('disiplin_score').value = document.querySelector('input[name="q_disiplin"]:checked').value;
+        document.getElementById('aktif_score').value = document.querySelector('input[name="q_aktif"]:checked').value;
+        
+        // Form akan terkirim dengan value skor yang baru!
+    });
+</script>
 
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
