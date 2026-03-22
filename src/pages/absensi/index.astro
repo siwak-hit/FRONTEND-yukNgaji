@@ -261,7 +261,7 @@ import Toast from '../../components/Toast.astro';
         btn.disabled = true;
 
         try {
-            const res = await fetch('http://localhost:3000/api/attendances', {
+            const res = await fetch(`${API_URL}/api/attendances`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -271,7 +271,7 @@ import Toast from '../../components/Toast.astro';
                     present_students: attendanceMap 
                 })
             });
-
+            
             if (res.ok) {
                 window.showToast?.('success', 'Berhasil', 'Data kehadiran berhasil disimpan.');
                 closeAbsensiModal();
