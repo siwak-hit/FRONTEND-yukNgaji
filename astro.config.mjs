@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
+import vercel from '@astrojs/vercel/serverless';
 
 export default defineConfig({
   output: 'server',
@@ -11,5 +12,6 @@ export default defineConfig({
   },
   server: {
     port: 1234,
-  }
+  },
+  adapter: vercel(),
 });
