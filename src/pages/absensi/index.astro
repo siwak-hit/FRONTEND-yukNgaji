@@ -23,6 +23,8 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <!-- Modal Absensi -->
+    <!-- FIX #1: Hapus onclick inline di sini, pakai event delegation di JS -->
     <div id="modalAbsensi" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
         <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col relative animate-scale-in">
             <div class="flex justify-between items-center mb-2 border-b pb-4">
@@ -30,7 +32,10 @@ import Toast from '../../components/Toast.astro';
                     <h3 class="font-bold text-gray-800 text-lg">Input Kehadiran</h3>
                     <p id="modalSubtitle" class="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">---</p>
                 </div>
-                <button onclick="closeAbsensiModal()" class="text-gray-400 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
+                <!-- FIX #5: Tidak ada onclick inline, pakai id -->
+                <button id="btnCloseModal" class="text-gray-400 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
             
             <div class="p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 mb-5 space-y-2.5 shadow-inner">
@@ -72,79 +77,70 @@ import Toast from '../../components/Toast.astro';
 
     let allStudents = [];
     let attendancesData = [];
-    let selectedDateStr = "";
-    let selectedSubject = "";
+    let selectedDateStr = '';
+    let selectedSubject = '';
 
-    const mapelMap = { 1: 'Tajwid (Wajib)', 2: 'Fiqih (Wajib)', 3: 'Tauhid (Wajib)', 5: 'Hafalan Al-Quran (Wajib)' };
+    const mapelMap = { 1: 'Tajwid', 2: 'Fiqih', 3: 'Tauhid', 5: 'Hafalan Al-Quran' };
+    const modal = document.getElementById('modalAbsensi');
 
-    const fetchInitialData = async () => {
-        try {
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 text-sm animate-pulse">Memuat kalender...</div>`;
+    // ─── HELPERS ──────────────────────────────────────────────
 
-            const headers = { 'Authorization': `Bearer ${token}` };
-            const [stdRes, attRes] = await Promise.all([
-                fetch(`${API_URL}/api/students`, { headers }),
-                fetch(`${API_URL}/api/attendances`, { headers })
-            ]);
-            
-            const stdData = await stdRes.json();
-            const attData = await attRes.json();
-            
-            allStudents = stdData.data || [];
-            attendancesData = attData.data || [];
-            
-            generateCalendar();
-        } catch (e) {
-            console.error(e);
-            window.showToast?.('danger', 'Error', 'Gagal memuat data absensi.');
-        }
-    };
+    const openModal = () => { modal.classList.replace('hidden', 'flex'); };
+    const closeModal = () => { modal.classList.replace('flex', 'hidden'); };
+
+    // FIX #5: Semua listener pakai addEventListener, tidak ada onclick inline
+    document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+
+    // Tutup modal jika klik backdrop (bukan konten)
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // ─── KALENDER ─────────────────────────────────────────────
 
     const generateCalendar = () => {
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
         
         const now = new Date();
-        const yyyy = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric' });
-        const mm = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', month: '2-digit' });
-        const dd = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta', day: '2-digit' });
-        
+        const [yyyy, mm, dd] = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }).split('-');
         const todayStr = `${yyyy}-${mm}-${dd}`;
-        const daysInMonth = new Date(yyyy, parseInt(mm), 0).getDate();
+        const daysInMonth = new Date(+yyyy, +mm, 0).getDate();
         
         document.getElementById('monthYearHeader').innerText = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
-        for (let i = daysInMonth; i >= 1; i--) { 
+        for (let i = daysInMonth; i >= 1; i--) {
             const dateStr = `${yyyy}-${mm}-${String(i).padStart(2, '0')}`;
             const dateObj = new Date(dateStr);
-            const dayOfWeek = dateObj.getDay(); 
-            
-            const isToday = dateStr === todayStr;
-            const isFuture = dateStr > todayStr;
-            const isMandatory = [1, 2, 3, 5].includes(dayOfWeek);
-            const subject = mapelMap[dayOfWeek] || 'Sunnah';
-            
-            const dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
-            const existingData = attendancesData.find(a => a.date === dateStr);
-            const isDone = !!existingData;
+            const dow = dateObj.getDay();
 
-            let cardClass = "bg-white border-gray-100 opacity-60";
-            let actionBtn = "";
+            const isToday  = dateStr === todayStr;
+            const isFuture = dateStr > todayStr;
+            const isMandatory = [1, 2, 3, 5].includes(dow);
+            const subject  = mapelMap[dow] || 'Sunnah';
+            const dayName  = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+            const isDone   = attendancesData.some(a => a.date === dateStr);
+
+            let cardClass, actionBtn;
 
             if (isFuture) {
-                cardClass = "bg-gray-50 border-gray-100 opacity-40 cursor-not-allowed";
+                cardClass = 'bg-gray-50 border-gray-100 opacity-40 cursor-not-allowed';
                 actionBtn = `<span class="text-[9px] text-gray-400 font-bold uppercase"><i class="fa-solid fa-lock"></i> Lock</span>`;
             } else if (isToday) {
-                cardClass = isDone ? "bg-green-50/50 border-green-200" : "bg-blue-50/50 border-blue-200 ring-2 ring-blue-500/20 shadow-md";
-                actionBtn = `<button onclick="openModal('${dateStr}', '${subject}', '${dayName}')" class="w-full py-2.5 mt-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 ${isDone ? 'bg-white text-green-700 border border-green-200' : 'bg-blue-600 text-white shadow-md shadow-blue-600/30'}">${isDone ? '<i class="fa-solid fa-check mr-1"></i> Edit Absen' : 'Lakukan Absen'}</button>`;
+                cardClass = isDone
+                    ? 'bg-green-50/50 border-green-200'
+                    : 'bg-blue-50/50 border-blue-200 ring-2 ring-blue-500/20 shadow-md';
+                // FIX #5: Pakai data-date, data-subject, data-dayname — bukan onclick inline
+                actionBtn = `<button
+                    class="open-modal-btn w-full py-2.5 mt-2 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 ${isDone ? 'bg-white text-green-700 border border-green-200' : 'bg-blue-600 text-white shadow-md shadow-blue-600/30'}"
+                    data-date="${dateStr}" data-subject="${subject}" data-dayname="${dayName}">
+                    ${isDone ? '<i class="fa-solid fa-check mr-1"></i> Edit Absen' : 'Lakukan Absen'}
+                </button>`;
             } else {
-                if (isDone) {
-                    cardClass = "bg-white border-gray-100 shadow-sm";
-                    actionBtn = `<button onclick="openModal('${dateStr}', '${subject}', '${dayName}')" class="w-full py-2 mt-2 rounded-lg text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-100"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit</button>`;
-                } else {
-                    actionBtn = `<span class="text-[9px] text-gray-400 font-bold uppercase inline-block mt-2"><i class="fa-solid fa-minus mr-1"></i> Kosong</span>`;
-                }
+                cardClass = isDone ? 'bg-white border-gray-100 shadow-sm' : 'bg-white border-gray-100 opacity-60';
+                actionBtn = isDone
+                    ? `<button class="open-modal-btn w-full py-2 mt-2 rounded-lg text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-100" data-date="${dateStr}" data-subject="${subject}" data-dayname="${dayName}"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit</button>`
+                    : `<span class="text-[9px] text-gray-400 font-bold uppercase inline-block mt-2"><i class="fa-solid fa-minus mr-1"></i> Kosong</span>`;
             }
 
             grid.innerHTML += `
@@ -152,107 +148,188 @@ import Toast from '../../components/Toast.astro';
                     <div>
                         <div class="flex justify-between items-start mb-1">
                             <span class="text-3xl font-black ${isToday ? 'text-blue-600' : 'text-gray-800'}">${i}</span>
-                            ${isMandatory && !isDone && isToday ? '<span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse mt-1" title="Wajib Absen"></span>' : ''}
+                            ${isMandatory && !isDone && isToday ? '<span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse mt-1"></span>' : ''}
                         </div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">${dayName}</p>
-                        <p class="text-[9px] font-bold ${isMandatory ? 'text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md' : 'text-gray-400'} mt-1.5 truncate inline-block">${subject}</p>
+                        <p class="text-[9px] font-bold mt-1.5 truncate inline-block ${isMandatory ? 'text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md' : 'text-gray-400'}">${subject}${isMandatory ? ' (Wajib)' : ''}</p>
                     </div>
                     ${actionBtn}
                 </div>
             `;
         }
+
+        // FIX #1 & #5: Satu event listener di parent (event delegation), tidak ada onclick inline
+        // Ini juga menghilangkan masalah bubbling karena kita cek target dengan .closest()
+        grid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.open-modal-btn');
+            if (!btn) return;
+            // FIX #1: stopPropagation eksplisit agar tidak naik ke listener lain
+            e.stopPropagation();
+            populateModal(btn.dataset.date, btn.dataset.subject, btn.dataset.dayname);
+        });
     };
 
-    // FUNGSI UNTUK MENAMPILKAN/SEMBUNYIKAN INPUT LAINNYA
-    window.handleStatusChange = (studentId) => {
-        const select = document.getElementById(`status-${studentId}`);
-        const otherInputDiv = document.getElementById(`other-reason-div-${studentId}`);
-        const otherInput = document.getElementById(`reason-other-${studentId}`);
-        
-        if (select.value === 'izin:lainnya') {
-            otherInputDiv.classList.remove('hidden');
-            otherInput.required = true;
-            otherInput.focus();
-        } else {
-            otherInputDiv.classList.add('hidden');
-            otherInput.required = false;
-            otherInput.value = ''; // Reset input
-        }
-    };
+    // ─── MODAL ABSENSI ────────────────────────────────────────
 
-    window.openModal = (dateStr, subject, dayName) => {
+    // FIX #2: Logika absensi dan kaleng dipisah total. 
+    // populateModal = hanya urusan absensi
+    // kaleng ditangani oleh listener tersendiri di bawah (event delegation di container)
+    const populateModal = (dateStr, subject, dayName) => {
         selectedDateStr = dateStr;
-        selectedSubject = subject.replace(' (Wajib)', '');
-        
+        selectedSubject = subject;
+
         const displayDate = new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        document.getElementById('modalSubtitle').innerText = `${dayName}, ${displayDate} • ${selectedSubject}`;
-        
+        document.getElementById('modalSubtitle').innerText = `${dayName}, ${displayDate} • ${subject}`;
+
         const existingData = attendancesData.find(a => a.date === dateStr);
-        // Data format baru: { "student_id": { status: 'sakit', reason: '' }, ... }
-        const currentPresentMap = existingData ? existingData.present_students : {};
+        const currentPresentMap = existingData?.present_students ?? {};
 
         const container = document.getElementById('studentListContainer');
-        container.innerHTML = '';
 
-        if (allStudents.length === 0) {
+        if (!allStudents.length) {
             container.innerHTML = '<p class="text-xs text-center text-gray-400 py-6 border border-dashed border-gray-200 rounded-xl">Belum ada data santri aktif.</p>';
-        } else {
-            allStudents.forEach(student => {
-                const stdInfo = currentPresentMap[student.id];
-                const currentStatus = stdInfo ? stdInfo.status : 'hadir'; // Default hadir
-                const currentReason = stdInfo ? stdInfo.reason : '';
-                
-                const isOther = currentStatus === 'izin:lainnya';
-
-                container.innerHTML += `
-                    <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-green-100 text-green-700 font-bold rounded-xl flex items-center justify-center text-lg capitalize">${student.name.substring(0,2)}</div>
-                            <div class="flex-1">
-                                <h4 class="text-sm font-bold text-gray-800 capitalize">${student.name}</h4>
-                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${student.grade}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-12 gap-2 items-center">
-                            <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status:</label>
-                            <select id="status-${student.id}" data-student-id="${student.id}" onchange="handleStatusChange('${student.id}')" class="col-span-9 text-xs p-2.5 rounded-lg border border-gray-200 font-bold text-gray-800 bg-white focus:ring-1 focus:ring-green-500">
-                                <option value="hadir" ${currentStatus === 'hadir' ? 'selected' : ''} class="text-green-600 font-bold">Hadir</option>
-                                <option value="izin:sakit" ${currentStatus === 'izin:sakit' ? 'selected' : ''} class="text-amber-600">Izin: Sakit</option>
-                                <option value="izin:pergi" ${currentStatus === 'izin:pergi' ? 'selected' : ''} class="text-amber-600">Izin: Pergi (Mendesak)</option>
-                                <option value="izin:lainnya" ${currentStatus === 'izin:lainnya' ? 'selected' : ''} class="text-amber-600">Izin: Lainnya (Tulis)</option>
-                                <option value="alpa" ${currentStatus === 'alpa' ? 'selected' : ''} class="text-red-600">Alpa / Izin Tidak Dianggap</option>
-                            </select>
-                        </div>
-
-                        <div id="other-reason-div-${student.id}" class="grid grid-cols-12 gap-2 items-start ${isOther ? '' : 'hidden'}">
-                            <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Ket:</label>
-                            <textarea id="reason-other-${student.id}" placeholder="Tulis alasan izin mendesak..." class="col-span-9 p-2.5 text-xs bg-white border border-gray-200 rounded-lg h-16" ${isOther ? 'required' : ''}>${currentReason}</textarea>
-                        </div>
-                    </div>
-                `;
-            });
+            openModal();
+            return;
         }
 
-        document.getElementById('modalAbsensi').classList.replace('hidden', 'flex');
+        // FIX #4: Icon kaleng diganti emoji 🪣 yang lebih representatif & jelas
+        // Warna tetap dinamis: hijau = punya kaleng, abu = tidak
+        container.innerHTML = allStudents.map(student => {
+            const stdInfo = currentPresentMap[student.id];
+            const currentStatus = stdInfo?.status ?? 'hadir';
+            const currentReason = stdInfo?.reason ?? '';
+            const isOther = currentStatus === 'izin:lainnya';
+            const hasKaleng = student.has_infaq_can;
+
+            return `
+            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-100 text-green-700 font-bold rounded-xl flex items-center justify-center text-lg capitalize">
+                        ${student.name.substring(0, 2)}
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-gray-800 capitalize">${student.name}</h4>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${student.grade}</p>
+                    </div>
+                    <!--
+                        FIX #4: Icon kaleng → emoji 🪣 jauh lebih representatif daripada SVG database.
+                        FIX #5: Pakai data-* bukan onclick inline.
+                        FIX #3: data-has-kaleng disimpan di tombol, bukan di variabel luar yang bisa stale.
+                    -->
+                    <button
+                        class="kaleng-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-black transition-all active:scale-95 ${hasKaleng ? 'bg-green-500 border-green-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-400'}"
+                        data-student-id="${student.id}"
+                        data-has-kaleng="${hasKaleng ? 'true' : 'false'}"
+                        title="${hasKaleng ? 'Punya Kaleng Infaq — Klik untuk lepas' : 'Belum Punya Kaleng — Klik untuk tandai'}"
+                        type="button"
+                    >
+                        <i class="fa-solid fa-jar text-sm"></i> <span>${hasKaleng ? 'Punya' : 'Belum'}</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-12 gap-2 items-center">
+                    <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status:</label>
+                    <select
+                        id="status-${student.id}"
+                        class="status-select col-span-9 text-xs p-2.5 rounded-lg border border-gray-200 font-bold text-gray-800 bg-white focus:ring-1 focus:ring-green-500"
+                        data-student-id="${student.id}"
+                    >
+                        <option value="hadir"         ${currentStatus === 'hadir'         ? 'selected' : ''}>Hadir</option>
+                        <option value="izin:sakit"    ${currentStatus === 'izin:sakit'    ? 'selected' : ''}>Izin: Sakit</option>
+                        <option value="izin:pergi"    ${currentStatus === 'izin:pergi'    ? 'selected' : ''}>Izin: Pergi (Mendesak)</option>
+                        <option value="izin:lainnya"  ${currentStatus === 'izin:lainnya'  ? 'selected' : ''}>Izin: Lainnya (Tulis)</option>
+                        <option value="alpa"          ${currentStatus === 'alpa'          ? 'selected' : ''}>Alpa / Izin Tidak Dianggap</option>
+                    </select>
+                </div>
+
+                <div id="other-div-${student.id}" class="grid grid-cols-12 gap-2 items-start ${isOther ? '' : 'hidden'}">
+                    <label class="col-span-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Ket:</label>
+                    <textarea
+                        id="reason-${student.id}"
+                        class="col-span-9 p-2.5 text-xs bg-white border border-gray-200 rounded-lg h-16"
+                        placeholder="Tulis alasan izin mendesak..."
+                        ${isOther ? 'required' : ''}
+                    >${currentReason}</textarea>
+                </div>
+            </div>`;
+        }).join('');
+
+        openModal();
     };
 
-    window.closeAbsensiModal = () => document.getElementById('modalAbsensi').classList.replace('flex', 'hidden');
+    // ─── EVENT DELEGATION: STATUS SELECT ──────────────────────
+    // FIX #5: Tidak ada onchange inline. Satu listener di container.
+    // FIX #1: stopPropagation agar tidak naik ke listener kalender.
+    document.getElementById('studentListContainer').addEventListener('change', (e) => {
+        const select = e.target.closest('.status-select');
+        if (!select) return;
+        e.stopPropagation();
 
-    document.getElementById('formAbsensi').onsubmit = async (e) => {
+        const id = select.dataset.studentId;
+        const otherDiv = document.getElementById(`other-div-${id}`);
+        const otherInput = document.getElementById(`reason-${id}`);
+        const isOther = select.value === 'izin:lainnya';
+
+        otherDiv.classList.toggle('hidden', !isOther);
+        otherInput.required = isOther;
+        if (!isOther) otherInput.value = '';
+        else otherInput.focus();
+    });
+
+    // ─── EVENT DELEGATION: KALENG INFAQ ───────────────────────
+    // FIX #2: Logic kaleng SEPENUHNYA terpisah dari absensi.
+    // FIX #3: State kaleng di-manage lewat data-has-kaleng di tombol itu sendiri (tidak pakai variabel global).
+    // FIX #1: stopPropagation agar klik tombol kaleng tidak bubble ke parent.
+    document.getElementById('studentListContainer').addEventListener('click', async (e) => {
+        const btn = e.target.closest('.kaleng-btn');
+        if (!btn) return;
+        e.stopPropagation(); // FIX #1
+
+        const studentId = btn.dataset.studentId;
+        // FIX #3: Baca state dari atribut tombol, bukan variabel luar
+        const newStatus = btn.dataset.hasKaleng !== 'true';
+
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/infaq-can`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ has_infaq_can: newStatus })
+            });
+
+            if (!res.ok) throw new Error('Gagal');
+
+            // FIX #3: Update atribut & UI setelah konfirmasi server
+            btn.dataset.hasKaleng = newStatus ? 'true' : 'false';
+            btn.className = `kaleng-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-black transition-all active:scale-95 ${newStatus ? 'bg-green-500 border-green-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-400'}`;
+            btn.title = newStatus ? 'Punya Kaleng Infaq — Klik untuk lepas' : 'Belum Punya Kaleng — Klik untuk tandai';
+            btn.innerHTML = `<i class="fa-solid fa-jar text-sm"></i> <span>${newStatus ? 'Punya' : 'Belum'}</span>`;
+
+            // Sync ke allStudents agar data tetap sinkron
+            const s = allStudents.find(s => s.id == studentId);
+            if (s) s.has_infaq_can = newStatus;
+
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal update status kaleng infaq.');
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+        }
+    });
+
+    // ─── SUBMIT ABSENSI ───────────────────────────────────────
+    // FIX #2: onsubmit hanya urusan absensi, tidak ada campur tangan kaleng di sini
+    document.getElementById('formAbsensi').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        // Bentuk struktur data baru (Object)
+
         const attendanceMap = {};
-        allStudents.forEach(student => {
-            const select = document.getElementById(`status-${student.id}`);
-            const status = select.value;
-            const otherInput = document.getElementById(`reason-other-${student.id}`);
-            
-            attendanceMap[student.id] = {
-                status: status,
-                // Masukkan reason hanya jika statusnya 'izin:lainnya'
-                reason: status === 'izin:lainnya' ? otherInput.value.trim() : ''
+        allStudents.forEach(({ id }) => {
+            const status = document.getElementById(`status-${id}`)?.value ?? 'hadir';
+            attendanceMap[id] = {
+                status,
+                reason: status === 'izin:lainnya' ? (document.getElementById(`reason-${id}`)?.value.trim() ?? '') : ''
             };
         });
 
@@ -264,27 +341,41 @@ import Toast from '../../components/Toast.astro';
             const res = await fetch(`${API_URL}/api/attendances`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date: selectedDateStr,
-                    subject: selectedSubject,
-                    // Kirim object map, backend harus disesuaikan untuk menerima ini
-                    present_students: attendanceMap 
-                })
+                body: JSON.stringify({ date: selectedDateStr, subject: selectedSubject, present_students: attendanceMap })
             });
-            
-            if (res.ok) {
-                window.showToast?.('success', 'Berhasil', 'Data kehadiran berhasil disimpan.');
-                closeAbsensiModal();
-                fetchInitialData(); 
-            } else {
-                window.showToast?.('danger', 'Gagal', 'Terjadi kesalahan server.');
-            }
-        } catch (err) {
-            console.error(err);
-            window.showToast?.('danger', 'Error', 'Gagal menyimpan data.');
+
+            if (!res.ok) throw new Error('Server error');
+
+            window.showToast?.('success', 'Berhasil', 'Data kehadiran berhasil disimpan.');
+            closeModal();
+            fetchInitialData();
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal menyimpan data kehadiran.');
         } finally {
-            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-base"></i><span>SIMPAN DATA KEHADIRAN</span>';
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-base"></i> <span>SIMPAN DATA KEHADIRAN</span>';
             btn.disabled = false;
+        }
+    });
+
+    // ─── INIT ─────────────────────────────────────────────────
+
+    const fetchInitialData = async () => {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 text-sm animate-pulse">Memuat kalender...</div>`;
+
+        try {
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [stdRes, attRes] = await Promise.all([
+                fetch(`${API_URL}/api/students`, { headers }),
+                fetch(`${API_URL}/api/attendances`, { headers })
+            ]);
+
+            allStudents = (await stdRes.json()).data ?? [];
+            attendancesData = (await attRes.json()).data ?? [];
+
+            generateCalendar();
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal memuat data absensi.');
         }
     };
 

@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css'; // <-- Tambahkan baris ini
+import TimerBanner from '../components/TimerBanner.astro';
 const { title = "yukNgaji" } = Astro.props;
 ---
 
@@ -23,6 +24,7 @@ const { title = "yukNgaji" } = Astro.props;
 </head>
 <body class="bg-gray-100 flex justify-center min-h-screen">
     <main class="w-full max-w-md bg-pattern min-h-screen shadow-2xl relative overflow-x-hidden no-scrollbar">
+        <TimerBanner />
         <slot />
     </main>
     <script is:inline>

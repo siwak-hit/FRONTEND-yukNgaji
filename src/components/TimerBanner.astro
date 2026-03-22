@@ -1,0 +1,90 @@
+---
+// src/components/TimerBanner.astro
+---
+<div id="timerBackdrop" class="hidden fixed inset-0 z-[90] bg-white/40 backdrop-blur-md transition-all duration-500"></div>
+
+<div id="timerBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-[400px] bg-gray-900 text-white p-3 rounded-2xl shadow-2xl shadow-gray-900/30 flex items-center justify-between transition-all duration-300">
+    <div class="flex items-center gap-3">
+        <div id="timerIconBox" class="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-amber-400">
+            <i class="fa-solid fa-hourglass-half animate-pulse"></i>
+        </div>
+        <div>
+            <p id="timerLabel" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Sisa Waktu</p>
+            <h3 id="timerDisplay" class="text-xl font-black font-mono tracking-wider leading-none">00:00</h3>
+        </div>
+    </div>
+    
+    <button id="btnStopTimer" class="w-10 h-10 bg-red-500/20 text-red-500 rounded-xl flex items-center justify-center active:scale-95 transition-all">
+        <i class="fa-solid fa-stop"></i>
+    </button>
+</div>
+
+<script>
+    let timerInterval;
+
+    const banner = document.getElementById('timerBanner');
+    const backdrop = document.getElementById('timerBackdrop');
+    const display = document.getElementById('timerDisplay');
+    const label = document.getElementById('timerLabel');
+    const iconBox = document.getElementById('timerIconBox');
+    const btnStop = document.getElementById('btnStopTimer');
+
+    const updateTimerUI = () => {
+        const endTimeStr = localStorage.getItem('ngaji_timer_end');
+        if (!endTimeStr) {
+            banner.classList.add('hidden');
+            backdrop.classList.add('hidden');
+            clearInterval(timerInterval);
+            return;
+        }
+
+        const endTime = parseInt(endTimeStr);
+        const now = Date.now();
+        const diff = endTime - now;
+
+        banner.classList.remove('hidden');
+
+        if (diff <= 0) {
+            // WAKTU HABIS
+            clearInterval(timerInterval);
+            display.innerText = "00:00";
+            label.innerText = "WAKTU HABIS!";
+            label.classList.replace('text-gray-400', 'text-red-400');
+            
+            // Efek Pulse & Blur
+            banner.classList.add('animate-pulse', 'ring-4', 'ring-red-500/50');
+            iconBox.className = "w-10 h-10 bg-red-500 text-white rounded-xl flex items-center justify-center";
+            iconBox.innerHTML = '<i class="fa-solid fa-bell text-xl animate-bounce"></i>';
+            backdrop.classList.remove('hidden');
+            
+            // Getar HP (Jika didukung browser)
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+        } else {
+            // SEDANG BERJALAN
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            display.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    };
+
+    btnStop.addEventListener('click', () => {
+        localStorage.removeItem('ngaji_timer_end');
+        
+        // Reset Style
+        banner.classList.add('hidden');
+        banner.classList.remove('animate-pulse', 'ring-4', 'ring-red-500/50');
+        backdrop.classList.add('hidden');
+        label.classList.replace('text-red-400', 'text-gray-400');
+        label.innerText = "Sisa Waktu";
+        iconBox.className = "w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-amber-400";
+        iconBox.innerHTML = '<i class="fa-solid fa-hourglass-half animate-pulse"></i>';
+        
+        clearInterval(timerInterval);
+    });
+
+    // Jalankan setiap detik
+    if (localStorage.getItem('ngaji_timer_end')) {
+        updateTimerUI();
+        timerInterval = setInterval(updateTimerUI, 1000);
+    }
+</script>

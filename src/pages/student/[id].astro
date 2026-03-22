@@ -15,10 +15,24 @@ import Toast from '../../components/Toast.astro';
                 <h1 class="text-xl font-bold text-gray-800">Detail Perkembangan</h1>
             </div>
             
-            <button onclick="openRaportModal()" class="w-10 h-10 bg-green-600 text-white rounded-xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all" title="Buat & Download Raport">
-                <i class="fa-solid fa-file-pdf text-lg"></i>
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="openRaportModal()" class="w-10 h-10 bg-green-600 text-white rounded-xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all" title="Buat & Download Raport">
+                    <i class="fa-solid fa-file-pdf text-lg"></i>
+                </button>
+            
+                <button id="infoKalengBtn" class="w-10 h-10 bg-gray-100 text-gray-400 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all" title="Memuat status kaleng...">
+                    <i class="fa-solid fa-jar text-lg"></i>
+                </button>
+            </div>
         </header>
+
+        <div id="modalKaleng" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full relative">
+                <h3 class="text-lg font-bold mb-4 border-b pb-2">Status Kaleng Infaq</h3>
+                <p id="kalengMessage" class="text-gray-700"></p>
+                <button id="closeModalKaleng" class="mt-6 w-full bg-gray-200 text-gray-800 py-2 rounded font-semibold hover:bg-gray-300 transition-colors">Tutup</button>
+            </div>
+        </div>
 
         <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6 relative overflow-hidden">
             <div class="flex justify-between items-start">
@@ -201,6 +215,56 @@ import Toast from '../../components/Toast.astro';
         });
     };
 
+
+    // Mengambil data dari server-side Astro (sesuaikan dengan caramu me-render data student)
+    let hasCan = false;
+    let lastReceived = null;
+
+    const infoBtn = document.getElementById('infoKalengBtn');
+    const modal = document.getElementById('modalKaleng');
+    const closeBtn = document.getElementById('closeModalKaleng');
+    const messageEl = document.getElementById('kalengMessage');
+
+    function getKalengMessage() {
+        if (hasCan) {
+            return "⚠️ Anak ini belum balikkin kaleng infaq! (Jangan dikasih kaleng baru).";
+        } else {
+            if (!lastReceived || lastReceived === "null") {
+                return "Anak ini belum pernah dikasih kaleng. Bisa diberikan pada Senin malam terdekat.";
+            }
+            
+            const lastDate = new Date(lastReceived);
+            const nextDate = new Date(lastDate);
+            nextDate.setDate(nextDate.getDate() + 14); // Tambah 2 minggu (14 hari)
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            nextDate.setHours(0,0,0,0);
+
+            const diffTime = nextDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const tglStr = nextDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+            if (diffDays > 0) {
+                return `Belum dikasih kaleng infaq. Jangan lupa kasih <b>${diffDays} hari lagi</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
+            } else if (diffDays === 0) {
+                return `Belum dikasih kaleng infaq. <b>Bagikan malam ini!</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
+            } else {
+                return `Belum dikasih kaleng infaq. Sudah terlewat ${Math.abs(diffDays)} hari dari jadwal.<br><br><span class="text-sm text-gray-500">(Jadwal: ${tglStr})</span>`;
+            }
+        }
+    }
+
+    infoBtn.addEventListener('click', () => {
+        messageEl.innerHTML = getKalengMessage();
+        modal.classList.remove('hidden');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
     // --- FETCH DATA ---
     const fetchData = async () => {
         try {
@@ -227,6 +291,26 @@ import Toast from '../../components/Toast.astro';
             document.getElementById('studentName').innerText = student.data.name;
             document.getElementById('studentGrade').innerText = student.data.grade;
             document.getElementById('studentInitial').innerText = student.data.name.substring(0, 2).toUpperCase();
+
+            // Render Status Kaleng
+            hasCan = student.data.has_infaq_can;
+            lastReceived = student.data.last_can_received_at;
+            const btnKaleng = document.getElementById('infoKalengBtn');
+            
+            // Class dasar untuk mempertahankan bentuk w-10 h-10
+            const baseShape = 'w-10 h-10 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all border';
+
+            if (hasCan) {
+                // Warna Merah (Peringatan: Anak ini masih bawa kaleng)
+                btnKaleng.className = `${baseShape} bg-red-50 text-red-500 border-red-200`;
+                btnKaleng.title = '⚠️ Belum Mengembalikan Kaleng (Klik info)';
+                btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
+            } else {
+                // Warna Hijau (Aman: Boleh dikasih kaleng)
+                btnKaleng.className = `${baseShape} bg-green-50 text-green-600 border-green-200`;
+                btnKaleng.title = '⚠️ Belum dikasih kaleng (Klik info)';
+                btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
+            }
 
             // Render Akademik
             if (progress.data) {
