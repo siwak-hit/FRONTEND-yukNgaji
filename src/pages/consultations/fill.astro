@@ -84,62 +84,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 </Layout>
 
 <script>
-    // BANK PERTANYAAN (Skor: 100 = Baik, 50 = Sedang, 0 = Kurang)
-    const questionBank = {
-        akhlak: [
-            { q: "Pas Kak Aziz lagi nerangin, apa yang kamu lakuin tadi?", opts: [{t: "Perhatiin dong!", s: 100}, {t: "Kadang ngobrol", s: 50}, {t: "Sibuk main sendiri", s: 0}] },
-            { q: "Jujur, kadang kamu suka lupa salim ke guru gak pas datang?", opts: [{t: "Selalu salim dong", s: 100}, {t: "Kadang lupa", s: 50}, {t: "Sering lupa", s: 0}] },
-            { q: "Kalau kamu ditegur guru karena salah, perasaan kamu gimana?", opts: [{t: "Biasa aja (nerima)", s: 100}, {t: "Agak bete", s: 50}, {t: "Marah / Gak terima", s: 0}] }
-        ],
-        disiplin: [
-            { q: "Lebih sering dateng duluan ke sekolah atau tempat ngaji?", opts: [{t: "Tempat ngaji", s: 100}, {t: "Sekolah", s: 50}, {t: "Sering telat dua-duanya", s: 0}] },
-            { q: "Habis ngaji, kamu langsung pulang atau bantu beresin meja?", opts: [{t: "Bantu beresin", s: 100}, {t: "Langsung kabur pulang", s: 0}] },
-            { q: "Kalau ada PR ngaji tapi kamu belum ngerjain, itu salah siapa?", opts: [{t: "Salahku sendiri", s: 100}, {t: "Salah temen gak ngingetin", s: 0}] }
-        ],
-        aktif: [
-            { q: "Pas guru nanya ke kelas, kamu biasanya ngapain?", opts: [{t: "Langsung jawab dong!", s: 100}, {t: "Mau jawab tapi malu", s: 50}, {t: "Diem aja nunggu temen", s: 0}] },
-            { q: "Kalau ada temen yang sering nanya ke guru, menurutmu dia...", opts: [{t: "Hebat dan pintar", s: 100}, {t: "Caper banget", s: 0}] },
-            { q: "Apa yang bikin kamu kadang gak mau nanya pelajaran?", opts: [{t: "Gak malu kok (Sering nanya)", s: 100}, {t: "Takut salah / diketawain", s: 50}, {t: "Gak peduli / Gak dengerin", s: 0}] }
-        ]
-    };
-
-    // Fungsi Pengacak Array
-    const shuffle = (array) => array.sort(() => 0.5 - Math.random());
-
-    // Pilih 1 pertanyaan acak dari setiap kategori
-    const selectedQ = [
-        { cat: 'akhlak', ...shuffle(questionBank.akhlak)[0] },
-        { cat: 'disiplin', ...shuffle(questionBank.disiplin)[0] },
-        { cat: 'aktif', ...shuffle(questionBank.aktif)[0] }
-    ];
-
-    // Render ke HTML
-    const container = document.getElementById('kuesionerContainer');
-    container.innerHTML = selectedQ.map((item, index) => `
-        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-            <p class="text-sm font-bold text-gray-800 mb-3">${index + 1}. ${item.q}</p>
-            <div class="space-y-2">
-                ${shuffle(item.opts).map((opt, i) => `
-                    <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all">
-                        <input type="radio" name="q_${item.cat}" value="${opt.s}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" required>
-                        <span class="text-xs font-semibold text-gray-700">${opt.t}</span>
-                    </label>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
-
-    // Listener saat Form dikirim (Masukkan skor ke hidden input)
-    document.getElementById('formKonsultasi').addEventListener('submit', (e) => {
-        document.getElementById('akhlak_score').value = document.querySelector('input[name="q_akhlak"]:checked').value;
-        document.getElementById('disiplin_score').value = document.querySelector('input[name="q_disiplin"]:checked').value;
-        document.getElementById('aktif_score').value = document.querySelector('input[name="q_aktif"]:checked').value;
-        
-        // Form akan terkirim dengan value skor yang baru!
-    });
-</script>
-
-<script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
@@ -147,7 +91,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const week = urlParams.get('week');
     const token = localStorage.getItem('token');
 
-    // Buat kunci unik untuk penyimpanan lokal agar tidak tercampur dengan siswa/mapel lain
+    // Buat kunci unik untuk penyimpanan lokal
     const timeKey = `timer_${studentId}_${subject}_${week}`;
     const ansKey = `ans_${studentId}_${subject}_${week}`;
 
@@ -155,11 +99,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     let timerInterval = null;
     let questions = [];
 
-    let selfieFileToUpload = null; // Variabel dari PhotoBooth
+    let selfieFileToUpload = null;
     let currentStudentName = "Si Anak";
 
     window.openCameraModal = () => {
-        // 3. Panggil PhotoBooth dengan melemparkan Nama dan Minggu
         window.openPhotoBooth(currentStudentName, week, (capturedFile) => {
             selfieFileToUpload = capturedFile; 
             const previewImg = document.getElementById('selfiePreview');
@@ -171,39 +114,77 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         });
     };
 
-    // 1. Inisialisasi Data
+    // ==========================================
+    // 1. RENDER PERTANYAAN KUESIONER SOSIAL
+    // ==========================================
+    const questionBank = {
+        akhlak: [
+            { q: "Pas Kak Aziz lagi nerangin, apa yang kamu lakuin tadi?", opts: [{t: "Merhatiin Kok!", s: 100}, {t: "gak terlalu ( Bosen soalnya )", s: 50}, {t: "gak tau ah!", s: 0}] },
+            { q: "Jujur, kadang kamu suka lupa salim ke guru gak pas datang?", opts: [{t: "Selalu salim ke semua nya", s: 100}, {t: "Ke pa Idris doang", s: 50}, {t: "Sering lupa", s: 0}] },
+            { q: "Kalau kamu ditegur guru karena salah, perasaan kamu gimana?", opts: [{t: "Biasa aja", s: 100}, {t: "Agak bete", s: 50}, {t: "curhat ke temen pas udah pulang ngaji", s: 0}] }
+        ],
+        disiplin: [
+            { q: "Misalkan kak Aziz nyuruh sesuatu, Apa yang kamu lakukan?", opts: [{t: "Gak mau ah", s: 0}, {t: "Mau, tapi...", s: 50}, {t: "Mau", s: 100}] },
+            { q: "Habis ngaji, kamu langsung pulang atau bantu beresin meja?", opts: [{t: "Bantuin beresin", s: 100}, {t: "biasanya sih langsung pulang", s: 0}] },
+            { q: "Kalau ada PR ngaji tapi kamu belum ngerjain, itu salah siapa?", opts: [{t: "Salahku sendiri", s: 100}, {t: "Salah temen gak ngingetin", s: 0}, {t:"salah kak Aziz bikin tugas susah banget", s:0}] }
+        ],
+        aktif: [
+            { q: "Pas guru nanya ke kelas, kamu biasanya ngapain?", opts: [{t: "Langsung jawab dong!", s: 100}, {t: "Mau jawab tapi malu", s: 50}, {t: "Diem aja nunggu temen yang jawab", s: 0}] },
+            { q: "Kalau ada temen yang sering nanya ke guru, menurutmu dia...", opts: [{t: "Hebat dan pintar", s: 100}, {t: "Caper banget", s: 0}, {t: "HEBAT BANGET!!! KEREN!", s: 20}] },
+            { q: "Apa yang bikin kamu kadang gak mau nanya pelajaran?", opts: [{t: "Aku suka nanya kok", s: 100}, {t: "Takut salah / diketawain", s: 50}, {t: "Gak tau apa yang mau ditanya", s: 0}] }
+        ]
+    };
+
+    const shuffle = (array) => array.sort(() => 0.5 - Math.random());
+
+    const selectedQ = [
+        { cat: 'akhlak', ...shuffle(questionBank.akhlak)[0] },
+        { cat: 'disiplin', ...shuffle(questionBank.disiplin)[0] },
+        { cat: 'aktif', ...shuffle(questionBank.aktif)[0] }
+    ];
+
+    const container = document.getElementById('kuesionerContainer');
+    container.innerHTML = selectedQ.map((item, index) => `
+        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+            <p class="text-sm font-bold text-gray-800 mb-3">${index + 1}. ${item.q}</p>
+            <div class="space-y-2">
+                ${shuffle(item.opts).map((opt) => `
+                    <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all">
+                        <input type="radio" name="q_${item.cat}" value="${opt.s}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" required>
+                        <span class="text-xs font-semibold text-gray-700">${opt.t}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+
+
+    // ==========================================
+    // 2. FETCH DATA & RENDER AKADEMIK
+    // ==========================================
     const init = async () => {
         try {
-            const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const student = await stdRes.json();
             currentStudentName = student.data.name;
             document.getElementById('headerName').innerText = student.data.name;
             document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
 
-            const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
+            const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const qData = await qRes.json();
             questions = qData.data;
             
             renderQuestions();
-            restoreDraftAnswers(); // Pulihkan jawaban jika ada
-            checkExistingSession(); // Cek apakah timer sudah berjalan sebelumnya
+            restoreDraftAnswers();
+            checkExistingSession();
         } catch (e) {
             console.error(e);
         }
     };
 
     const renderQuestions = () => {
-        const container = document.getElementById('questionsList');
-        container.innerHTML = questions.map((q, idx) => {
-            
-            // LOGIKA SHUFFLE: Ubah object menjadi array, lalu acak urutannya
+        document.getElementById('questionsList').innerHTML = questions.map((q, idx) => {
             const shuffledOptions = Object.entries(q.options).sort(() => Math.random() - 0.5);
-
             return `
             <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}">
                 <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
@@ -220,7 +201,9 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }).join('');
     };
 
-    // --- FITUR AUTO-SAVE (Mencegah hilang saat refresh) ---
+    // ==========================================
+    // 3. AUTO SAVE & VALIDATION (PERBAIKAN DI SINI)
+    // ==========================================
     const saveDraftAnswers = () => {
         const answers = {};
         document.querySelectorAll('.question-block').forEach(block => {
@@ -228,53 +211,73 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
             if (selected) answers[qId] = selected;
         });
-        const msg = document.getElementById('consMessage').value;
-        localStorage.setItem(ansKey, JSON.stringify({ answers, msg }));
+
+        // Simpan jawaban kuesioner sosial juga
+        const psych = {
+            akhlak: document.querySelector('input[name="q_akhlak"]:checked')?.value,
+            disiplin: document.querySelector('input[name="q_disiplin"]:checked')?.value,
+            aktif: document.querySelector('input[name="q_aktif"]:checked')?.value,
+        };
+
+        localStorage.setItem(ansKey, JSON.stringify({ answers, psych }));
     };
 
     const restoreDraftAnswers = () => {
         const saved = JSON.parse(localStorage.getItem(ansKey));
         if (!saved) return;
 
-        // Pulihkan radio button
         if (saved.answers) {
             Object.entries(saved.answers).forEach(([qId, val]) => {
                 const radio = document.querySelector(`input[name="q-${qId}"][value="${val}"]`);
                 if (radio) radio.checked = true;
             });
         }
-        // Pulihkan textarea
-        if (saved.msg) {
-            document.getElementById('consMessage').value = saved.msg;
+        
+        if (saved.psych) {
+            if (saved.psych.akhlak) { const r = document.querySelector(`input[name="q_akhlak"][value="${saved.psych.akhlak}"]`); if (r) r.checked = true; }
+            if (saved.psych.disiplin) { const r = document.querySelector(`input[name="q_disiplin"][value="${saved.psych.disiplin}"]`); if (r) r.checked = true; }
+            if (saved.psych.aktif) { const r = document.querySelector(`input[name="q_aktif"][value="${saved.psych.aktif}"]`); if (r) r.checked = true; }
             validate(); 
         }
     };
 
-    // Pasang event listener agar setiap kali ngeklik/ngetik, langsung ke-save
+    // Validasi baru: Tombol aktif JIKA ketiga pertanyaan sosial sudah dijawab
+    const validate = () => {
+        const btn = document.getElementById('btnSubmit');
+        const ansAkhlak = document.querySelector('input[name="q_akhlak"]:checked');
+        const ansDisiplin = document.querySelector('input[name="q_disiplin"]:checked');
+        const ansAktif = document.querySelector('input[name="q_aktif"]:checked');
+
+        if (ansAkhlak && ansDisiplin && ansAktif) {
+            btn.disabled = false;
+            btn.classList.replace('bg-gray-200', 'bg-green-600');
+            btn.classList.replace('text-gray-400', 'text-white');
+            btn.classList.remove('cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.replace('bg-green-600', 'bg-gray-200');
+            btn.classList.replace('text-white', 'text-gray-400');
+            btn.classList.add('cursor-not-allowed');
+        }
+    };
+
     document.getElementById('questionsList').addEventListener('change', saveDraftAnswers);
-    document.getElementById('consMessage').addEventListener('input', () => {
+    document.getElementById('kuesionerContainer').addEventListener('change', () => {
         validate();
         saveDraftAnswers();
     });
-    // --------------------------------------------------------
 
-    // --- FITUR PERSISTENT TIMER ---
+    // ==========================================
+    // 4. TIMER & SUBMIT
+    // ==========================================
     const checkExistingSession = () => {
         const savedEndTime = localStorage.getItem(timeKey);
-        
         if (savedEndTime) {
-            // Jika sudah ada timer, berarti dia lagi refresh di tengah-tengah
-            document.getElementById('startOverlay').classList.add('hidden'); // Lewati layar awal
+            document.getElementById('startOverlay').classList.add('hidden');
             const now = Date.now();
             timeLeft = Math.floor((savedEndTime - now) / 1000);
-
-            if (timeLeft > 0) {
-                startTest(false); // Lanjutkan tanpa reset waktu
-            } else {
-                timeLeft = 0;
-                startTest(false);
-                disableAcademicSection(); // Waktu sudah habis saat dia refresh
-            }
+            if (timeLeft > 0) { startTest(false); } 
+            else { timeLeft = 0; startTest(false); disableAcademicSection(); }
         }
     };
 
@@ -291,13 +294,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         
         const intv = setInterval(() => {
             count--;
-            if (count > 0) {
-                text.innerText = count.toString();
-            } else {
-                clearInterval(intv);
-                overlay.classList.add('hidden');
-                startTest(true); // true = Sesi Baru
-            }
+            if (count > 0) text.innerText = count.toString();
+            else { clearInterval(intv); overlay.classList.add('hidden'); startTest(true); }
         }, 1000);
     };
 
@@ -305,28 +303,15 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         document.getElementById('testContent').classList.remove('hidden');
         document.getElementById('timerDisplay').classList.remove('hidden');
         
-        // Cuma catat Waktu Selesai (End Time) kalau ini sesi baru
-        if (isNewSession) {
-            const endTime = Date.now() + (timeLeft * 1000);
-            localStorage.setItem(timeKey, endTime);
-        }
-
+        if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         updateTimerUI();
         if (timeLeft <= 0) return;
 
         timerInterval = setInterval(() => {
-            // Hitung sisa waktu berdasarkan End Time di memori, bukan sekadar hitung mundur
-            const savedEndTime = localStorage.getItem(timeKey);
-            timeLeft = Math.floor((savedEndTime - Date.now()) / 1000);
-
+            timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000);
             if (timeLeft <= 0) {
-                timeLeft = 0;
-                updateTimerUI();
-                clearInterval(timerInterval);
-                disableAcademicSection();
-            } else {
-                updateTimerUI();
-            }
+                timeLeft = 0; updateTimerUI(); clearInterval(timerInterval); disableAcademicSection();
+            } else updateTimerUI();
         }, 1000);
     };
 
@@ -343,27 +328,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         window.showToast?.('warning', 'Waktu Habis', 'Bagian soal akademik telah ditutup.');
     };
 
-    // --- SUBMIT LOGIC ---
-    const validate = () => {
-        const msg = document.getElementById('consMessage').value;
-        const btn = document.getElementById('btnSubmit');
-        if (msg.length > 3) {
-            btn.disabled = false;
-            btn.classList.replace('bg-gray-200', 'bg-green-600');
-            btn.classList.replace('text-gray-400', 'text-white');
-            btn.classList.remove('cursor-not-allowed');
-        } else {
-            btn.disabled = true;
-            btn.classList.replace('bg-green-600', 'bg-gray-200');
-            btn.classList.replace('text-white', 'text-gray-400');
-        }
-    };
-
-
+    // ACTION: SUBMIT DATA
     document.getElementById('btnSubmit').onclick = async () => {
-        const formData = new FormData();
-
-        // Collect Answers
         const answers = [];
         document.querySelectorAll('.question-block').forEach(block => {
             const qId = block.getAttribute('data-id');
@@ -371,15 +337,20 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             answers.push({ question_id: qId, answer: selected });
         });
 
+        const formData = new FormData();
         formData.append('student_id', studentId);
         formData.append('subject', subject);
         formData.append('week', week);
-        formData.append('message', document.getElementById('consMessage').value);
         
-        // Gunakan file dari PhotoBooth jika ada
+        // Ambil skor dari input yang dicheck, bukan dari textarea lagi
+        formData.append('akhlak_score', document.querySelector('input[name="q_akhlak"]:checked')?.value || 0);
+        formData.append('disiplin_score', document.querySelector('input[name="q_disiplin"]:checked')?.value || 0);
+        formData.append('aktif_score', document.querySelector('input[name="q_aktif"]:checked')?.value || 0);
+
         if (selfieFileToUpload) formData.append('image', selfieFileToUpload);
 
         try {
+            document.getElementById('btnSubmit').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengirim...';
             await Promise.all([
                 fetch(`${API_URL}/api/onboarding/submit-grade`, {
                     method: 'POST',
@@ -396,11 +367,12 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             localStorage.removeItem(timeKey);
             localStorage.removeItem(ansKey);
 
-            window.showToast?.('success', 'Berhasil', 'Data santri berhasil dikirim.');
+            window.showToast?.('success', 'Berhasil', 'Data Anak berhasil dikirim.');
             setTimeout(() => window.location.replace('/consultations'), 1500);
         } catch (e) {
             console.error(e);
             window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.');
+            document.getElementById('btnSubmit').innerHTML = 'Kirim Semua Jawaban';
         }
     };
 

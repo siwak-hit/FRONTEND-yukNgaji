@@ -5,12 +5,12 @@ import Toast from '../../components/Toast.astro';
 import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen ini di-import
 ---
 
-<Layout title="Daftar Santri - yukNgaji">
+<Layout title="Daftar Anak - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
         
         <header class="mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Data Santri</h1>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Data Anak</h1>
                 <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-widest">Manajemen Kelas</p>
             </div>
             <button onclick="openAddModal()" class="w-12 h-12 bg-green-600 text-white rounded-2xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all">
@@ -23,7 +23,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                 <input type="text" id="searchInput" 
                     class="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-all shadow-sm" 
-                    placeholder="Cari nama santri...">
+                    placeholder="Cari nama Anak...">
             </div>
             
             <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -64,7 +64,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
     <div id="modalStudent" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h3 id="modalTitle" class="font-bold text-gray-800 text-lg">Tambah Santri Baru</h3>
+                <h3 id="modalTitle" class="font-bold text-gray-800 text-lg">Tambah Anak Baru</h3>
                 <button onclick="closeStudentModal()" class="text-gray-400 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
@@ -127,7 +127,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
             container.innerHTML = `
                 <div class="text-center py-16">
                     <i class="fa-solid fa-user-slash text-gray-200 text-5xl mb-4"></i>
-                    <p class="text-gray-400 text-sm font-medium">Santri tidak ditemukan.</p>
+                    <p class="text-gray-400 text-sm font-medium">Anak tidak ditemukan.</p>
                 </div>
             `;
             document.getElementById('pagination').classList.add('hidden');
@@ -222,7 +222,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
     window.openAddModal = () => {
         isEditMode = false;
         currentStudentId = null;
-        document.getElementById('modalTitle').innerText = 'Tambah Santri Baru';
+        document.getElementById('modalTitle').innerText = 'Tambah Anak Baru';
         document.getElementById('formStudent').reset();
         document.getElementById('modalStudent').classList.remove('hidden');
     };
@@ -231,7 +231,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
     window.openEditModal = (id) => {
         isEditMode = true;
         currentStudentId = id;
-        document.getElementById('modalTitle').innerText = 'Edit Data Santri';
+        document.getElementById('modalTitle').innerText = 'Edit Data Anak';
         
         // Cari data di state lokal
         const student = allStudents.find(s => s.id === id);
@@ -276,7 +276,7 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
             });
 
             if (res.ok) {
-                window.showToast?.('success', 'Berhasil', `Santri berhasil ${isEditMode ? 'diperbarui' : 'ditambahkan'}.`);
+                window.showToast?.('success', 'Berhasil', `Anak berhasil ${isEditMode ? 'diperbarui' : 'ditambahkan'}.`);
                 closeStudentModal();
                 fetchStudents(); // Refresh data grid
             } else {
@@ -296,8 +296,8 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
         // Panggil fungsi global ModalAlert
         if(window.showModalAlert) {
             window.showModalAlert(
-                'Hapus Data Santri?',
-                'Data santri beserta riwayat konsultasi dan ujian akan dihapus permanen. Lanjutkan?',
+                'Hapus Data Anak?',
+                'Data Anak beserta riwayat konsultasi dan ujian akan dihapus permanen. Lanjutkan?',
                 'Hapus Permanen',
                 'Batal',
                 () => executeDelete()
@@ -313,10 +313,10 @@ import ModalAlert from '../../components/ModalAlert.astro'; // Pastikan komponen
             });
             
             if (res.ok) {
-                window.showToast?.('success', 'Dihapus', 'Data santri berhasil dihapus dari sistem.');
+                window.showToast?.('success', 'Dihapus', 'Data Anak berhasil dihapus dari sistem.');
                 fetchStudents();
             } else {
-                window.showToast?.('danger', 'Gagal', 'Gagal menghapus santri.');
+                window.showToast?.('danger', 'Gagal', 'Gagal menghapus Anak.');
             }
         } catch (err) {
             console.error(err);

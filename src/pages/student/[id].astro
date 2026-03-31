@@ -4,7 +4,7 @@ import NavbarGuru from '../../components/NavbarGuru.astro';
 import Toast from '../../components/Toast.astro';
 ---
 
-<Layout title="Detail Santri - yukNgaji">
+<Layout title="Detail Anak - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
         
         <header class="flex items-center justify-between mb-8">
@@ -34,7 +34,7 @@ import Toast from '../../components/Toast.astro';
             </div>
         </div>
 
-        <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6 relative overflow-hidden">
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6 relative overflow-visible">
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-4">
                     <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl">--</div>
@@ -43,12 +43,48 @@ import Toast from '../../components/Toast.astro';
                         <p id="studentGrade" class="text-xs text-gray-400 font-medium uppercase tracking-wider">--</p>
                     </div>
                 </div>
-                <a href="/absensi" id="badgeTodayStatus" class="flex flex-col items-center justify-center bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl transition-all active:scale-95">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hari Ini</span>
-                    <div id="todayStatusUI" class="flex items-center gap-1.5 text-xs font-black text-gray-500">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Cek...
+                <div class="flex flex-col items-end gap-2">
+                    <a href="/absensi" id="badgeTodayStatus" class="flex flex-col items-center justify-center bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl transition-all active:scale-95">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hari Ini</span>
+                        <div id="todayStatusUI" class="flex items-center gap-1.5 text-xs font-black text-gray-500">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Cek...
+                        </div>
+                    </a>
+                    <div class="flex items-center gap-1">
+                        <!-- Badge utama (klik = buka modal setor) -->
+                        <button onclick="openHafalanModal()" id="badgeHafalan"
+                            class="flex flex-col items-center justify-center bg-green-50 border border-green-200 px-3 py-2 rounded-xl transition-all active:scale-95">
+                            <span class="text-[9px] font-bold text-green-500 uppercase tracking-widest mb-1">Hafalan</span>
+                            <div id="hafalanBadgeUI" class="text-xs font-black text-green-700">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                            </div>
+                        </button>
+                    
+                        <div class="flex flex-col items-center gap-1">
+                            <!-- Tombol Edit Manual (✏️) -->
+                            <button onclick="openEditCheckpointModal()"
+                                title="Edit posisi hafalan"
+                                class="w-7 h-7 flex items-center justify-center bg-blue-50 border border-blue-200 text-blue-500 rounded-lg text-xs active:scale-95 transition-all">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        
+                            <!-- Titik tiga (⋮) → menu Reset -->
+                            <div class="relative">
+                                <button onclick="toggleHafalanMenu()"
+                                    title="Opsi lainnya"
+                                    class="w-7 h-7 flex items-center justify-center bg-gray-100 border border-gray-200 text-gray-400 rounded-lg text-xs active:scale-95 transition-all">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                                <div id="hafalanMenu" class="hidden absolute right-0 top-8 bg-white border border-gray-100 rounded-2xl shadow-xl w-44">
+                                    <button onclick="confirmResetHafalan()"
+                                        class="w-full flex items-center gap-2 px-4 py-3 text-xs text-red-500 font-bold hover:bg-red-50 transition-colors ">
+                                        <i class="fa-solid fa-rotate-left"></i> Reset Data Hafalan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </a>
+                </div>
             </div>
         </section>
 
@@ -107,6 +143,9 @@ import Toast from '../../components/Toast.astro';
 
     </div>
 
+    <!-- ============================================================ -->
+    <!-- MODAL RAPORT -->
+    <!-- ============================================================ -->
     <div id="modalRaport" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
@@ -116,6 +155,36 @@ import Toast from '../../components/Toast.astro';
             
             <form id="formRaport" class="space-y-4">
                 <input type="text" id="rapName" readonly class="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold text-gray-500">
+
+                <!-- [BARU] SECTION FOTO ANAK -->
+                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-xs font-bold text-gray-700">
+                            Foto Raport
+                            <span class="text-[9px] font-normal text-gray-400 ml-1">(Opsional)</span>
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btnAcakFoto" onclick="acakFotoRaport()"
+                                class="text-[9px] bg-blue-100 text-blue-600 px-2 py-1 rounded-md font-bold transition-all active:scale-95"
+                                title="Ambil foto acak dari kuesioner">
+                                <i class="fa-solid fa-shuffle"></i> Acak Foto
+                            </button>
+                            <button type="button" id="btnHapusFoto" onclick="hapusFotoRaport()"
+                                class="hidden text-[9px] bg-red-100 text-red-500 px-2 py-1 rounded-md font-bold transition-all active:scale-95">
+                                <i class="fa-solid fa-xmark"></i> Tanpa Foto
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Preview area -->
+                    <div id="fotoPreviewArea" class="relative flex items-center justify-center h-28 bg-white rounded-xl border border-dashed border-gray-200 overflow-hidden">
+                        <div id="fotoPlaceholder" class="text-center text-gray-400">
+                            <i class="fa-regular fa-image text-3xl mb-1 block text-gray-300"></i>
+                            <span id="fotoStatusText" class="text-[10px]">Tekan "Acak Foto" untuk memilih foto dari kuesioner</span>
+                        </div>
+                        <img id="fotoPreviewImg" src="" alt="Preview foto raport"
+                            class="hidden absolute inset-0 w-full h-full object-cover rounded-xl">
+                    </div>
+                </div>
 
                 <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
                     <h4 class="text-xs font-bold text-blue-800 mb-2">A. Akademik (Otomatis)</h4>
@@ -162,8 +231,112 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <!-- Canvas tersembunyi untuk konversi gambar URL → Base64 -->
+    <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
     <NavbarGuru activeMenu="students" />
     <Toast />
+
+    <!-- ============================================================ -->
+    <!-- MODAL ONBOARDING HAFALAN -->
+    <!-- ============================================================ -->
+    <div id="modalOnboarding" class="fixed inset-0 bg-black/70 z-[80] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <div class="text-center mb-5">
+                <div class="text-4xl mb-2">📖</div>
+                <h3 class="font-bold text-gray-800 text-lg">Mulai Hafalan</h3>
+                <p class="text-xs text-gray-400 mt-1">Tentukan posisi awal hafalan ananda sekarang.</p>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Surat Saat Ini</label>
+                    <select id="onboardingSurah" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-sm border border-gray-200 font-medium"></select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Sudah Hafal Sampai Ayat</label>
+                    <select id="onboardingAyah" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-sm border border-gray-200 font-medium"></select>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                    <p class="text-xs text-amber-700 font-bold">⚠️ Yakin nih? Kalo boong dijewer...</p>
+                </div>
+                <button onclick="submitOnboarding()" class="w-full py-3 bg-green-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all">
+                    <i class="fa-solid fa-check mr-2"></i>Simpan Posisi Awal
+                </button>
+                <button onclick="closeOnboardingModal()" class="w-full py-2 text-xs text-gray-400 font-medium">Nanti saja</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL EDIT MANUAL CHECKPOINT (Teacher Override) -->
+    <!-- ============================================================ -->
+    <div id="modalEditCheckpoint" class="fixed inset-0 bg-black/70 z-[85] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-5">
+                <div>
+                    <h3 class="font-bold text-gray-800">Edit Posisi Hafalan</h3>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Override manual oleh guru</p>
+                </div>
+                <button onclick="closeEditCheckpointModal()" class="text-gray-400 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Surat</label>
+                    <select id="editSurah" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-sm border border-gray-200 font-medium"></select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Posisi Ayat (sudah hafal s.d.)</label>
+                    <select id="editAyah" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-xl text-sm border border-gray-200 font-medium"></select>
+                </div>
+                <button onclick="submitEditCheckpoint()"
+                    class="w-full py-3 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL INPUT HAFALAN HARIAN -->
+    <!-- ============================================================ -->
+    <div id="modalHafalan" class="fixed inset-0 bg-black/60 z-[75] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800">Setor Hafalan Hari Ini</h3>
+                <button onclick="closeHafalanModal()" class="text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="hafalanInfo" class="bg-green-50 border border-green-100 rounded-xl p-3 mb-4 text-sm text-green-800 font-medium text-center"></div>
+            <p id="hafalanWarning" class="hidden text-center text-xs text-amber-600 font-bold mb-3 bg-amber-50 border border-amber-200 rounded-xl p-2"></p>
+            <!-- Tab Mode: Maju / Mundur -->
+            <div class="flex p-1 bg-gray-100 rounded-2xl mb-3">
+                <button id="tabMaju" onclick="setHafalanMode('maju')"
+                    class="flex-1 py-2 text-[10px] font-bold bg-white text-green-700 rounded-xl shadow-sm transition-all uppercase tracking-widest">
+                    ▲ Setor Maju
+                </button>
+                <button id="tabMundur" onclick="setHafalanMode('mundur')"
+                    class="flex-1 py-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest">
+                    ▼ Koreksi Mundur
+                </button>
+            </div>
+
+            <!-- Grid tombol maju (default tampil) -->
+            <div id="sectionMaju">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Tambah berapa ayat?</p>
+                <div id="hafalanBtnGrid" class="grid grid-cols-4 gap-2 mb-4"></div>
+            </div>
+
+            <!-- Grid tombol mundur (default hidden) -->
+            <div id="sectionMundur" class="hidden">
+                <p class="text-[10px] font-bold text-red-400 uppercase mb-2">Mundur berapa ayat?</p>
+                <div id="hafalanBtnGridMundur" class="grid grid-cols-4 gap-2 mb-4"></div>
+                <p class="text-[9px] text-gray-400 text-center">Jika mundur melewati batas surat, sistem otomatis pindah ke surat sebelumnya.</p>
+            </div>
+
+            <button onclick="closeHafalanModal()" class="w-full py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl">Tutup</button>
+        </div>
+    </div>
 </Layout>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" is:inline></script>
@@ -182,21 +355,54 @@ import Toast from '../../components/Toast.astro';
     let currentAvgRaw = 0;
     let lastRaportData = null;
     let attendanceStatsGlobal = { hadir: 0, izin: 0, alpa: 0 };
-    let globalConsultations = null; // Variabel global untuk menyimpan data kuesioner
+    let globalConsultations = null;
+    let attendanceDetailGlobal = { izinDates: [], alpaDates: [] };
+    let analisisAIGlobal = null;
+
+    // ================================================================
+    // DATA JUZ AMMA (SSOT — disalin dari data/juzAmma.js)
+    // ================================================================
+    const JUZ_AMMA = [
+      { id:1,name:"An-Naba'",ayahs:40},{id:2,name:"An-Nazi'at",ayahs:46},
+      {id:3,name:"Abasa",ayahs:42},{id:4,name:"At-Takwir",ayahs:29},
+      {id:5,name:"Al-Infitar",ayahs:19},{id:6,name:"Al-Mutaffifin",ayahs:36},
+      {id:7,name:"Al-Insyiqaq",ayahs:25},{id:8,name:"Al-Buruj",ayahs:22},
+      {id:9,name:"At-Tariq",ayahs:17},{id:10,name:"Al-A'la",ayahs:19},
+      {id:11,name:"Al-Gasyiyah",ayahs:26},{id:12,name:"Al-Fajr",ayahs:30},
+      {id:13,name:"Al-Balad",ayahs:20},{id:14,name:"Asy-Syams",ayahs:15},
+      {id:15,name:"Al-Lail",ayahs:21},{id:16,name:"Ad-Duha",ayahs:11},
+      {id:17,name:"Al-Insyirah",ayahs:8},{id:18,name:"At-Tin",ayahs:8},
+      {id:19,name:"Al-'Alaq",ayahs:19},{id:20,name:"Al-Qadr",ayahs:5},
+      {id:21,name:"Al-Bayyinah",ayahs:8},{id:22,name:"Az-Zalzalah",ayahs:8},
+      {id:23,name:"Al-'Adiyat",ayahs:11},{id:24,name:"Al-Qari'ah",ayahs:11},
+      {id:25,name:"At-Takasur",ayahs:8},{id:26,name:"Al-'Asr",ayahs:3},
+      {id:27,name:"Al-Humazah",ayahs:9},{id:28,name:"Al-Fil",ayahs:5},
+      {id:29,name:"Quraisy",ayahs:4},{id:30,name:"Al-Ma'un",ayahs:7},
+      {id:31,name:"Al-Kausar",ayahs:3},{id:32,name:"Al-Kafirun",ayahs:6},
+      {id:33,name:"An-Nasr",ayahs:3},{id:34,name:"Al-Masad",ayahs:5},
+      {id:35,name:"Al-Ikhlas",ayahs:4},{id:36,name:"Al-Falaq",ayahs:5},
+      {id:37,name:"An-Nas",ayahs:6},
+    ];
+
+    // State hafalan
+    let studentCheckpoint = { current_surah_id: null, current_ayah: 0 }; // diisi saat fetchData
+
+    // [BARU] State foto raport
+    let selectedFotoBase64 = null; // null = tidak pakai foto
+    let selectedFotoUrl    = null;
 
     // --- CHARTS INIT ---
     const initChart = (history) => {
         const canvas = document.getElementById('progressChart');
         if (!canvas) return;
         if (myChart) myChart.destroy();
-        
         myChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
                 labels: history.tajwid.map(item => `Mg-${item.week}`),
                 datasets: [
                     { label: 'Tajwid', data: history.tajwid.map(i => i.score), borderColor: '#22c55e', backgroundColor: '#22c55e22', tension: 0.4, fill: true },
-                    { label: 'Fiqih', data: history.fiqih.map(i => i.score), borderColor: '#3b82f6', tension: 0.4 },
+                    { label: 'Fiqih',  data: history.fiqih.map(i => i.score),  borderColor: '#3b82f6', tension: 0.4 },
                     { label: 'Tauhid', data: history.tauhid.map(i => i.score), borderColor: '#a855f7', tension: 0.4 }
                 ]
             },
@@ -208,7 +414,6 @@ import Toast from '../../components/Toast.astro';
         const canvas = document.getElementById('attendanceChart');
         if (!canvas) return;
         if (attChart) attChart.destroy();
-        
         attChart = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
             data: {
@@ -219,136 +424,119 @@ import Toast from '../../components/Toast.astro';
         });
     };
 
-
-    // Mengambil data dari server-side Astro (sesuaikan dengan caramu me-render data student)
     let hasCan = false;
     let lastReceived = null;
 
-    const infoBtn = document.getElementById('infoKalengBtn');
-    const modal = document.getElementById('modalKaleng');
+    const infoBtn  = document.getElementById('infoKalengBtn');
+    const modal    = document.getElementById('modalKaleng');
     const closeBtn = document.getElementById('closeModalKaleng');
     const messageEl = document.getElementById('kalengMessage');
 
     function getKalengMessage() {
-        if (hasCan) {
-            return "⚠️ Anak ini belum balikkin kaleng infaq! (Jangan dikasih kaleng baru).";
-        } else {
-            if (!lastReceived || lastReceived === "null") {
-                return "Anak ini belum pernah dikasih kaleng. Bisa diberikan pada Senin malam terdekat.";
-            }
-            
-            const lastDate = new Date(lastReceived);
-            const nextDate = new Date(lastDate);
-            nextDate.setDate(nextDate.getDate() + 14); // Tambah 2 minggu (14 hari)
+        if (hasCan) return "⚠️ Anak ini belum balikkin kaleng infaq! (Jangan dikasih kaleng baru).";
+        if (!lastReceived || lastReceived === "null") return "Anak ini belum pernah dikasih kaleng. Bisa diberikan pada Senin malam terdekat.";
 
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            nextDate.setHours(0,0,0,0);
+        const nextDate = new Date(lastReceived);
+        nextDate.setDate(nextDate.getDate() + 14);
+        const today = new Date(); today.setHours(0,0,0,0); nextDate.setHours(0,0,0,0);
+        const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+        const tglStr = nextDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-            const diffTime = nextDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            const tglStr = nextDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-            if (diffDays > 0) {
-                return `Belum dikasih kaleng infaq. Jangan lupa kasih <b>${diffDays} hari lagi</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
-            } else if (diffDays === 0) {
-                return `Belum dikasih kaleng infaq. <b>Bagikan malam ini!</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
-            } else {
-                return `Belum dikasih kaleng infaq. Sudah terlewat ${Math.abs(diffDays)} hari dari jadwal.<br><br><span class="text-sm text-gray-500">(Jadwal: ${tglStr})</span>`;
-            }
-        }
+        if (diffDays > 0)  return `Belum dikasih kaleng infaq. Jangan lupa kasih <b>${diffDays} hari lagi</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
+        if (diffDays === 0) return `Belum dikasih kaleng infaq. <b>Bagikan malam ini!</b><br><br><span class="text-sm text-gray-500">(${tglStr})</span>`;
+        return `Belum dikasih kaleng infaq. Sudah terlewat ${Math.abs(diffDays)} hari dari jadwal.<br><br><span class="text-sm text-gray-500">(Jadwal: ${tglStr})</span>`;
     }
 
-    infoBtn.addEventListener('click', () => {
-        messageEl.innerHTML = getKalengMessage();
-        modal.classList.remove('hidden');
-    });
-
-    closeBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
-    });
+    infoBtn.addEventListener('click', () => { messageEl.innerHTML = getKalengMessage(); modal.classList.remove('hidden'); });
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
     // --- FETCH DATA ---
     const fetchData = async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [stdRes, progRes, todoRes, consRes, rapRes, attRes] = await Promise.all([
+            const [stdRes, progRes, todoRes, consRes, rapRes, attRes, lagRes] = await Promise.all([
                 fetch(`${API_URL}/api/students/${studentId}`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/progress`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/todos`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/raports`, { headers }),
-                fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers })
+                fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers }),
+                fetch(`${API_URL}/api/students/${studentId}/lag-status`, { headers })
             ]);
 
-            const student = await stdRes.json();
+            const student  = await stdRes.json();
             const progress = await progRes.json();
-            const todos = await todoRes.json();
+            const todos    = await todoRes.json();
             globalConsultations = await consRes.json();
-            const raports = await rapRes.json();
+            const raports  = await rapRes.json();
             const attendance = await attRes.json();
+            const lagStatus  = await lagRes.json();
+
+            // Render banner tertinggal di tab Todo
+            if (lagStatus.data) renderLagBanner(lagStatus.data);
 
             if (raports.data?.length > 0) lastRaportData = raports.data[0];
 
-            // Render Profil
-            document.getElementById('studentName').innerText = student.data.name;
-            document.getElementById('studentGrade').innerText = student.data.grade;
+            document.getElementById('studentName').innerText    = student.data.name;
+            document.getElementById('studentGrade').innerText   = student.data.grade;
             document.getElementById('studentInitial').innerText = student.data.name.substring(0, 2).toUpperCase();
 
-            // Render Status Kaleng
+            // Simpan checkpoint hafalan
+            studentCheckpoint = {
+                current_surah_id: student.data.current_surah_id ?? null,
+                current_ayah:     student.data.current_ayah     ?? 0,
+            };
+
+            // Tampilkan badge pencapaian hafalan di profil
+            renderCheckpointBadge();
+
+            // Onboarding: tampilkan modal jika belum punya checkpoint
+            if (studentCheckpoint.current_surah_id === null) {
+                openOnboardingModal();
+            }
+
             hasCan = student.data.has_infaq_can;
             lastReceived = student.data.last_can_received_at;
             const btnKaleng = document.getElementById('infoKalengBtn');
-            
-            // Class dasar untuk mempertahankan bentuk w-10 h-10
             const baseShape = 'w-10 h-10 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all border';
-
             if (hasCan) {
-                // Warna Merah (Peringatan: Anak ini masih bawa kaleng)
                 btnKaleng.className = `${baseShape} bg-red-50 text-red-500 border-red-200`;
                 btnKaleng.title = '⚠️ Belum Mengembalikan Kaleng (Klik info)';
-                btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
             } else {
-                // Warna Hijau (Aman: Boleh dikasih kaleng)
                 btnKaleng.className = `${baseShape} bg-green-50 text-green-600 border-green-200`;
                 btnKaleng.title = '⚠️ Belum dikasih kaleng (Klik info)';
-                btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
             }
+            btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
 
-            // Render Akademik
             if (progress.data) {
                 initChart(progress.data);
-                const lastT = progress.data.tajwid.slice(-1)[0]?.score || 0;
-                const lastF = progress.data.fiqih.slice(-1)[0]?.score || 0;
+                const lastT  = progress.data.tajwid.slice(-1)[0]?.score || 0;
+                const lastF  = progress.data.fiqih.slice(-1)[0]?.score  || 0;
                 const lastTh = progress.data.tauhid.slice(-1)[0]?.score || 0;
                 document.getElementById('avgTajwid').innerText = lastT;
-                document.getElementById('avgFiqih').innerText = lastF;
+                document.getElementById('avgFiqih').innerText  = lastF;
                 document.getElementById('avgTauhid').innerText = lastTh;
                 currentAvgRaw = (lastT + lastF + lastTh) / 3;
             }
 
-            // Render Absensi
             if (attendance.data) {
-                const { stats, todayStatus, performance } = attendance.data;
-                attendanceStatsGlobal = stats; // Simpan untuk PDF
+                const { stats, detail, todayStatus, performance } = attendance.data;
+                attendanceStatsGlobal  = stats;
+                attendanceDetailGlobal = detail || { izinDates: [], alpaDates: [] };
                 
-                // UI Dashboard Absensi
                 initAttChart(stats);
-                document.getElementById('statHadir').innerText = stats.hadir;
-                document.getElementById('statIzin').innerText = stats.izin;
-                document.getElementById('statAlpa').innerText = stats.alpa;
+                document.getElementById('statHadir').innerText       = stats.hadir;
+                document.getElementById('statIzin').innerText        = stats.izin;
+                document.getElementById('statAlpa').innerText        = stats.alpa;
                 document.getElementById('statPerformance').innerText = performance;
 
-                // UI Today Badge
                 const badgeUI = document.getElementById('todayStatusUI');
-                if (todayStatus === 'hadir') badgeUI.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> <span class="text-green-600">Hadir</span>';
+                if (todayStatus === 'hadir')              badgeUI.innerHTML = '<i class="fa-solid fa-check text-green-500"></i> <span class="text-green-600">Hadir</span>';
                 else if (todayStatus?.startsWith('izin')) badgeUI.innerHTML = '<i class="fa-solid fa-envelope text-amber-500"></i> <span class="text-amber-600">Izin</span>';
-                else if (todayStatus === 'alpa') badgeUI.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> <span class="text-red-600">Alpa</span>';
-                else badgeUI.innerHTML = '<i class="fa-solid fa-circle-question text-gray-400"></i> <span class="text-gray-500">Belum</span>';
+                else if (todayStatus === 'alpa')          badgeUI.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> <span class="text-red-600">Alpa</span>';
+                else                                      badgeUI.innerHTML = '<i class="fa-solid fa-circle-question text-gray-400"></i> <span class="text-gray-500">Belum</span>';
             }
 
-            // Render Todos & Cons
             const todoContainer = document.getElementById('todoContainer');
             todoContainer.innerHTML = todos.data.length ? todos.data.map(item => `
                 <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
@@ -361,13 +549,11 @@ import Toast from '../../components/Toast.astro';
             consContainer.innerHTML = globalConsultations.data.length ? globalConsultations.data.map(item => `
                 <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
                     <div class="flex justify-between items-center"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Mg ${item.week} • ${item.subject}</span><span class="text-[10px] text-gray-400 font-bold uppercase">${new Date(item.created_at).toLocaleDateString('id-ID')}</span></div>
-                    
                     <div class="grid grid-cols-3 gap-2 py-2 border-y border-dashed border-gray-100">
                         <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Akhlak</p><p class="text-sm font-black text-green-600">${item.akhlak_score}</p></div>
                         <div class="text-center border-x border-dashed border-gray-100"><p class="text-[9px] text-gray-400 font-bold uppercase">Disiplin</p><p class="text-sm font-black text-blue-600">${item.disiplin_score}</p></div>
                         <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Keaktifan</p><p class="text-sm font-black text-purple-600">${item.aktif_score}</p></div>
                     </div>
-
                     ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
                 </div>
             `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat kuesioner.</p>';
@@ -387,100 +573,207 @@ import Toast from '../../components/Toast.astro';
     setupTabs('tabDashAkademik', 'tabDashAbsensi', 'contentDashAkademik', 'contentDashAbsensi');
     setupTabs('tabTodo', 'tabCons', 'contentTodo', 'contentCons');
 
-    // --- LOGIKA RAPORT ---
+    // ================================================================
+    // HELPERS ABSENSI
+    // ================================================================
+
+    // Kelompokkan izinDates & alpaDates ke ringkasan per-bulan
+    const buildMonthlyAttendanceSummary = () => {
+        const map = {};
+
+        const add = (dateStr, type) => {
+            const [y, m] = dateStr.split('-');
+            const key = `${y}-${m}`;
+            if (!map[key]) map[key] = { izin: 0, alpa: 0 };
+            map[key][type]++;
+        };
+
+        attendanceDetailGlobal.izinDates.forEach(item => add(item.date, 'izin'));
+        attendanceDetailGlobal.alpaDates.forEach(item => add(item.date, 'alpa'));
+
+        return Object.keys(map).sort().map(key => {
+            const [year, month] = key.split('-');
+            const label = new Date(parseInt(year), parseInt(month) - 1, 1)
+                .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+            return { label, izin: map[key].izin, alpa: map[key].alpa };
+        });
+    };
+
+    // Bangun teks insight berdasarkan pola alpa dan alasan izin dominan
+    const buildAttendanceInsight = () => {
+        const total = attendanceStatsGlobal.izin + attendanceStatsGlobal.alpa;
+        if (total === 0) return null;
+
+        // Hitung frekuensi sub-status izin
+        const izinCount = {};
+        attendanceDetailGlobal.izinDates.forEach(({ status }) => {
+            izinCount[status] = (izinCount[status] || 0) + 1;
+        });
+
+        let dominanIzin = null, dominanIzinCount = 0;
+        Object.entries(izinCount).forEach(([k, v]) => {
+            if (v > dominanIzinCount) { dominanIzin = k; dominanIzinCount = v; }
+        });
+
+        const lines = [];
+
+        // Insight alpha
+        if (attendanceStatsGlobal.alpa > 0) {
+            const pct = Math.round((attendanceStatsGlobal.alpa / total) * 100);
+            if (pct >= 50) {
+                lines.push(`⚠️ Perhatian: Lebih dari separuh ketidakhadiran (${attendanceStatsGlobal.alpa} hari, ${pct}%) adalah alpa tanpa keterangan. Mohon Ayah/Bunda lebih proaktif menghubungi guru bila ananda berhalangan hadir.`);
+            } else if (attendanceStatsGlobal.alpa >= 3) {
+                lines.push(`Terdapat ${attendanceStatsGlobal.alpa} hari alpa. Harap dikomunikasikan ke guru jika ada kendala kehadiran agar tidak tercatat alpa.`);
+            }
+        }
+
+        // Insight izin dominan
+        if (dominanIzin && dominanIzinCount > 0) {
+            const label = dominanIzin.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            if (dominanIzin.includes('sakit')) {
+                lines.push(`Sebagian besar izin (${dominanIzinCount}x) disebabkan sakit. Pastikan ananda menjaga pola makan dan istirahat agar lebih jarang melewatkan pelajaran.`);
+            } else if (dominanIzin.includes('keluarga') || dominanIzin.includes('acara')) {
+                lines.push(`Beberapa izin (${dominanIzinCount}x) karena keperluan keluarga/acara. Bila memungkinkan, jadwalkan kegiatan di luar hari pengajian wajib.`);
+            } else {
+                lines.push(`Alasan izin terbanyak adalah "${label}" (${dominanIzinCount}x). Pastikan ananda mengulang materi yang terlewat di rumah.`);
+            }
+        }
+
+        if (lines.length === 0) {
+            lines.push(`Terdapat ${total} hari ketidakhadiran. Performa kehadiran ananda secara keseluruhan masih tergolong baik. Tetap jaga konsistensinya!`);
+        }
+
+        return lines.join('\n\n');
+    };
+
+    // ================================================================
+    // HELPER FOTO: konversi URL gambar Supabase → Base64 via canvas
+    // ================================================================
+    const urlToBase64 = (url) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const maxW = 300, maxH = 400;
+            let w = img.naturalWidth, h = img.naturalHeight;
+            if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+            if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+            const canvas = document.getElementById('hiddenCanvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => reject(new Error('Gagal load: ' + url));
+        img.src = url;
+    });
+
+    // ================================================================
+    // AKSI FOTO MODAL
+    // ================================================================
+    window.acakFotoRaport = async () => {
+        const btn        = document.getElementById('btnAcakFoto');
+        const statusText = document.getElementById('fotoStatusText');
+        const previewImg = document.getElementById('fotoPreviewImg');
+        const placeholder = document.getElementById('fotoPlaceholder');
+
+        const fotoList = (globalConsultations?.data || []).filter(c => c.image_url);
+        if (fotoList.length === 0) {
+            statusText.innerText = 'Belum ada foto di kuesioner anak ini.';
+            return;
+        }
+
+        const picked = fotoList[Math.floor(Math.random() * fotoList.length)];
+        selectedFotoUrl = picked.image_url;
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            selectedFotoBase64 = await urlToBase64(selectedFotoUrl);
+            previewImg.src = selectedFotoBase64;
+            previewImg.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            document.getElementById('btnHapusFoto').classList.remove('hidden');
+        } catch (e) {
+            console.error('Foto gagal diload:', e);
+            statusText.innerText = 'Gagal memuat foto. Coba lagi.';
+            selectedFotoBase64 = null; selectedFotoUrl = null;
+        } finally {
+            btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Acak Foto';
+            btn.disabled = false;
+        }
+    };
+
+    window.hapusFotoRaport = () => {
+        selectedFotoBase64 = null; selectedFotoUrl = null;
+        const previewImg  = document.getElementById('fotoPreviewImg');
+        const placeholder = document.getElementById('fotoPlaceholder');
+        previewImg.classList.add('hidden'); previewImg.src = '';
+        placeholder.classList.remove('hidden');
+        document.getElementById('fotoStatusText').innerText = 'Tekan "Acak Foto" untuk memilih foto dari kuesioner';
+        document.getElementById('btnHapusFoto').classList.add('hidden');
+    };
+
+    // ================================================================
+    // LOGIKA MODAL RAPORT
+    // ================================================================
     const convertToGrade = (s) => s >= 85 ? 'A' : s >= 70 ? 'B' : s >= 60 ? 'C' : 'D';
 
     window.openRaportModal = () => {
         document.getElementById('rapName').value = document.getElementById('studentName').innerText;
-        
-        // IMPROVEMENT 1: Cegah error NaN jika nilai akademik masih '-' (belum ada ujian)
-        const valT = parseInt(document.getElementById('avgTajwid').innerText) || 0;
-        const valF = parseInt(document.getElementById('avgFiqih').innerText) || 0;
-        const valTh = parseInt(document.getElementById('avgTauhid').innerText) || 0;
+        hapusFotoRaport(); // reset foto tiap buka modal
 
+        const valT  = parseInt(document.getElementById('avgTajwid').innerText) || 0;
+        const valF  = parseInt(document.getElementById('avgFiqih').innerText)  || 0;
+        const valTh = parseInt(document.getElementById('avgTauhid').innerText) || 0;
         document.getElementById('rapTajwid').value = convertToGrade(valT);
-        document.getElementById('rapFiqih').value = convertToGrade(valF);
+        document.getElementById('rapFiqih').value  = convertToGrade(valF);
         document.getElementById('rapTauhid').value = convertToGrade(valTh);
 
-        // Inject Data Kehadiran
         document.getElementById('rapHadir').innerText = attendanceStatsGlobal.hadir;
-        document.getElementById('rapIzin').innerText = attendanceStatsGlobal.izin;
-        document.getElementById('rapAlpa').innerText = attendanceStatsGlobal.alpa;
+        document.getElementById('rapIzin').innerText  = attendanceStatsGlobal.izin;
+        document.getElementById('rapAlpa').innerText  = attendanceStatsGlobal.alpa;
 
-        // KALKULASI RATA-RATA DARI KUESIONER GLOBAL
-        let avgAkhlak = 0, avgDisiplinKuesioner = 0, avgAktif = 0;
-        let hasKonsulData = false;
-
-        if (globalConsultations && globalConsultations.data && globalConsultations.data.length > 0) {
+        let avgAkhlak = 0, avgDisiplinKuesioner = 0, avgAktif = 0, hasKonsulData = false;
+        if (globalConsultations?.data?.length > 0) {
             hasKonsulData = true;
             const total = globalConsultations.data.length;
-            avgAkhlak = globalConsultations.data.reduce((sum, c) => sum + c.akhlak_score, 0) / total;
-            avgDisiplinKuesioner = globalConsultations.data.reduce((sum, c) => sum + c.disiplin_score, 0) / total;
-            avgAktif = globalConsultations.data.reduce((sum, c) => sum + c.aktif_score, 0) / total;
+            avgAkhlak           = globalConsultations.data.reduce((s, c) => s + c.akhlak_score,   0) / total;
+            avgDisiplinKuesioner = globalConsultations.data.reduce((s, c) => s + c.disiplin_score, 0) / total;
+            avgAktif            = globalConsultations.data.reduce((s, c) => s + c.aktif_score,     0) / total;
         }
 
-        // --- LOGIKA BARU: GABUNGAN ABSENSI & KUESIONER (KEDISIPLINAN) ---
-        let finalDisiplin = 0;
-        // Total valid days = jumlah semua record absen yang masuk hitungan
         const totalValidDays = attendanceStatsGlobal.hadir + attendanceStatsGlobal.izin + attendanceStatsGlobal.alpa;
-        
-        let attendanceScore = 100; // Default 100 jika anak baru masuk dan belum ada absen
-        if (totalValidDays > 0) {
-            // Persentase Kehadiran (Makin sering hadir / jarang alpa = makin mendekati 100)
-            // Kehadiran di hari sunnah akan membuat "hadir" bertambah tanpa menambah pembagi (izin/alpa), sehingga mendongkrak nilai!
-            attendanceScore = (attendanceStatsGlobal.hadir / totalValidDays) * 100; 
-        }
-
-        if (hasKonsulData) {
-            // Jika punya data kuesioner: Gabungkan (50% Kuesioner + 50% Absensi)
-            finalDisiplin = (avgDisiplinKuesioner + attendanceScore) / 2;
-        } else {
-            // Jika belum pernah kuesioner: Nilai murni dari rajin/tidaknya dia absen
-            finalDisiplin = attendanceScore;
-        }
+        let attendanceScore = 100;
+        if (totalValidDays > 0) attendanceScore = (attendanceStatsGlobal.hadir / totalValidDays) * 100;
+        const finalDisiplin = hasKonsulData ? (avgDisiplinKuesioner + attendanceScore) / 2 : attendanceScore;
 
         if (lastRaportData) {
-            document.getElementById('rapQuran').value = lastRaportData.academic_grades.quran || 'A';
-            document.getElementById('rapSikap1').value = lastRaportData.behavior_grades.kedisiplinan || 'A';
-            document.getElementById('rapSikap2').value = lastRaportData.behavior_grades.akhlak || 'A';
-            document.getElementById('rapSikap3').value = lastRaportData.behavior_grades.keaktifan || 'A';
-            document.getElementById('rapNote').value = lastRaportData.teacher_note || '';
+            document.getElementById('rapQuran').value  = lastRaportData.academic_grades.quran           || 'A';
+            document.getElementById('rapSikap1').value = lastRaportData.behavior_grades.kedisiplinan    || 'A';
+            document.getElementById('rapSikap2').value = lastRaportData.behavior_grades.akhlak          || 'A';
+            document.getElementById('rapSikap3').value = lastRaportData.behavior_grades.keaktifan       || 'A';
+            document.getElementById('rapNote').value   = lastRaportData.teacher_note                    || '';
         } else {
-            document.getElementById('rapQuran').value = 'A';
-            
-            // AUTO-FILL
-            // rapSikap1 (Kedisiplinan) sekarang mengambil dari `finalDisiplin` yang sudah dicampur absensi!
+            document.getElementById('rapQuran').value  = 'A';
             document.getElementById('rapSikap1').value = (totalValidDays > 0 || hasKonsulData) ? convertToGrade(finalDisiplin) : 'C';
             document.getElementById('rapSikap2').value = hasKonsulData ? convertToGrade(avgAkhlak) : 'C';
-            document.getElementById('rapSikap3').value = hasKonsulData ? convertToGrade(avgAktif) : 'C';
-            
-            document.getElementById('rapNote').value = '';
+            document.getElementById('rapSikap3').value = hasKonsulData ? convertToGrade(avgAktif)  : 'C';
+            document.getElementById('rapNote').value   = '';
         }
 
         document.getElementById('modalRaport').classList.replace('hidden', 'flex');
     };
 
     window.closeRaportModal = () => document.getElementById('modalRaport').classList.replace('flex', 'hidden');
+
     window.generateSystemNote = async () => {
         const name = document.getElementById('rapName').value;
-        const btn = document.querySelector('button[onclick="generateSystemNote()"]');
-        
-        // AMBIL SEMUA NILAI TERBARU DARI DROPDOWN & INPUT
+        const btn  = document.querySelector('button[onclick="generateSystemNote()"]');
         const payload = {
             studentName: name,
-            academic: {
-                tajwid: document.getElementById('rapTajwid').value,
-                fiqih: document.getElementById('rapFiqih').value,
-                tauhid: document.getElementById('rapTauhid').value,
-                quran: document.getElementById('rapQuran').value
-            },
-            behavior: {
-                kedisiplinan: document.getElementById('rapSikap1').value,
-                akhlak: document.getElementById('rapSikap2').value,
-                keaktifan: document.getElementById('rapSikap3').value
-            }
+            academic:  { tajwid: document.getElementById('rapTajwid').value, fiqih: document.getElementById('rapFiqih').value, tauhid: document.getElementById('rapTauhid').value, quran: document.getElementById('rapQuran').value },
+            behavior:  { kedisiplinan: document.getElementById('rapSikap1').value, akhlak: document.getElementById('rapSikap2').value, keaktifan: document.getElementById('rapSikap3').value }
         };
-        
         try {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
             const res = await fetch(`${API_URL}/api/raports/generate-note`, {
@@ -489,153 +782,323 @@ import Toast from '../../components/Toast.astro';
                 body: JSON.stringify(payload)
             });
             const result = await res.json();
-            
             if (res.ok) {
                 document.getElementById('rapNote').value = result.data;
+                analisisAIGlobal = result.analisis || null; // simpan untuk PDF hal. 2
             }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI';
-        }
+        } catch (e) { console.error(e); }
+        finally { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI'; }
     };
 
-    // --- PDF GENERATOR (Font Diperbesar & Ditambah Kehadiran) ---
+    // ================================================================
+    // HELPER PDF: gambar satu tabel dengan header & baris data
+    // col: [{ label, x, w }] — row: string[]
+    // Kembalikan curY setelah tabel selesai
+    // ================================================================
+    const drawTable = (doc, curY, cols, rows, rowH = 8) => {
+        const margin    = 15;
+        const totalW    = cols.reduce((s, c) => s + c.w, 0);
+
+        // Header
+        doc.setFillColor(220, 220, 220);
+        cols.forEach(c => doc.rect(c.x, curY, c.w, rowH, 'F'));
+        doc.rect(margin, curY, totalW, rowH); // outer border
+        cols.slice(1).forEach(c => doc.line(c.x, curY, c.x, curY + rowH)); // vertical dividers
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+        cols.forEach(c => doc.text(c.label, c.x + c.w / 2, curY + rowH / 2 + 1.5, { align: 'center' }));
+        curY += rowH;
+
+        // Rows
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        rows.forEach((cells, idx) => {
+            if (idx % 2 === 0) { doc.setFillColor(250, 250, 250); cols.forEach(c => doc.rect(c.x, curY, c.w, rowH, 'F')); }
+            doc.rect(margin, curY, totalW, rowH);
+            cols.slice(1).forEach(c => doc.line(c.x, curY, c.x, curY + rowH));
+            cells.forEach((txt, i) => {
+                const align = i === 0 ? 'left' : 'center';
+                const xPos  = i === 0 ? cols[i].x + 3 : cols[i].x + cols[i].w / 2;
+                doc.text(String(txt ?? '-'), xPos, curY + rowH / 2 + 1.5, { align });
+            });
+            curY += rowH;
+        });
+
+        return curY;
+    };
+
+    // ================================================================
+    // PDF GENERATOR
+    // ================================================================
     const generatePdfWithJsPDF = (payload, studentName) => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-        const pageW = doc.internal.pageSize.getWidth();
-        const margin = 15;
+        const pageW    = doc.internal.pageSize.getWidth();
+        const margin   = 15;
         const contentW = pageW - margin * 2;
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        const today    = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        // Checkpoint hafalan untuk PDF
+        const pdfSurah = getSurahById(studentCheckpoint.current_surah_id);
+        const checkpointLabel = pdfSurah
+            ? `${pdfSurah.name}, Ayat ${studentCheckpoint.current_ayah} / ${pdfSurah.ayahs}`
+            : 'Belum diset';
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14); // UPDATE DARI 13
+        // ---- HEADER ----
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
         doc.text('MUSHOLA NURUL HIDAYAH', pageW / 2, 20, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10); // UPDATE DARI 9
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
         doc.text('Pengajian Perumahan Bumi Rahayu 5 - Bekasi', pageW / 2, 26, { align: 'center' });
-        doc.setLineWidth(0.5); doc.line(margin, 30, pageW - margin, 30);
+        doc.setLineWidth(0.5);
+        doc.line(margin, 30, pageW - margin, 30);
 
-        doc.setFontSize(10); // UPDATE DARI 9
-        doc.text('Nama', margin, 38); doc.text(`: ${studentName}`, margin + 20, 38);
-        doc.text(`Tanggal: ${today}`, pageW - margin, 38, { align: 'right' });
-
-        let curY = 48; // Spasi ditambah
-
-        // A. AKADEMIK
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); // UPDATE DARI 10
-        doc.text('A. PENCAPAIAN AKADEMIK', margin, curY); curY += 6;
-        const akdRows = [['Tajwid', payload.academic_grades.tajwid], ['Fiqih', payload.academic_grades.fiqih], ['Tauhid', payload.academic_grades.tauhid], ['Al-Quran / Iqro', payload.academic_grades.quran]];
+// ---- NAMA & TANGGAL ----
+doc.setFontSize(10);
         
-        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); // UPDATE DARI 8
-        doc.text('Mata Pelajaran', margin + 3, curY + 5.5); doc.text('Nilai', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
-        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
+        // Nama rata kiri (Y = 38)
+        doc.text('Nama', margin, 38);
+        doc.text(`: ${studentName}`, margin + 15, 38);
+        
+        // Tanggal rata kanan di baris yang sama (Y = 38)
+        doc.text(`Tanggal: ${today}`, pageW - margin, 38, { align: 'right' });
+        
+        // Pencapaian Hafalan tepat di bawah nama (Y = 44)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(`Pencapaian Hafalan : ${checkpointLabel}`, margin, 44);
 
-        doc.setFont('helvetica', 'normal');
-        akdRows.forEach(([lbl, val]) => {
-            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
-            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
-        }); curY += 6;
+        // curY diturunkan ke 52 sebagai titik awal tabel & foto (biar tidak nabrak teks hafalan)
+        let curY = 52;
 
-        // B. KEPRIBADIAN
+        // ---- A. AKADEMIK & FOTO (Posisi Samping Tabel) ----
+        const fotoW = 30, fotoH = 40, fotoX = pageW - margin - fotoW;
+        const fotoY = curY + 6; // Y-coordinate foto disamakan dengan isi tabel (turun 5)
+
+        if (selectedFotoBase64) {
+            doc.addImage(selectedFotoBase64, 'JPEG', fotoX, fotoY, fotoW, fotoH);
+            doc.setLineWidth(0.3); doc.rect(fotoX, fotoY, fotoW, fotoH);
+        }
+
+        // Bila ada foto, sempitkan lebar tabel agar tidak menabrak foto
+        const tblW  = selectedFotoBase64 ? contentW - fotoW - 5 : contentW;
+        const col1W = tblW * 0.7, col2W = tblW * 0.3;
+        const colAkd = [
+            { label: 'Mata Pelajaran', x: margin,         w: col1W },
+            { label: 'Nilai',          x: margin + col1W, w: col2W }
+        ];
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('A. PENCAPAIAN AKADEMIK', margin, curY); curY += 6;
+
+        curY = drawTable(doc, curY, colAkd, [
+            ['Tajwid',         payload.academic_grades.tajwid],
+            ['Fiqih',          payload.academic_grades.fiqih],
+            ['Tauhid',         payload.academic_grades.tauhid],
+            ['Al-Quran / Iqro', payload.academic_grades.quran],
+        ]);
+        curY += 3;
+
+        // Pastikan batas Y melewati foto sebelum masuk ke section B
+        if (selectedFotoBase64) {
+            curY = Math.max(curY, fotoY + fotoH + 8);
+        }
+
+        // ---- B. KEPRIBADIAN ----
+        const colFull = [
+            { label: 'Aspek Penilaian', x: margin,                  w: contentW * 0.7 },
+            { label: 'Nilai',           x: margin + contentW * 0.7, w: contentW * 0.3 }
+        ];
+
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
         doc.text('B. PENILAIAN KEPRIBADIAN', margin, curY); curY += 6;
-        const bhrRows = [['Kedisiplinan', payload.behavior_grades.kedisiplinan], ['Akhlak & Adab', payload.behavior_grades.akhlak], ['Keaktifan', payload.behavior_grades.keaktifan]];
-        
-        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        doc.text('Aspek Penilaian', margin + 3, curY + 5.5); doc.text('Nilai', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
-        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
 
-        doc.setFont('helvetica', 'normal');
-        bhrRows.forEach(([lbl, val]) => {
-            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
-            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
-        }); curY += 6;
-
-        // C. KEHADIRAN (BAGIAN BARU)
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-        doc.text('C. KEHADIRAN', margin, curY); curY += 6;
-        const attRows = [['Hadir', attendanceStatsGlobal.hadir + ' Hari'], ['Izin / Sakit', attendanceStatsGlobal.izin + ' Hari'], ['Alpa', attendanceStatsGlobal.alpa + ' Hari']];
-        
-        doc.setFillColor(220, 220, 220); doc.rect(margin, curY, contentW * 0.7, 8, 'F'); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8, 'F');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        doc.text('Keterangan', margin + 3, curY + 5.5); doc.text('Jumlah', margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' });
-        doc.rect(margin, curY, contentW, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8); curY += 8;
-
-        doc.setFont('helvetica', 'normal');
-        attRows.forEach(([lbl, val]) => {
-            doc.rect(margin, curY, contentW * 0.7, 8); doc.rect(margin + contentW * 0.7, curY, contentW * 0.3, 8); doc.line(margin + contentW * 0.7, curY, margin + contentW * 0.7, curY + 8);
-            doc.text(lbl, margin + 3, curY + 5.5); doc.text(val, margin + contentW * 0.7 + (contentW * 0.3) / 2, curY + 5.5, { align: 'center' }); curY += 8;
-        }); curY += 6;
-
-        // D. CATATAN
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-        doc.text('D. CATATAN USTADZ/USTADZAH', margin, curY); curY += 6;
-
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
-        const noteLines = doc.splitTextToSize(payload.teacher_note || '-', contentW - 6);
-        
-        // PERBAIKAN: Ubah pengali dari 5 menjadi 4 karena font-nya kecil (ukuran 9).
-        // Ditambah 4 sebagai padding pelengkap untuk atas dan bawah.
-        const noteBoxH = Math.max(25, noteLines.length * 4 + 4); 
-        
-        doc.rect(margin, curY, contentW, noteBoxH);
-        
-        // Posisi awalan teks (curY) juga saya naikkan sedikit jadi + 5 agar center
-        doc.text(noteLines, margin + 3, curY + 5);
-        curY += noteBoxH + 12;
-
-// --- TTD / MENGETAHUI ---
-curY += 5; // Beri sedikit jarak aman dari kotak catatan
-        
-        doc.setFont('helvetica', 'normal'); 
-        doc.setFontSize(10); 
-        
-        // 1. Tanggal tetap di kanan atas area TTD
-        doc.text(`Bekasi, ${today}`, pageW - margin, curY, { align: 'right' }); 
+        curY = drawTable(doc, curY, colFull, [
+            ['Kedisiplinan',    payload.behavior_grades.kedisiplinan],
+            ['Akhlak & Adab',   payload.behavior_grades.akhlak],
+            ['Keaktifan',       payload.behavior_grades.keaktifan],
+        ]);
         curY += 6;
 
-        // 2. Teks "Mengetahui," di tengah
-        doc.text('Mengetahui,', pageW / 2, curY, { align: 'center' }); 
-        curY += 8;
+        // ---- C. KEHADIRAN ----
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('C. KEHADIRAN', margin, curY); curY += 6;
+        curY = drawTable(doc, curY, colFull, [
+            ['Hadir',      `${attendanceStatsGlobal.hadir} Hari`],
+            ['Izin / Sakit', `${attendanceStatsGlobal.izin} Hari`],
+            ['Alpa',        `${attendanceStatsGlobal.alpa} Hari`],
+        ]);
+        curY += 6;
 
-        // 3. Menghitung 3 titik koordinat (X) untuk membagi kertas jadi 3 kolom proporsional
-        const col1X = margin + (contentW / 6); // Sepertiga kiri
-        const col2X = pageW / 2;               // Tengah persis
-        const col3X = pageW - margin - (contentW / 6); // Sepertiga kanan
+        // ---- D. CATATAN ----
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('D. CATATAN USTADZ/USTADZAH', margin, curY); curY += 6;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+        const noteLines = doc.splitTextToSize(payload.teacher_note || '-', contentW - 6);
+        const noteBoxH  = Math.max(25, noteLines.length * 4 + 4);
+        doc.rect(margin, curY, contentW, noteBoxH);
+        doc.text(noteLines, margin + 3, curY + 5);
+        curY += noteBoxH + 3;
 
-        // 4. Baris Jabatan (Normal, Ukuran 10)
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text('Guru Pengajar', col1X, curY, { align: 'center' });
+        // ---- TTD ----
+        curY += 5;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(`Bekasi, ${today}`, pageW - margin, curY, { align: 'right' }); curY += 6;
+
+        doc.text('Mengetahui,', pageW / 2, curY, { align: 'center' }); curY += 8;
+
+        const col1X = margin + contentW / 6, col2X = pageW / 2, col3X = pageW - margin - contentW / 6;
+
+        doc.text('Guru Pengajar',           col1X, curY, { align: 'center' });
         doc.text('Ketua DKM Nurul Hidayah', col2X, curY, { align: 'center' });
-        doc.text('Pembina Pengajian', col3X, curY, { align: 'center' });
-        
-        // Beri jarak vertikal seakan-akan ada area untuk tanda tangan asli (20 unit)
-        curY += 5; 
-
-        // 5. Baris Nama Lengkap (Bold, Ukuran 11 -> lebih besar 1px/pt)
+        doc.text('Pembina Pengajian',        col3X, curY, { align: 'center' });
+        curY += 5;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.text('Kak Wakhid Khoirul Aziz', col1X, curY, { align: 'center' });
-        doc.text('Bp. Ust. Suyatno', col2X, curY, { align: 'center' });
-        doc.text('Bp. Ust. Idris', col3X, curY, { align: 'center' });
-        
+        doc.text('Bp. Ust. Suyatno',        col2X, curY, { align: 'center' });
+        doc.text('Bp. Ust. Idris',           col3X, curY, { align: 'center' });
+
+        // ================================================================
+        // HALAMAN 2
+        // ================================================================
+        doc.addPage();
+        let p2Y = 20;
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+        doc.text('LAMPIRAN RAPORT', pageW / 2, p2Y, { align: 'center' }); p2Y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(`Analisis & Ringkasan Absensi — ${studentName}`, pageW / 2, p2Y, { align: 'center' });
+        p2Y += 4;
+        doc.setLineWidth(0.5); doc.line(margin, p2Y, pageW - margin, p2Y); p2Y += 8;
+
+        // ---- E. ANALISIS PSIKOLOGIS ----
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('E. ANALISIS & RINGKASAN ANAK', margin, p2Y); p2Y += 6;
+
+        if (analisisAIGlobal) {
+            const sectionBox = (title, text, rgb) => {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.text(title, margin, p2Y); p2Y += 5;
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+                const lines = doc.splitTextToSize(text || '-', contentW - 6);
+                const boxH  = Math.max(12, lines.length * 4 + 6);
+                doc.setFillColor(...rgb); doc.rect(margin, p2Y, contentW, boxH, 'F');
+                doc.rect(margin, p2Y, contentW, boxH);
+                doc.text(lines, margin + 3, p2Y + 5);
+                p2Y += boxH + 5;
+            };
+            sectionBox('Profil:', analisisAIGlobal.profilPsikologis, [240, 248, 255]);
+            sectionBox('Kelebihan:', analisisAIGlobal.kelebihan, [240, 255, 244]);
+            sectionBox('Area Pengembangan:', analisisAIGlobal.kekurangan, [255, 250, 235]);
+            p2Y += 3;
+        } else {
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text('(Tekan "Generate AI" pada form raport untuk mengisi bagian ini secara otomatis.)', margin, p2Y);
+            doc.setTextColor(0, 0, 0);
+            p2Y += 10;
+        }
+
+        // ---- F. RINGKASAN ABSENSI BULANAN ----
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('F. RINGKASAN ABSENSI BULANAN', margin, p2Y); p2Y += 6;
+
+        const monthlySummary = buildMonthlyAttendanceSummary();
+        const colAbsen = [
+            { label: 'Bulan',      x: margin,                   w: contentW * 0.50 },
+            { label: 'Izin/Sakit', x: margin + contentW * 0.50, w: contentW * 0.25 },
+            { label: 'Alpa',       x: margin + contentW * 0.75, w: contentW * 0.25 }
+        ];
+
+        if (monthlySummary.length > 0) {
+            const rowH = 8;
+            doc.setFillColor(220, 220, 220);
+            colAbsen.forEach(c => doc.rect(c.x, p2Y, c.w, rowH, 'F'));
+            doc.rect(margin, p2Y, contentW, rowH);
+            colAbsen.slice(1).forEach(c => doc.line(c.x, p2Y, c.x, p2Y + rowH));
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            colAbsen.forEach(c => doc.text(c.label, c.x + c.w / 2, p2Y + rowH / 2 + 1.5, { align: 'center' }));
+            p2Y += rowH;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            monthlySummary.forEach((row, idx) => {
+                if (idx % 2 === 0) {
+                    doc.setFillColor(250, 250, 250);
+                    colAbsen.forEach(c => doc.rect(c.x, p2Y, c.w, rowH, 'F'));
+                }
+                doc.rect(margin, p2Y, contentW, rowH);
+                colAbsen.slice(1).forEach(c => doc.line(c.x, p2Y, c.x, p2Y + rowH));
+
+                doc.setTextColor(0, 0, 0);
+                doc.text(row.label, colAbsen[0].x + 3, p2Y + rowH / 2 + 1.5);
+
+                doc.setTextColor(row.izin > 0 ? 180 : 0, row.izin > 0 ? 120 : 0, 0);
+                doc.text(row.izin > 0 ? `${row.izin} hari` : '-', colAbsen[1].x + colAbsen[1].w / 2, p2Y + rowH / 2 + 1.5, { align: 'center' });
+
+                doc.setTextColor(row.alpa > 0 ? 180 : 0, 0, 0);
+                doc.text(row.alpa > 0 ? `${row.alpa} hari` : '-', colAbsen[2].x + colAbsen[2].w / 2, p2Y + rowH / 2 + 1.5, { align: 'center' });
+
+                doc.setTextColor(0, 0, 0);
+                p2Y += rowH;
+            });
+
+            doc.setFillColor(225, 225, 225);
+            colAbsen.forEach(c => doc.rect(c.x, p2Y, c.w, rowH, 'F'));
+            doc.rect(margin, p2Y, contentW, rowH);
+            colAbsen.slice(1).forEach(c => doc.line(c.x, p2Y, c.x, p2Y + rowH));
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            doc.text('TOTAL', colAbsen[0].x + 3, p2Y + rowH / 2 + 1.5);
+            doc.text(`${attendanceStatsGlobal.izin} hari`, colAbsen[1].x + colAbsen[1].w / 2, p2Y + rowH / 2 + 1.5, { align: 'center' });
+            doc.text(`${attendanceStatsGlobal.alpa} hari`, colAbsen[2].x + colAbsen[2].w / 2, p2Y + rowH / 2 + 1.5, { align: 'center' });
+            p2Y += rowH + 8;
+
+        } else {
+            doc.setFillColor(240, 255, 244);
+            doc.rect(margin, p2Y, contentW, 12, 'F');
+            doc.rect(margin, p2Y, contentW, 12);
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+            doc.setTextColor(30, 140, 60);
+            doc.text('Masya Allah! Tidak ada catatan izin maupun alpa. Kehadiran sempurna!', margin + 3, p2Y + 8);
+            doc.setTextColor(0, 0, 0);
+            p2Y += 18;
+        }
+
+        // ---- G. INSIGHT KEHADIRAN ----
+        const insightText = buildAttendanceInsight();
+        if (insightText) {
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+            doc.text('G. INSIGHT & REKOMENDASI KEHADIRAN', margin, p2Y); p2Y += 6;
+
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+            const insLines  = doc.splitTextToSize(insightText, contentW - 8);
+            const insBoxH   = Math.max(16, insLines.length * 4 + 8);
+            
+            doc.setFillColor(255, 243, 205);
+            doc.rect(margin, p2Y, contentW, insBoxH, 'F');
+            doc.setFillColor(245, 158, 11);
+            doc.rect(margin, p2Y, 3, insBoxH, 'F');
+            doc.rect(margin, p2Y, contentW, insBoxH);
+            
+            doc.setTextColor(0, 0, 0);
+            doc.text(insLines, margin + 5, p2Y + 5);
+            p2Y += insBoxH;
+        }
+
         return doc;
     };
 
+    // ================================================================
+    // SUBMIT FORM RAPORT
+    // ================================================================
     document.getElementById('formRaport').onsubmit = async (e) => {
         e.preventDefault();
         const pdfWindow = window.open('', '_blank');
         if (pdfWindow) pdfWindow.document.write('<html><body style="font-family:sans-serif;text-align:center;margin-top:20vh;"><h3>Memproses PDF Raport...</h3></body></html>');
         
         const payload = {
-            id: lastRaportData ? lastRaportData.id : null, student_id: studentId,
-            academic_grades: { tajwid: document.getElementById('rapTajwid').value, fiqih: document.getElementById('rapFiqih').value, tauhid: document.getElementById('rapTauhid').value, quran: document.getElementById('rapQuran').value },
-            behavior_grades: { kedisiplinan: document.getElementById('rapSikap1').value, akhlak: document.getElementById('rapSikap2').value, keaktifan: document.getElementById('rapSikap3').value },
+            id: lastRaportData ? lastRaportData.id : null,
+            student_id: studentId,
+            academic_grades:  { tajwid: document.getElementById('rapTajwid').value, fiqih: document.getElementById('rapFiqih').value, tauhid: document.getElementById('rapTauhid').value, quran: document.getElementById('rapQuran').value },
+            behavior_grades:  { kedisiplinan: document.getElementById('rapSikap1').value, akhlak: document.getElementById('rapSikap2').value, keaktifan: document.getElementById('rapSikap3').value },
             teacher_note: document.getElementById('rapNote').value
         };
 
@@ -652,9 +1115,403 @@ curY += 5; // Beri sedikit jarak aman dari kotak catatan
             const pdfUrl = URL.createObjectURL(doc.output('blob'));
             if (pdfWindow && !pdfWindow.closed) pdfWindow.location.href = pdfUrl;
             
-            closeRaportModal(); window.showToast?.('success', 'Berhasil', 'Raport tersimpan.');
+            closeRaportModal();
+            window.showToast?.('success', 'Berhasil', 'Raport tersimpan.');
         } catch (err) {
-            if (pdfWindow) pdfWindow.close(); closeRaportModal(); window.showToast?.('danger', 'Error', 'Gagal memproses raport.');
+            if (pdfWindow) pdfWindow.close();
+            closeRaportModal();
+            window.showToast?.('danger', 'Error', 'Gagal memproses raport.');
+        }
+    };
+
+    // ================================================================
+    // HAFALAN — HELPER
+    // ================================================================
+    const getSurahById = (id) => JUZ_AMMA.find(s => s.id === id) || null;
+
+    const renderCheckpointBadge = () => {
+        const ui = document.getElementById('hafalanBadgeUI');
+        if (!ui) return;
+        const { current_surah_id, current_ayah } = studentCheckpoint;
+        if (current_surah_id === null) {
+            ui.innerHTML = '<span class="text-amber-500">Belum diset</span>';
+            return;
+        }
+        const surah = getSurahById(current_surah_id);
+        if (!surah) return;
+        const sisa = surah.ayahs - current_ayah;
+        ui.innerHTML = `
+            <span>${surah.name}</span>
+            <span class="text-[9px] text-green-500 font-bold block text-center">Ayat ${current_ayah}/${surah.ayahs}</span>
+            ${sisa <= 3 ? `<span class="text-[8px] text-amber-500 font-bold block text-center">Sisa ${sisa} lagi tamat!</span>` : ''}
+        `;
+    };
+
+    // ================================================================
+    // HAFALAN — MODAL ONBOARDING
+    // ================================================================
+    const openOnboardingModal = () => {
+        // Isi dropdown surat
+        const surahSel = document.getElementById('onboardingSurah');
+        surahSel.innerHTML = JUZ_AMMA.map(s =>
+            `<option value="${s.id}">${s.id}. ${s.name} (${s.ayahs} ayat)</option>`
+        ).join('');
+
+        // Isi dropdown ayat berdasar surat pertama
+        const updateAyahOptions = (surahId) => {
+            const surah = getSurahById(parseInt(surahId));
+            const ayahSel = document.getElementById('onboardingAyah');
+            ayahSel.innerHTML = `<option value="0">Belum mulai (ayat 0)</option>` +
+                Array.from({ length: surah.ayahs }, (_, i) => i + 1)
+                    .map(n => `<option value="${n}">Ayat ${n}</option>`).join('');
+        };
+
+        surahSel.onchange = () => updateAyahOptions(surahSel.value);
+        updateAyahOptions(surahSel.value);
+
+        document.getElementById('modalOnboarding').classList.replace('hidden', 'flex');
+    };
+
+    window.closeOnboardingModal = () =>
+        document.getElementById('modalOnboarding').classList.replace('flex', 'hidden');
+
+    window.submitOnboarding = async () => {
+        const surah_id = parseInt(document.getElementById('onboardingSurah').value);
+        const ayah     = parseInt(document.getElementById('onboardingAyah').value);
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/checkpoint`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_surah_id: surah_id, current_ayah: ayah })
+            });
+            if (!res.ok) throw new Error();
+            studentCheckpoint = { current_surah_id: surah_id, current_ayah: ayah };
+            renderCheckpointBadge();
+            closeOnboardingModal();
+            window.showToast?.('success', 'Berhasil', 'Posisi hafalan disimpan!');
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal menyimpan posisi hafalan.');
+        }
+    };
+
+    // ================================================================
+    // HAFALAN — MODAL SETOR HARIAN
+    // ================================================================
+    const SETOR_OPTIONS = [1, 2, 3, 5, 7, 10];
+
+    window.openHafalanModal = () => {
+        const { current_surah_id, current_ayah } = studentCheckpoint;
+        if (current_surah_id === null) { openOnboardingModal(); return; }
+
+        const surah = getSurahById(current_surah_id);
+        const sisa  = surah.ayahs - current_ayah;
+
+        // Info header
+        document.getElementById('hafalanInfo').innerHTML =
+            `📖 <b>${surah.name}</b> — Ayat <b>${current_ayah}</b> dari <b>${surah.ayahs}</b>`;
+
+        // Warning label jika mepet tamat
+        const warnEl = document.getElementById('hafalanWarning');
+        if (sisa <= 3 && sisa > 0) {
+            warnEl.textContent = `⚡ ${surah.name} sisa ${sisa} ayat lagi tamat!`;
+            warnEl.classList.remove('hidden');
+        } else {
+            warnEl.classList.add('hidden');
+        }
+
+        // ── Grid MAJU ──
+        const SETOR_OPTIONS = [1, 2, 3, 5, 7, 10];
+        const gridMaju = document.getElementById('hafalanBtnGrid');
+        gridMaju.innerHTML = SETOR_OPTIONS.map(n => {
+            const disabled = n > sisa;
+            return `
+                <button onclick="setorHafalan(${n})" ${disabled ? 'disabled' : ''}
+                    class="py-3 rounded-xl font-bold text-sm transition-all active:scale-95
+                        ${disabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-green-100 text-green-700 hover:bg-green-200'}">
+                    +${n}
+                </button>`;
+        }).join('');
+
+        // Tombol "Tamatkan sisa" jika sisa ada tapi tidak ada di opsi
+        if (sisa > 0 && !SETOR_OPTIONS.includes(sisa)) {
+            gridMaju.innerHTML += `
+                <button onclick="setorHafalan(${sisa})"
+                    class="col-span-4 py-3 rounded-xl font-bold text-sm bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all active:scale-95">
+                    🏁 Tamatkan sisa ${sisa} ayat
+                </button>`;
+        }
+
+        // ── Grid MUNDUR ──
+        const MUNDUR_OPTIONS = [1, 2, 3, 5, 7, 10];
+        const gridMundur = document.getElementById('hafalanBtnGridMundur');
+        gridMundur.innerHTML = MUNDUR_OPTIONS.map(n => {
+            // Semua opsi mundur selalu aktif (backend handle cross-surah)
+            return `
+                <button onclick="setorHafalan(${-n})"
+                    class="py-3 rounded-xl font-bold text-sm bg-red-100 text-red-600 hover:bg-red-200 transition-all active:scale-95">
+                    −${n}
+                </button>`;
+        }).join('');
+
+        // Reset ke mode maju tiap buka modal
+        setHafalanMode('maju');
+
+        document.getElementById('modalHafalan').classList.replace('hidden', 'flex');
+    };
+
+        // ================================================================
+    // HAFALAN — EDIT MANUAL (Teacher Override)
+    // ================================================================
+    window.openEditCheckpointModal = () => {
+        const surahSel = document.getElementById('editSurah');
+        const { current_surah_id, current_ayah } = studentCheckpoint;
+
+        surahSel.innerHTML = JUZ_AMMA.map(s =>
+            `<option value="${s.id}" ${s.id === current_surah_id ? 'selected' : ''}>${s.id}. ${s.name} (${s.ayahs} ayat)</option>`
+        ).join('');
+
+        const updateEditAyah = (surahId) => {
+            const surah = getSurahById(parseInt(surahId));
+            document.getElementById('editAyah').innerHTML =
+                `<option value="0">Belum mulai (ayat 0)</option>` +
+                Array.from({ length: surah.ayahs }, (_, i) => i + 1)
+                    .map(n => `<option value="${n}" ${n === current_ayah && parseInt(surahId) === current_surah_id ? 'selected' : ''}>${n === surah.ayahs ? `Ayat ${n} (TAMAT ✓)` : `Ayat ${n}`}</option>`)
+                    .join('');
+        };
+
+        surahSel.onchange = () => updateEditAyah(surahSel.value);
+        updateEditAyah(current_surah_id || 1);
+
+        // Tutup menu titik tiga jika terbuka
+        document.getElementById('hafalanMenu').classList.add('hidden');
+        document.getElementById('modalEditCheckpoint').classList.replace('hidden', 'flex');
+    };
+
+    window.closeEditCheckpointModal = () =>
+        document.getElementById('modalEditCheckpoint').classList.replace('flex', 'hidden');
+
+    window.submitEditCheckpoint = async () => {
+        const surah_id = parseInt(document.getElementById('editSurah').value);
+        const ayah     = parseInt(document.getElementById('editAyah').value);
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/checkpoint`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_surah_id: surah_id, current_ayah: ayah })
+            });
+            if (!res.ok) throw new Error();
+            studentCheckpoint = { current_surah_id: surah_id, current_ayah: ayah };
+            renderCheckpointBadge();
+            closeEditCheckpointModal();
+            window.showToast?.('success', 'Berhasil', 'Posisi hafalan diperbarui!');
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal memperbarui posisi hafalan.');
+        }
+    };
+
+        // ================================================================
+    // HAFALAN — RESET ONBOARDING
+    // ================================================================
+    window.toggleHafalanMenu = () => {
+        const menu = document.getElementById('hafalanMenu');
+        menu.classList.toggle('hidden');
+        // Tutup otomatis jika klik di luar
+        const close = (e) => {
+            if (!menu.contains(e.target) && !e.target.closest('[onclick="toggleHafalanMenu()"]')) {
+                menu.classList.add('hidden');
+                document.removeEventListener('click', close);
+            }
+        };
+        if (!menu.classList.contains('hidden')) {
+            setTimeout(() => document.addEventListener('click', close), 10);
+        }
+    };
+
+    window.confirmResetHafalan = () => {
+        document.getElementById('hafalanMenu').classList.add('hidden');
+        if (!confirm('⚠️ Yakin mau reset semua data hafalan anak ini?\n\nData posisi surat & ayat akan kembali ke nol. Log hafalan tetap tersimpan.')) return;
+        resetHafalan();
+    };
+
+    const resetHafalan = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/checkpoint`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error();
+            studentCheckpoint = { current_surah_id: null, current_ayah: 0 };
+            renderCheckpointBadge();
+            window.showToast?.('success', 'Reset Berhasil', 'Data hafalan direset. Onboarding akan muncul saat refresh.');
+        } catch {
+            window.showToast?.('danger', 'Error', 'Gagal mereset data hafalan.');
+        }
+    };
+
+    window.closeHafalanModal = () =>
+        document.getElementById('modalHafalan').classList.replace('flex', 'hidden');
+
+    window.setorHafalan = async (jumlah) => {
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/memorization`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: studentId, added_ayahs: jumlah })
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message || 'Gagal');
+
+            studentCheckpoint.current_surah_id = result.data.current_surah_id;
+            studentCheckpoint.current_ayah     = result.data.current_ayah;
+
+            renderCheckpointBadge();
+            closeHafalanModal();
+
+            let msg;
+            if (result.data.promoted) {
+                msg = result.data.next_surah === 'KHATAM JUZ AMMA 🎉'
+                    ? `MASYA ALLAH! ${result.data.prev_surah} tamat! JUZ AMMA KHATAM! 🎉🎉🎉`
+                    : `Masya Allah! Tamat ${result.data.prev_surah}! Lanjut → ${result.data.next_surah} 🎉`;
+            } else if (result.data.demoted) {
+                msg = `Dikoreksi mundur ke ${result.data.next_surah}, ayat ${result.data.current_ayah}.`;
+            } else {
+                msg = jumlah > 0
+                    ? `+${jumlah} ayat tercatat! Semangat! 💪`
+                    : `Koreksi −${Math.abs(jumlah)} ayat tersimpan.`;
+            }
+            window.showToast?.('success', jumlah > 0 ? 'Hafalan Dicatat' : 'Koreksi Disimpan', msg);
+        } catch (err) {
+            window.showToast?.('danger', 'Error', err.message || 'Gagal mencatat hafalan.');
+        }
+    };
+
+    // ================================================================
+    // HAFALAN — MODE MAJU/MUNDUR di modal harian
+    // ================================================================
+    let currentHafalanMode = 'maju';
+
+    window.setHafalanMode = (mode) => {
+        currentHafalanMode = mode;
+        const isMaju = mode === 'maju';
+
+        document.getElementById('tabMaju').className   = `flex-1 py-2 text-[10px] font-bold rounded-xl shadow-sm transition-all uppercase tracking-widest ${isMaju ? 'bg-white text-green-700' : 'text-gray-400 hover:text-gray-600'}`;
+        document.getElementById('tabMundur').className = `flex-1 py-2 text-[10px] font-bold rounded-xl shadow-sm transition-all uppercase tracking-widest ${!isMaju ? 'bg-white text-red-600' : 'text-gray-400 hover:text-gray-600'}`;
+
+        document.getElementById('sectionMaju').classList.toggle('hidden', !isMaju);
+        document.getElementById('sectionMundur').classList.toggle('hidden', isMaju);
+    };
+
+    // ================================================================
+    // PATCH generateSystemNote — suntikkan checkpoint ke prompt AI
+    // ================================================================
+    // (Ganti fungsi generateSystemNote yang sudah ada)
+    window.generateSystemNote = async () => {
+        const name = document.getElementById('rapName').value;
+        const btn  = document.querySelector('button[onclick="generateSystemNote()"]');
+
+        // Terjemahkan checkpoint ke teks
+        const surah = getSurahById(studentCheckpoint.current_surah_id);
+        const checkpointText = surah
+            ? `Pencapaian Hafalan: Surah ${surah.name}, Ayat ${studentCheckpoint.current_ayah} dari ${surah.ayahs}`
+            : 'Pencapaian Hafalan: belum diset';
+
+        const payload = {
+            studentName: name,
+            academic:  {
+                tajwid: document.getElementById('rapTajwid').value,
+                fiqih:  document.getElementById('rapFiqih').value,
+                tauhid: document.getElementById('rapTauhid').value,
+                quran:  document.getElementById('rapQuran').value
+            },
+            behavior: {
+                kedisiplinan: document.getElementById('rapSikap1').value,
+                akhlak:       document.getElementById('rapSikap2').value,
+                keaktifan:    document.getElementById('rapSikap3').value
+            },
+            checkpointText // dikirim ke backend untuk disuntikkan ke prompt AI
+        };
+
+        try {
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+            const res = await fetch(`${API_URL}/api/raports/generate-note`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (res.ok) {
+                document.getElementById('rapNote').value = result.data;
+                analisisAIGlobal = result.analisis || null;
+            }
+        } catch (e) { console.error(e); }
+        finally { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI'; }
+    };
+
+    // ================================================================
+    // DETEKSI ANAK TERTINGGAL — Banner di Tab Tugas AI
+    // ================================================================
+    const renderLagBanner = (lagData) => {
+        // Hapus banner lama jika ada
+        document.getElementById('lagBanner')?.remove();
+
+        const SUBJECT_LABEL = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
+        const laggingSubjects = Object.entries(lagData)
+            .filter(([, v]) => v.isLagging)
+            .map(([subject, v]) => ({ subject, ...v }));
+
+        if (laggingSubjects.length === 0) return; // Tidak ada yang tertinggal
+
+        // Buat banner HTML
+        const banner = document.createElement('div');
+        banner.id = 'lagBanner';
+        banner.className = 'mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3';
+
+        const itemsHtml = laggingSubjects.map(({ subject, classWeek, studentWeek, missedWeeks }) => {
+            const missedLabel = missedWeeks.slice(0, 3).map(w => `Mg-${w}`).join(', ');
+            const moreCount   = missedWeeks.length > 3 ? ` +${missedWeeks.length - 3} lagi` : '';
+            return `
+                <div class="bg-white rounded-xl p-3 border border-amber-100">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-black text-amber-700 uppercase">${SUBJECT_LABEL[subject]}</span>
+                        <span class="text-[9px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                            Kelas: Mg-${classWeek} | Anak: Mg-${studentWeek || '0'}
+                        </span>
+                    </div>
+                    <p class="text-[10px] text-gray-600 leading-relaxed">
+                        Belum ujian pertemuan: <b class="text-amber-700">${missedLabel}${moreCount}</b>
+                    </p>
+                    <button onclick="openSusulanModal('${subject}', ${JSON.stringify(missedWeeks)})"
+                        class="mt-2 w-full py-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-lg active:scale-95 transition-all">
+                        <i class="fa-solid fa-graduation-cap mr-1"></i> Berikan Ujian Susulan Mg-${missedWeeks[0]}
+                    </button>
+                </div>`;
+        }).join('');
+
+        banner.innerHTML = `
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                <p class="text-xs font-black text-amber-800 uppercase tracking-wide">Anak Ini Tertinggal!</p>
+            </div>
+            ${itemsHtml}`;
+
+        // Sisipkan di atas todoContainer
+        const todoContainer = document.getElementById('todoContainer');
+        todoContainer.parentElement.insertBefore(banner, todoContainer);
+    };
+
+    // ================================================================
+    // MODAL UJIAN SUSULAN (trigger dari banner)
+    // ================================================================
+    window.openSusulanModal = (subject, missedWeeks) => {
+        // Tidak perlu modal baru — cukup arahkan ke halaman ujian yang sudah ada
+        // dengan subject dan week yang sudah diketahui.
+        // Sesuaikan URL ini dengan route halaman ujian kamu.
+        const targetWeek = missedWeeks[0];
+        const confirmed  = confirm(
+            `Berikan ujian susulan ${subject.toUpperCase()} Pertemuan ${targetWeek} untuk anak ini?\n\nTekan OK untuk lanjut ke halaman ujian.`
+        );
+        if (confirmed) {
+            window.location.href = `/consultations/fill?id=${studentId}&subject=${subject}&week=${targetWeek}`;
         }
     };
 

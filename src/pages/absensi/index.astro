@@ -53,7 +53,7 @@ import Toast from '../../components/Toast.astro';
 
             <form id="formAbsensi" class="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
                 <div id="studentListContainer" class="space-y-3">
-                    <p class="text-xs text-center text-gray-400 py-4 animate-pulse">Memuat santri...</p>
+                    <p class="text-xs text-center text-gray-400 py-4 animate-pulse">Memuat Anak...</p>
                 </div>
             </form>
 
@@ -187,7 +187,7 @@ import Toast from '../../components/Toast.astro';
         const container = document.getElementById('studentListContainer');
 
         if (!allStudents.length) {
-            container.innerHTML = '<p class="text-xs text-center text-gray-400 py-6 border border-dashed border-gray-200 rounded-xl">Belum ada data santri aktif.</p>';
+            container.innerHTML = '<p class="text-xs text-center text-gray-400 py-6 border border-dashed border-gray-200 rounded-xl">Belum ada data Anak aktif.</p>';
             openModal();
             return;
         }
