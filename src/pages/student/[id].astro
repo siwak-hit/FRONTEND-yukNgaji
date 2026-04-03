@@ -396,17 +396,41 @@ import Toast from '../../components/Toast.astro';
         const canvas = document.getElementById('progressChart');
         if (!canvas) return;
         if (myChart) myChart.destroy();
+        
+        // 1. Kumpulkan SEMUA minggu yang ada (Entah dia ngerjain mapel apa saja)
+        const allWeeks = new Set([
+            ...history.tajwid.map(i => i.week),
+            ...history.fiqih.map(i => i.week),
+            ...history.tauhid.map(i => i.week)
+        ]);
+        
+        // 2. Urutkan minggu dari terkecil ke terbesar
+        const sortedWeeks = Array.from(allWeeks).sort((a,b) => a-b);
+        const labels = sortedWeeks.length > 0 ? sortedWeeks.map(w => `Mg-${w}`) : ['Mg-1'];
+
+        // 3. Petakan data agar pas dengan sumbu X (Jika tidak ada nilai di minggu itu, jadikan null)
+        const mapData = (arr) => sortedWeeks.map(w => {
+            const found = arr.find(item => item.week === w);
+            return found ? found.score : null; 
+        });
+
         myChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
-                labels: history.tajwid.map(item => `Mg-${item.week}`),
+                labels: labels,
                 datasets: [
-                    { label: 'Tajwid', data: history.tajwid.map(i => i.score), borderColor: '#22c55e', backgroundColor: '#22c55e22', tension: 0.4, fill: true },
-                    { label: 'Fiqih',  data: history.fiqih.map(i => i.score),  borderColor: '#3b82f6', tension: 0.4 },
-                    { label: 'Tauhid', data: history.tauhid.map(i => i.score), borderColor: '#a855f7', tension: 0.4 }
+                    { label: 'Tajwid', data: mapData(history.tajwid), borderColor: '#22c55e', backgroundColor: '#22c55e22', tension: 0.4, fill: true },
+                    { label: 'Fiqih', data: mapData(history.fiqih), borderColor: '#3b82f6', tension: 0.4 },
+                    { label: 'Tauhid', data: mapData(history.tauhid), borderColor: '#a855f7', tension: 0.4 }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { y: { min: 0, max: 100 } },
+                spanGaps: true // Sambung garis jika ada minggu yang bolong
+            }
         });
     };
 

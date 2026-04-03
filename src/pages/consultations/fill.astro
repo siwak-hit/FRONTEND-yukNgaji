@@ -91,9 +91,23 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const week = urlParams.get('week');
     const token = localStorage.getItem('token');
 
-    // Buat kunci unik untuk penyimpanan lokal
+    // Kunci penyimpanan lokal
     const timeKey = `timer_${studentId}_${subject}_${week}`;
     const ansKey = `ans_${studentId}_${subject}_${week}`;
+    const qKey = `qs_${studentId}_${subject}_${week}`;
+    const psychKey = `psych_${studentId}_${subject}_${week}`;
+
+    // ==========================================
+    // 0. FUNGSI ALGORITMA ACAK (FISHER-YATES SHUFFLE)
+    // ==========================================
+    const shuffleArray = (array) => {
+        const arr = [...array]; // Clone array agar tidak mengubah aslinya
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]]; // Tukar posisi acak
+        }
+        return arr;
+    };
 
     let timeLeft = 90;
     let timerInterval = null;
@@ -115,7 +129,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     // ==========================================
-    // 1. RENDER PERTANYAAN KUESIONER SOSIAL
+    // 1. RENDER PERTANYAAN KUESIONER SOSIAL (Pojok Curhat)
     // ==========================================
     const questionBank = {
         akhlak: [
@@ -135,20 +149,26 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         ]
     };
 
-    const shuffle = (array) => array.sort(() => 0.5 - Math.random());
+    let selectedQ = JSON.parse(localStorage.getItem(psychKey)) || [];
 
-    const selectedQ = [
-        { cat: 'akhlak', ...shuffle(questionBank.akhlak)[0] },
-        { cat: 'disiplin', ...shuffle(questionBank.disiplin)[0] },
-        { cat: 'aktif', ...shuffle(questionBank.aktif)[0] }
-    ];
+    // Jika belum ada 3 soal (baru buka atau sistem error), acak baru!
+    if (selectedQ.length !== 3) {
+        selectedQ = [
+            { cat: 'akhlak', ...shuffleArray(questionBank.akhlak)[0] },
+            { cat: 'disiplin', ...shuffleArray(questionBank.disiplin)[0] },
+            { cat: 'aktif', ...shuffleArray(questionBank.aktif)[0] }
+        ];
+        // ACAK JUGA OPSI JAWABANNYA
+        selectedQ = selectedQ.map(q => ({ ...q, opts: shuffleArray(q.opts) }));
+        localStorage.setItem(psychKey, JSON.stringify(selectedQ));
+    }
 
     const container = document.getElementById('kuesionerContainer');
     container.innerHTML = selectedQ.map((item, index) => `
         <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
             <p class="text-sm font-bold text-gray-800 mb-3">${index + 1}. ${item.q}</p>
             <div class="space-y-2">
-                ${shuffle(item.opts).map((opt) => `
+                ${item.opts.map((opt) => `
                     <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 active:scale-95 transition-all">
                         <input type="radio" name="q_${item.cat}" value="${opt.s}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" required>
                         <span class="text-xs font-semibold text-gray-700">${opt.t}</span>
@@ -158,9 +178,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         </div>
     `).join('');
 
-
     // ==========================================
-    // 2. FETCH DATA & RENDER AKADEMIK
+    // 2. FETCH DATA & RENDER AKADEMIK (Soal Onboarding)
     // ==========================================
     const init = async () => {
         try {
@@ -172,8 +191,23 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
             const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const qData = await qRes.json();
-            questions = qData.data;
-            
+            let allQuestions = qData.data || [];
+
+            // Tarik ID soal yang tersimpan di memori (kalau ada)
+            let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
+            questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
+
+            // Tentukan target: Maksimal 3 soal (atau sesuai ketersediaan di database)
+            const targetDisplay = Math.min(3, allQuestions.length);
+
+            // JIKA KOSONG atau JUMLAHNYA NGE-BUG (misal dari cache lama cuma 1, padahal di DB sekarang udah ada >3)
+            if (questions.length !== targetDisplay && targetDisplay > 0) {
+                // Acak dari bank soal secara merata, lalu potong 3 teratas
+                questions = shuffleArray(allQuestions).slice(0, targetDisplay);
+                // Timpa memori lama dengan susunan yang baru
+                localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
+            }
+
             renderQuestions();
             restoreDraftAnswers();
             checkExistingSession();
@@ -183,8 +217,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     const renderQuestions = () => {
-        document.getElementById('questionsList').innerHTML = questions.map((q, idx) => {
-            const shuffledOptions = Object.entries(q.options).sort(() => Math.random() - 0.5);
+        const listContainer = document.getElementById('questionsList');
+        
+        if (questions.length === 0) {
+            listContainer.innerHTML = '<p class="text-xs text-gray-400 italic bg-gray-50 p-4 rounded-xl text-center border border-gray-100">Belum ada soal untuk pertemuan ini.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = questions.map((q, idx) => {
+            // ACAK OPSI JAWABAN (A, B, C, D)
+            const shuffledOptions = shuffleArray(Object.entries(q.options));
+            
             return `
             <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}">
                 <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
@@ -202,7 +245,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     // ==========================================
-    // 3. AUTO SAVE & VALIDATION (PERBAIKAN DI SINI)
+    // 3. AUTO SAVE & VALIDATION 
     // ==========================================
     const saveDraftAnswers = () => {
         const answers = {};
@@ -212,7 +255,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             if (selected) answers[qId] = selected;
         });
 
-        // Simpan jawaban kuesioner sosial juga
         const psych = {
             akhlak: document.querySelector('input[name="q_akhlak"]:checked')?.value,
             disiplin: document.querySelector('input[name="q_disiplin"]:checked')?.value,
@@ -241,7 +283,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
     };
 
-    // Validasi baru: Tombol aktif JIKA ketiga pertanyaan sosial sudah dijawab
     const validate = () => {
         const btn = document.getElementById('btnSubmit');
         const ansAkhlak = document.querySelector('input[name="q_akhlak"]:checked');
@@ -342,7 +383,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         formData.append('subject', subject);
         formData.append('week', week);
         
-        // Ambil skor dari input yang dicheck, bukan dari textarea lagi
         formData.append('akhlak_score', document.querySelector('input[name="q_akhlak"]:checked')?.value || 0);
         formData.append('disiplin_score', document.querySelector('input[name="q_disiplin"]:checked')?.value || 0);
         formData.append('aktif_score', document.querySelector('input[name="q_aktif"]:checked')?.value || 0);
@@ -364,8 +404,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 })
             ]);
 
+            // Pembersihan total setelah sukses kirim (Agar anak selanjutnya dapat fresh form)
             localStorage.removeItem(timeKey);
             localStorage.removeItem(ansKey);
+            localStorage.removeItem(qKey);
+            localStorage.removeItem(psychKey);
 
             window.showToast?.('success', 'Berhasil', 'Data Anak berhasil dikirim.');
             setTimeout(() => window.location.replace('/consultations'), 1500);

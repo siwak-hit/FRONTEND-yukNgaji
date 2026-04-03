@@ -1,0 +1,223 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Denah Tempat Duduk - yukNgaji">
+    <div class="px-4 py-8 pb-32 min-h-screen flex flex-col bg-gray-50">
+
+        <header class="flex items-center gap-4 mb-6">
+            <a href="/dashboard" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600 active:scale-95 transition-all">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            <div>
+                <h1 class="text-lg font-bold text-gray-800 leading-tight">Denah Duduk</h1>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ketuk siswa, lalu ketuk kursi</p>
+            </div>
+        </header>
+
+        <section class="mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Belum Kebagian Kursi</h2>
+                <button id="btnReset" class="text-[10px] bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-all"><i class="fa-solid fa-rotate-left mr-1"></i> Reset Semua</button>
+            </div>
+            <div id="unassignedPool" class="flex gap-4 overflow-x-auto pb-4 pt-2 px-1 no-scrollbar min-h-[100px]">
+                <div class="flex items-center justify-center w-full text-xs text-gray-400 italic">Memuat data santri...</div>
+            </div>
+        </section>
+
+        <section class="flex-1 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            
+            <div class="flex flex-col items-center mb-8">
+                <div class="bg-gray-100 p-1 rounded-xl flex gap-1 mb-6">
+                    <button id="btnLayout2" class="px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-cyan-600 transition-all">2 Kolom</button>
+                    <button id="btnLayout1" class="px-4 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-600 transition-all">1 Kolom</button>
+                </div>
+
+                <div class="bg-gray-200 text-gray-400 text-[10px] font-bold uppercase tracking-widest px-8 py-2 rounded-b-xl border-t-4 border-gray-300">Papan Tulis / Ustadz</div>
+            </div>
+
+            <div id="classroomLayout" class="grid grid-cols-2 gap-x-6 gap-y-10">
+                </div>
+        </section>
+
+    </div>
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    const STORAGE_KEY = 'yukngaji_seat_arrangements';
+    const LAYOUT_KEY = 'yukngaji_seat_layout_mode'; // Nyimpen preferensi layout (1 atau 2)
+
+    let students = [];
+    let seatMap = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    let currentLayout = localStorage.getItem(LAYOUT_KEY) || '2'; // Default 2 Kolom
+    let selectedStudentId = null;
+
+    if (!token) window.location.replace('/');
+
+    const init = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const data = await res.json();
+            students = data.data || [];
+            
+            const validStudentIds = students.map(s => s.id);
+            for (let seatId in seatMap) {
+                if (!validStudentIds.includes(seatMap[seatId])) {
+                    delete seatMap[seatId];
+                }
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seatMap));
+
+            applyLayoutClasses(); // Terapkan styling layout
+            renderUI();
+        } catch (e) {
+            console.error(e);
+            window.showToast?.('danger', 'Error', 'Gagal memuat data santri.');
+        }
+    };
+
+    // --- LOGIKA TOGGLE LAYOUT ---
+    const applyLayoutClasses = () => {
+        const classEl = document.getElementById('classroomLayout');
+        const btn1 = document.getElementById('btnLayout1');
+        const btn2 = document.getElementById('btnLayout2');
+
+        const activeClass = 'px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-cyan-600 transition-all';
+        const inactiveClass = 'px-4 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-600 transition-all';
+
+        if (currentLayout === '1') {
+            // Mode 1 Kolom: Berbaris lurus ke bawah di tengah
+            classEl.className = 'flex flex-col items-center gap-y-10';
+            btn1.className = activeClass;
+            btn2.className = inactiveClass;
+        } else {
+            // Mode 2 Kolom: Grid bersampingan
+            classEl.className = 'grid grid-cols-2 gap-x-6 gap-y-10';
+            btn2.className = activeClass;
+            btn1.className = inactiveClass;
+        }
+    };
+
+    document.getElementById('btnLayout1').onclick = () => {
+        currentLayout = '1';
+        localStorage.setItem(LAYOUT_KEY, '1');
+        applyLayoutClasses();
+    };
+
+    document.getElementById('btnLayout2').onclick = () => {
+        currentLayout = '2';
+        localStorage.setItem(LAYOUT_KEY, '2');
+        applyLayoutClasses();
+    };
+
+    // --- LOGIKA RENDER UI ---
+    const renderUI = () => {
+        const poolEl = document.getElementById('unassignedPool');
+        const classEl = document.getElementById('classroomLayout');
+        
+        const seatedStudentIds = Object.values(seatMap);
+        const unassignedStudents = students.filter(s => !seatedStudentIds.includes(s.id));
+
+        if (unassignedStudents.length === 0) {
+            poolEl.innerHTML = `<div class="flex items-center justify-center w-full text-[10px] font-bold text-green-500 bg-green-50 rounded-xl py-4 border border-green-100">🎉 Semua santri sudah duduk!</div>`;
+        } else {
+            poolEl.innerHTML = unassignedStudents.map(s => {
+                const isSelected = selectedStudentId === s.id;
+                return `
+                    <div onclick="selectStudent('${s.id}')" class="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer transition-all active:scale-95 ${isSelected ? '-translate-y-2' : 'opacity-80 hover:opacity-100'}">
+                        <div class="relative w-14 h-14 bg-white border-2 ${isSelected ? 'border-cyan-500 ring-4 ring-cyan-100 shadow-md' : 'border-gray-200'} rounded-full flex items-center justify-center overflow-hidden">
+                            <span class="text-lg font-black ${isSelected ? 'text-cyan-500' : 'text-gray-400'}">${s.name.substring(0,2).toUpperCase()}</span>
+                            ${isSelected ? `<div class="absolute inset-0 bg-cyan-500/10"></div>` : ''}
+                        </div>
+                        <span class="text-[10px] font-bold ${isSelected ? 'text-cyan-600' : 'text-gray-600'} text-center max-w-[60px] truncate">${s.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        const totalDesks = Math.ceil(students.length / 2);
+        let deskHtml = '';
+
+        for (let i = 1; i <= totalDesks; i++) {
+            const seatLeftId = `meja-${i}-kiri`;
+            const seatRightId = `meja-${i}-kanan`;
+
+            deskHtml += `
+                <div class="flex flex-col items-center relative w-full max-w-[160px]">
+                    <span class="absolute -top-5 text-[8px] font-black text-amber-600/50 uppercase tracking-widest">Meja ${i}</span>
+                    <div class="flex gap-2 mb-2 w-full justify-center">
+                        ${renderSeat(seatLeftId)}
+                        ${renderSeat(seatRightId)}
+                    </div>
+                    <div class="w-full h-8 bg-amber-100 border border-amber-200 rounded-lg shadow-sm"></div>
+                </div>
+            `;
+        }
+        classEl.innerHTML = deskHtml;
+    };
+
+    const renderSeat = (seatId) => {
+        const studentId = seatMap[seatId];
+        
+        if (studentId) {
+            const s = students.find(x => x.id === studentId);
+            return `
+                <div onclick="removeStudent('${seatId}')" class="flex flex-col items-center cursor-pointer group relative active:scale-95 transition-transform" title="Ketuk untuk memindahkan">
+                    <div class="absolute -top-6 bg-gray-800 text-white text-[8px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Keluarkan</div>
+                    <span class="text-[9px] font-bold text-gray-700 truncate w-16 text-center mb-1 drop-shadow-sm">${s?.name || '?'}</span>
+                    <div class="w-11 h-11 bg-green-50 border-2 border-green-500 rounded-full flex items-center justify-center shadow-sm">
+                        <span class="text-xs font-black text-green-600">${s?.name.substring(0,2).toUpperCase() || '?'}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            const isActive = selectedStudentId !== null;
+            return `
+                <div onclick="placeStudent('${seatId}')" class="flex flex-col items-center cursor-pointer active:scale-95 transition-all group pt-4 w-11">
+                    <div class="w-11 h-11 bg-gray-50 border-2 border-dashed ${isActive ? 'border-cyan-400 bg-cyan-50 animate-pulse' : 'border-gray-300'} rounded-full flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-plus text-[10px] ${isActive ? 'text-cyan-500' : 'text-gray-300'}"></i>
+                    </div>
+                </div>
+            `;
+        }
+    };
+
+    window.selectStudent = (id) => {
+        selectedStudentId = selectedStudentId === id ? null : id;
+        renderUI();
+    };
+
+    window.placeStudent = (seatId) => {
+        if (!selectedStudentId) {
+            window.showToast?.('warning', 'Pilih Santri', 'Ketuk santri di atas terlebih dahulu.');
+            return;
+        }
+        seatMap[seatId] = selectedStudentId;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seatMap));
+        selectedStudentId = null;
+        renderUI();
+        if (navigator.vibrate) navigator.vibrate(50);
+    };
+
+    window.removeStudent = (seatId) => {
+        delete seatMap[seatId];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seatMap));
+        renderUI();
+        if (navigator.vibrate) navigator.vibrate(50);
+    };
+
+    document.getElementById('btnReset').onclick = () => {
+        if (confirm('Yakin ingin mereset semua posisi tempat duduk?')) {
+            seatMap = {};
+            localStorage.setItem(STORAGE_KEY, '{}');
+            selectedStudentId = null;
+            renderUI();
+        }
+    };
+
+    init();
+</script>
