@@ -7,22 +7,71 @@ import Toast from '../../components/Toast.astro';
 <Layout title="Detail Anak - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
         
-        <header class="flex items-center justify-between mb-8">
-            <div class="flex items-center gap-4">
-                <a href="/students" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </a>
-                <h1 class="text-xl font-bold text-gray-800">Detail Perkembangan</h1>
+        <header class="mb-6">
+            <!-- Row 1: Back + Title + Actions -->
+            <div class="flex items-center justify-between mb-0">
+                <div class="flex items-center gap-4">
+                    <a href="/students" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </a>
+                    <h1 class="text-xl font-bold text-gray-800">Detail Perkembangan</h1>
+                </div>
+               
+                <div class="flex items-center gap-2">
+                    <!-- Toggle navigator — ikon berbeda dari tombol back -->
+                    <button id="btnToggleNav" onclick="toggleStudentNav()"
+                        class="w-10 h-10 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all text-gray-400"
+                        title="Ganti siswa">
+                        <i class="fa-solid fa-users-between-lines text-sm"></i>
+                    </button>
+                </div>
             </div>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="openRaportModal()" class="w-10 h-10 bg-green-600 text-white rounded-xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all" title="Buat & Download Raport">
-                    <i class="fa-solid fa-file-pdf text-lg"></i>
-                </button>
-            
-                <button id="infoKalengBtn" class="w-10 h-10 bg-gray-100 text-gray-400 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all" title="Memuat status kaleng...">
-                    <i class="fa-solid fa-jar text-lg"></i>
-                </button>
+
+            <!-- Row 2: Student Navigator (collapsible) -->
+            <div id="studentNavPanel"
+                class="overflow-hidden transition-all duration-300 ease-in-out"
+                style="max-height: 0; opacity: 0;">
+                <div class="pt-3">
+                    <!-- Label hint -->
+                    <div class="flex items-center justify-between mb-2 px-0.5">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pindah Siswa</span>
+                        <span id="studentNavCounter" class="text-[10px] font-bold text-gray-400 tabular-nums">-/-</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Prev -->
+                        <button id="btnPrevStudent" onclick="navigateStudent(-1)"
+                            class="w-9 h-9 flex-shrink-0 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-all"
+                            title="Siswa sebelumnya">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+
+                        <!-- Search -->
+                        <div class="relative flex-1">
+                            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl shadow-sm px-3 py-2.5">
+                                <i class="fa-solid fa-magnifying-glass text-gray-300 text-xs flex-shrink-0"></i>
+                                <input
+                                    type="text"
+                                    id="studentSearchInput"
+                                    placeholder="Cari nama siswa..."
+                                    class="flex-1 text-sm font-medium text-gray-700 bg-transparent outline-none placeholder-gray-300 min-w-0"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <!-- Dropdown -->
+                            <div id="studentSearchDropdown"
+                                class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden max-h-52 overflow-y-auto">
+                            </div>
+                        </div>
+
+                        <!-- Next -->
+                        <button id="btnNextStudent" onclick="navigateStudent(1)"
+                            class="w-9 h-9 flex-shrink-0 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-all"
+                            title="Siswa berikutnya">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -36,11 +85,23 @@ import Toast from '../../components/Toast.astro';
 
         <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6">
             
-            <div class="flex items-center gap-4 mb-5">
-                <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl">--</div>
-                <div>
-                    <h2 id="studentName" class="text-lg font-bold text-gray-800">Memuat...</h2>
+            <div class="flex items-center gap-3 mb-5">
+                <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl flex-shrink-0">--</div>
+                <div class="flex-1 min-w-0">
+                    <h2 id="studentName" class="text-lg font-bold text-gray-800 truncate">Memuat...</h2>
                     <p id="studentGrade" class="text-xs text-gray-400 font-medium uppercase tracking-wider">--</p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button onclick="openRaportModal()"
+                        class="w-9 h-9 bg-green-600 text-white rounded-xl shadow-md shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all"
+                        title="Buat & Download Raport">
+                        <i class="fa-solid fa-file-pdf text-sm"></i>
+                    </button>
+                    <button id="infoKalengBtn"
+                        class="w-9 h-9 bg-gray-100 text-gray-400 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all"
+                        title="Memuat status kaleng...">
+                        <i class="fa-solid fa-jar text-sm"></i>
+                    </button>
                 </div>
             </div>
 
@@ -365,6 +426,161 @@ import Toast from '../../components/Toast.astro';
     const studentId = pathParts[pathParts.length - 1];
 
     if (!token) window.location.replace('/');
+
+    // ================================================================
+    // STUDENT NAVIGATOR — list semua siswa, navigasi prev/next, search
+    // ================================================================
+    let allStudents = [];       // [{id, name, grade}, ...]
+    let currentStudentIndex = -1;
+    let searchDebounceTimer = null;
+
+    const loadAllStudents = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json();
+            allStudents = (json.data || []).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+            currentStudentIndex = allStudents.findIndex(s => String(s.id) === String(studentId));
+            updateNavigatorUI();
+        } catch (e) {
+            console.error('Gagal load daftar siswa:', e);
+        }
+    };
+
+    const updateNavigatorUI = () => {
+        const counter = document.getElementById('studentNavCounter');
+        const input   = document.getElementById('studentSearchInput');
+        const btnPrev = document.getElementById('btnPrevStudent');
+        const btnNext = document.getElementById('btnNextStudent');
+
+        if (currentStudentIndex >= 0) {
+            counter.textContent = `${currentStudentIndex + 1}/${allStudents.length}`;
+            input.placeholder   = allStudents[currentStudentIndex]?.name || 'Cari nama siswa...';
+        } else {
+            counter.textContent = `-/${allStudents.length}`;
+        }
+
+        btnPrev.disabled = currentStudentIndex <= 0;
+        btnNext.disabled = currentStudentIndex >= allStudents.length - 1;
+    };
+
+    window.navigateStudent = (direction) => {
+        const newIndex = currentStudentIndex + direction;
+        if (newIndex < 0 || newIndex >= allStudents.length) return;
+        const target = allStudents[newIndex];
+        window.location.href = `/student/${target.id}`;
+    };
+
+    // Search dengan debounce
+    const renderDropdown = (query) => {
+        const dropdown = document.getElementById('studentSearchDropdown');
+        if (!query.trim()) {
+            dropdown.classList.add('hidden');
+            dropdown.innerHTML = '';
+            return;
+        }
+
+        const q = query.toLowerCase();
+        const matched = allStudents.filter(s => s.name.toLowerCase().includes(q)).slice(0, 8);
+
+        if (matched.length === 0) {
+            dropdown.innerHTML = `<div class="px-4 py-3 text-xs text-gray-400 text-center">Tidak ditemukan</div>`;
+            dropdown.classList.remove('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = matched.map((s, i) => {
+            const highlighted = s.name.replace(
+                new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                '<mark class="bg-yellow-100 text-yellow-800 rounded">$1</mark>'
+            );
+            const isActive = String(s.id) === String(studentId);
+            return `
+                <button onclick="goToStudent('${s.id}')"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${isActive ? 'bg-green-50' : ''} ${i > 0 ? 'border-t border-gray-50' : ''}">
+                    <div class="w-7 h-7 rounded-lg bg-green-100 text-green-600 text-[10px] font-black flex items-center justify-center flex-shrink-0">
+                        ${s.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-800 truncate">${highlighted}</p>
+                        <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wide truncate">${s.grade || ''}</p>
+                    </div>
+                    ${isActive ? '<i class="fa-solid fa-circle-check text-green-500 text-xs flex-shrink-0"></i>' : ''}
+                </button>`;
+        }).join('');
+
+        dropdown.classList.remove('hidden');
+    };
+
+    window.goToStudent = (id) => {
+        document.getElementById('studentSearchDropdown').classList.add('hidden');
+        document.getElementById('studentSearchInput').value = '';
+        if (String(id) !== String(studentId)) {
+            window.location.href = `/student/${id}`;
+        }
+    };
+
+    // Event listeners untuk search
+    document.getElementById('studentSearchInput').addEventListener('input', (e) => {
+        clearTimeout(searchDebounceTimer);
+        const val = e.target.value;
+        searchDebounceTimer = setTimeout(() => renderDropdown(val), 280);
+    });
+
+    document.getElementById('studentSearchInput').addEventListener('focus', (e) => {
+        if (e.target.value.trim()) renderDropdown(e.target.value);
+    });
+
+    // Tutup dropdown kalau klik di luar
+    document.addEventListener('click', (e) => {
+        const input    = document.getElementById('studentSearchInput');
+        const dropdown = document.getElementById('studentSearchDropdown');
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Panggil saat halaman load
+    loadAllStudents();
+
+    // ================================================================
+    // TOGGLE STUDENT NAVIGATOR PANEL
+    // ================================================================
+    let navPanelOpen = false;
+
+    window.toggleStudentNav = () => {
+        const panel  = document.getElementById('studentNavPanel');
+        const btn    = document.getElementById('btnToggleNav');
+        const input  = document.getElementById('studentSearchInput');
+        navPanelOpen = !navPanelOpen;
+
+        if (navPanelOpen) {
+            panel.style.maxHeight = '120px';
+            panel.style.opacity   = '1';
+            btn.classList.remove('text-gray-400', 'bg-white', 'border-gray-100');
+            btn.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
+            
+            // [TAMBAHAN] Ganti overflow setelah animasi selesai (320ms)
+            setTimeout(() => {
+                panel.classList.remove('overflow-hidden');
+                panel.classList.add('overflow-visible');
+                input.focus();
+            }, 320);
+
+        } else {
+            // [TAMBAHAN] Kembalikan ke overflow-hidden SEBELUM animasi menutup
+            panel.classList.remove('overflow-visible');
+            panel.classList.add('overflow-hidden');
+            
+            panel.style.maxHeight = '0';
+            panel.style.opacity   = '0';
+            btn.classList.remove('text-green-600', 'bg-green-50', 'border-green-200');
+            btn.classList.add('text-gray-400', 'bg-white', 'border-gray-100');
+            document.getElementById('studentSearchDropdown').classList.add('hidden');
+            input.value = '';
+        }
+    };
     
     let myChart = null;
     let attChart = null;
