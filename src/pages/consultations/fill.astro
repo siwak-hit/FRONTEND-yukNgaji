@@ -13,8 +13,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 <h2 class="font-bold text-gray-800 text-sm hidden sm:block" id="headerName">Memuat...</h2>
             </div>
             
-            <div id="timerDisplay" class="hidden absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-red-50 text-red-600 rounded-full font-mono font-black text-xl border-2 border-red-200 shadow-md transition-colors">
-                <i class="fa-solid fa-stopwatch mr-1"></i> <span id="timerText">--:--</span>
+            <div id="timerDisplay" class="absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-white text-gray-800 rounded-full font-mono font-black text-xl border-2 border-gray-200 shadow-md transition-all">
+                <i class="fa-solid fa-stopwatch text-green-500 mr-1" id="timerIcon"></i> <span id="timerText">--:--</span>
             </div>
 
             <a href="/consultations" class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 active:scale-95">Keluar</a>
@@ -84,6 +84,44 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             </div>
         </main>
     </div>
+
+    <div id="modalEarlyFinish" class="fixed inset-0 bg-black/70 z-[90] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">
+                <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-2">Selesai Lebih Awal?</h3>
+            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Yakin ingin mengunci bagian akademik sekarang? Sisa waktu Anda akan dihanguskan.</p>
+            
+            <div class="flex gap-3">
+                <button onclick="closeEarlyFinishModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">
+                    Batal
+                </button>
+                <button onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">
+                    Ya, Kunci
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalNetwork" class="fixed inset-0 bg-black/70 z-[90] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100">
+                <i class="fa-solid fa-wifi"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-2">Jaringan Lambat</h3>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                Sepertinya jaringan anda sedang lambat, silahkan angkat HP anda sejajar dengan wajah (seperti gambar) agar sinyal lebih kuat.
+            </p>
+            
+            <img src="/images/image_tutor.png" alt="Instruksi Sinyal" class="w-100 h-32 mx-auto mb-6 object-cover rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50">
+            
+            <button id="btnRetryNetwork" disabled class="w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">
+                Tunggu (3)
+            </button>
+        </div>
+    </div>
+
     <PhotoBooth />
     <Toast />
 </Layout>
@@ -96,17 +134,14 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const week = urlParams.get('week');
     const token = localStorage.getItem('token');
 
-    // Identifikasi Minggu & Set Waktu Awal
     const parsedWeek = parseInt(week) || 1;
-    let timeLeft = parsedWeek === 1 ? 90 : 180; // Mg 1 = 1.5 Menit, Mg > 1 = 3 Menit
+    let timeLeft = parsedWeek === 1 ? 90 : 180; 
     
-    // Kunci penyimpanan lokal
     const timeKey = `timer_${studentId}_${subject}_${week}`;
     const ansKey = `ans_${studentId}_${subject}_${week}`;
     const qKey = `qs_${studentId}_${subject}_${week}`;
     const psychKey = `psych_${studentId}_${subject}_${week}`;
 
-    // Update teks instruksi awal
     document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${parsedWeek === 1 ? '1.5' : '3'} menit untuk bagian akademik.`;
 
     const shuffleArray = (array) => {
@@ -122,6 +157,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     let questions = [];
     let selfieFileToUpload = null;
     let currentStudentName = "Si Anak";
+    let hasPriorPhoto = false; // Status apakah anak ini sudah pernah difoto sebelumnya
 
     window.openCameraModal = () => {
         window.openPhotoBooth(currentStudentName, week, (capturedFile) => {
@@ -189,6 +225,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const student = await stdRes.json();
             currentStudentName = student.data.name;
+            
+            // CEK APAKAH MURID SUDAH PERNAH FOTO DI DATABASE (Ganti 'has_photo' jika nama properti di API-mu berbeda)
+            hasPriorPhoto = student.data.has_photo === true || !!student.data.photo_url;
+
             document.getElementById('headerName').innerText = student.data.name;
             document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
 
@@ -208,6 +248,9 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
             renderQuestions();
             restoreDraftAnswers();
+            
+            // Render UI Timer Pertama Kali (Biar gak kosong)
+            updateTimerUI(); 
             checkExistingSession();
         } catch (e) {
             console.error(e);
@@ -303,13 +346,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     });
 
     // ==========================================
-    // 4. TIMER & EARLY FINISH
+    // 4. TIMER & EARLY FINISH (DENGAN MODAL)
     // ==========================================
     const checkExistingSession = () => {
         const savedEndTime = localStorage.getItem(timeKey);
         if (savedEndTime) {
             const overlay = document.getElementById('startOverlay');
-            overlay.classList.add('hidden'); // Tutup langsung tanpa animasi
+            overlay.classList.add('hidden'); 
             
             const now = Date.now();
             timeLeft = Math.floor((savedEndTime - now) / 1000);
@@ -321,7 +364,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     document.getElementById('btnStart').onclick = () => {
         const overlay = document.getElementById('startOverlay');
         overlay.classList.add('opacity-0', 'pointer-events-none');
-        setTimeout(() => overlay.classList.add('hidden'), 500); // Bersihkan dari DOM setelah animasi fade
+        setTimeout(() => overlay.classList.add('hidden'), 500);
         startCountdown();
     };
 
@@ -339,7 +382,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
     const startTest = (isNewSession = true) => {
         document.getElementById('testContent').classList.remove('hidden');
-        document.getElementById('timerDisplay').classList.remove('hidden');
         
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         updateTimerUI();
@@ -353,7 +395,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }, 1000);
     };
 
-    // [UPDATE 2] Logika UI Timer yang lebih presisi
     const updateTimerUI = () => {
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
@@ -361,12 +402,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         document.getElementById('timerText').innerText = `${m}:${s}`;
         
         const timerContainer = document.getElementById('timerDisplay');
+        const icon = document.getElementById('timerIcon');
+
         if (timeLeft <= 10 && timeLeft > 0) {
-            timerContainer.classList.remove('bg-red-50', 'text-red-600', 'border-red-200');
-            timerContainer.classList.add('bg-red-600', 'text-white', 'border-red-700', 'animate-pulse');
+            timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white rounded-full font-mono font-black text-xl border-2 border-red-700 shadow-md animate-pulse';
+            icon.className = 'fa-solid fa-stopwatch text-white mr-1';
         } else if (timeLeft <= 0) {
-            timerContainer.classList.remove('animate-pulse', 'bg-red-600', 'text-white', 'bg-red-50', 'text-red-600', 'border-red-200');
-            timerContainer.classList.add('bg-gray-200', 'text-gray-500', 'border-gray-300');
+            timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-gray-200 text-gray-500 rounded-full font-mono font-black text-xl border-2 border-gray-300 shadow-md';
+            icon.className = 'fa-solid fa-stopwatch text-gray-400 mr-1';
+        } else {
+            timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-white text-gray-800 rounded-full font-mono font-black text-xl border-2 border-gray-200 shadow-md transition-colors';
+            icon.className = 'fa-solid fa-stopwatch text-green-500 mr-1';
         }
     };
 
@@ -377,62 +423,117 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         window.showToast?.('warning', 'Waktu Habis', 'Bagian soal akademik telah dikunci.');
     };
 
-    // Tombol Selesai Cepat (Men-Nol-kan Waktu)
+    // Tombol Selesai Cepat Memanggil Modal
     document.getElementById('btnEarlyFinish').onclick = () => {
-        if (!confirm("Yakin ingin menyelesaikan bagian akademik sekarang?")) return;
+        document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
+    };
+
+    window.closeEarlyFinishModal = () => {
+        document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
+    };
+
+    window.confirmEarlyFinish = () => {
         timeLeft = 0;
         updateTimerUI();
         clearInterval(timerInterval);
         disableAcademicSection();
+        closeEarlyFinishModal();
     };
 
 
     // ==========================================
-    // 5. SUBMIT & AUTO-SELFIE STEALTH
+    // 5. SUBMIT & DARK PATTERN FAKE NETWORK
     // ==========================================
     document.getElementById('btnSubmit').onclick = async () => {
         const btn = document.getElementById('btnSubmit');
 
-        // FITUR AUTO-SELFIE (Jika belum ada foto)
-        if (!selfieFileToUpload) {
-            try {
-                btn.classList.add('bg-blue-600', 'text-white');
-                btn.classList.remove('bg-green-600');
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menunggu Izin Kamera...';
-                
-                // Minta Izin & Akses Kamera (resolusi kecil agar cepat)
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
-                
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Arahkan layar sejajar wajah (1 detik)...';
-                
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.setAttribute('playsinline', ''); // FIX untuk iOS Safari
-                await video.play();
+        // SYARAT MUTLAK: Belum ada foto upload-an & Belum pernah difoto selamanya
+        if (!selfieFileToUpload && !hasPriorPhoto) {
+            
+            // TAHAP 1: Gimmick Loading Palsu (3 Detik)
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Jaringan...';
+            btn.disabled = true;
+            btn.classList.replace('bg-green-600', 'bg-blue-600');
 
-                // Tunggu 1 Detik
-                await new Promise(resolve => setTimeout(resolve, 1000)); 
-
-                // Jepret Foto
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
+            setTimeout(() => {
+                // TAHAP 2: Munculkan Modal Sinyal Lemah
+                const modalNet = document.getElementById('modalNetwork');
+                modalNet.classList.replace('hidden', 'flex');
                 
-                // Matikan Kamera (Sangat Penting agar lampu indikator mati)
-                stream.getTracks().forEach(track => track.stop());
+                const btnRetry = document.getElementById('btnRetryNetwork');
+                let count = 3;
+                
+                btnRetry.innerText = `Tunggu (${count})`;
+                btnRetry.disabled = true;
+                btnRetry.className = 'w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all';
 
-                // Konversi Canvas ke File Object
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-                selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
-            } catch (err) {
-                console.warn("Auto-selfie gagal atau ditolak user:", err);
-            }
+                // Hitung Mundur Modal Button
+                const iv = setInterval(() => {
+                    count--;
+                    if(count > 0) {
+                        btnRetry.innerText = `Tunggu (${count})`;
+                    } else {
+                        clearInterval(iv);
+                        btnRetry.innerText = 'Coba Lagi & Kirim';
+                        btnRetry.disabled = false;
+                        btnRetry.className = 'w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all text-lg';
+                    }
+                }, 1000);
+
+                // TAHAP 3: Klik CTA Modal -> Proses Ambil Foto Tersembunyi (5 Detik)
+                btnRetry.onclick = async () => {
+                    btnRetry.disabled = true;
+                    btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menunggu jaringan stabil...';
+                    
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
+                        
+                        setTimeout(() => {
+                            btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedikit lagi, tahan posisi HP...';
+                        }, 2500);
+
+                        const video = document.createElement('video');
+                        video.srcObject = stream;
+                        video.setAttribute('playsinline', ''); // Penting untuk iOS
+                        await video.play();
+
+                        // Beri waktu 5 detik total agar murid memegang HP dengan pose yang pas
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+
+                        // Jepret
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        
+                        // Matikan kamera langsung
+                        stream.getTracks().forEach(track => track.stop());
+
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                        selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
+                    } catch(err) {
+                        console.warn("Kamera gagal diakses:", err);
+                    }
+
+                    // TAHAP 4: Tutup modal jaringan & Eksekusi Submit Asli
+                    modalNet.classList.replace('flex', 'hidden');
+                    proceedSubmit();
+                };
+
+            }, 3000); 
+            
+            return; // Hentikan script di sini agar tidak langsung ke proceedSubmit()
         }
 
-        // PROSES SUBMIT NORMAL
+        // Jika anak sudah pernah foto, atau sudah klik buka kamera -> Langsung gass kirim
+        proceedSubmit();
+    };
+
+    const proceedSubmit = async () => {
+        const btn = document.getElementById('btnSubmit');
+        btn.disabled = true;
         btn.classList.add('bg-green-600');
-        btn.classList.remove('bg-blue-600');
+        btn.classList.remove('bg-blue-600', 'bg-gray-200');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengirim...';
 
         const answers = [];
@@ -477,6 +578,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             console.error(e);
             window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.');
             btn.innerHTML = 'Kirim Semua Jawaban';
+            btn.disabled = false;
         }
     };
 
