@@ -34,8 +34,9 @@ import Toast from '../../components/Toast.astro';
             </div>
         </div>
 
-        <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6 relative overflow-visible">
-            <div class="flex justify-between items-start">
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <!-- Kiri: avatar + nama -->
                 <div class="flex items-center gap-4">
                     <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl">--</div>
                     <div>
@@ -43,46 +44,43 @@ import Toast from '../../components/Toast.astro';
                         <p id="studentGrade" class="text-xs text-gray-400 font-medium uppercase tracking-wider">--</p>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-2">
-                    <a href="/absensi" id="badgeTodayStatus" class="flex flex-col items-center justify-center bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl transition-all active:scale-95">
+
+                <!-- Kanan: badge Hari Ini + Hafalan sejajar -->
+                <div class="flex items-center gap-2">
+                    <a href="/absensi" id="badgeTodayStatus"
+                        class="flex flex-col items-center bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl active:scale-95 transition-all">
                         <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hari Ini</span>
                         <div id="todayStatusUI" class="flex items-center gap-1.5 text-xs font-black text-gray-500">
                             <i class="fa-solid fa-spinner fa-spin"></i> Cek...
                         </div>
                     </a>
-                    <div class="flex items-center gap-1">
-                        <!-- Badge utama (klik = buka modal setor) -->
-                        <button onclick="openHafalanModal()" id="badgeHafalan"
-                            class="flex flex-col items-center justify-center bg-green-50 border border-green-200 px-3 py-2 rounded-xl transition-all active:scale-95">
-                            <span class="text-[9px] font-bold text-green-500 uppercase tracking-widest mb-1">Hafalan</span>
-                            <div id="hafalanBadgeUI" class="text-xs font-black text-green-700">
-                                <i class="fa-solid fa-spinner fa-spin"></i>
-                            </div>
-                        </button>
-                    
-                        <div class="flex flex-col items-center gap-1">
-                            <!-- Tombol Edit Manual (✏️) -->
-                            <button onclick="openEditCheckpointModal()"
-                                title="Edit posisi hafalan"
-                                class="w-7 h-7 flex items-center justify-center bg-blue-50 border border-blue-200 text-blue-500 rounded-lg text-xs active:scale-95 transition-all">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                        
-                            <!-- Titik tiga (⋮) → menu Reset -->
-                            <div class="relative">
-                                <button onclick="toggleHafalanMenu()"
-                                    title="Opsi lainnya"
-                                    class="w-7 h-7 flex items-center justify-center bg-gray-100 border border-gray-200 text-gray-400 rounded-lg text-xs active:scale-95 transition-all">
-                                    <i class="fa-solid fa-ellipsis-vertical"></i>
-                                </button>
-                                <div id="hafalanMenu" class="hidden absolute right-0 top-8 bg-white border border-gray-100 rounded-2xl shadow-xl w-44">
-                                    <button onclick="confirmResetHafalan()"
-                                        class="w-full flex items-center gap-2 px-4 py-3 text-xs text-red-500 font-bold hover:bg-red-50 transition-colors ">
-                                        <i class="fa-solid fa-rotate-left"></i> Reset Data Hafalan
-                                    </button>
-                                </div>
-                            </div>
+                    <button onclick="openHafalanModal()" id="badgeHafalan"
+                        class="flex flex-col items-center bg-green-50 border border-green-200 px-3 py-2 rounded-xl active:scale-95 transition-all">
+                        <span class="text-[9px] font-bold text-green-500 uppercase tracking-widest mb-1">Hafalan</span>
+                        <div id="hafalanBadgeUI" class="text-xs font-black text-green-700">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
                         </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action bar bawah: Edit hafalan + menu Lainnya -->
+            <div class="border-t border-gray-100 pt-3 flex justify-end gap-2">
+                <button onclick="openEditCheckpointModal()"
+                    class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-lg text-[11px] font-bold active:scale-95 transition-all">
+                    <i class="fa-solid fa-pen text-[10px]"></i> Edit hafalan
+                </button>
+                <div class="relative">
+                    <button onclick="toggleHafalanMenu()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 border border-gray-200 text-gray-500 rounded-lg text-[11px] font-bold active:scale-95 transition-all">
+                        <i class="fa-solid fa-ellipsis-vertical text-[10px]"></i> Lainnya
+                    </button>
+                    <!-- Dropdown membuka ke ATAS agar tidak terpotong section bawah -->
+                    <div id="hafalanMenu" class="hidden absolute right-0 bottom-9 bg-white border border-gray-100 rounded-2xl shadow-xl w-44 z-50">
+                        <button onclick="confirmResetHafalan()"
+                            class="w-full flex items-center gap-2 px-4 py-3 text-xs text-red-500 font-bold hover:bg-red-50 transition-colors rounded-2xl">
+                            <i class="fa-solid fa-rotate-left"></i> Reset Data Hafalan
+                        </button>
                     </div>
                 </div>
             </div>
@@ -339,6 +337,25 @@ import Toast from '../../components/Toast.astro';
     </div>
 </Layout>
 
+<div id="modalSusulan" class="fixed inset-0 bg-black/70 z-[90] hidden items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+        <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner border border-amber-100">
+            <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <h3 class="font-bold text-gray-800 text-lg mb-2">Ujian Susulan</h3>
+        <p class="text-sm text-gray-500 mb-6 leading-relaxed" id="susulanMessage">Berikan ujian susulan untuk anak ini?</p>
+        
+        <div class="flex gap-3">
+            <button onclick="closeSusulanModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">
+                Batal
+            </button>
+            <button id="btnConfirmSusulan" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">
+                Mulai Ujian
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" is:inline></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js" is:inline></script>
 
@@ -360,28 +377,46 @@ import Toast from '../../components/Toast.astro';
     let analisisAIGlobal = null;
 
     // ================================================================
-    // DATA JUZ AMMA (SSOT — disalin dari data/juzAmma.js)
+    // DATA JUZ AMMA (Disusun mundur dari An-Nas ke An-Naba')
     // ================================================================
     const JUZ_AMMA = [
-      { id:1,name:"An-Naba'",ayahs:40},{id:2,name:"An-Nazi'at",ayahs:46},
-      {id:3,name:"Abasa",ayahs:42},{id:4,name:"At-Takwir",ayahs:29},
-      {id:5,name:"Al-Infitar",ayahs:19},{id:6,name:"Al-Mutaffifin",ayahs:36},
-      {id:7,name:"Al-Insyiqaq",ayahs:25},{id:8,name:"Al-Buruj",ayahs:22},
-      {id:9,name:"At-Tariq",ayahs:17},{id:10,name:"Al-A'la",ayahs:19},
-      {id:11,name:"Al-Gasyiyah",ayahs:26},{id:12,name:"Al-Fajr",ayahs:30},
-      {id:13,name:"Al-Balad",ayahs:20},{id:14,name:"Asy-Syams",ayahs:15},
-      {id:15,name:"Al-Lail",ayahs:21},{id:16,name:"Ad-Duha",ayahs:11},
-      {id:17,name:"Al-Insyirah",ayahs:8},{id:18,name:"At-Tin",ayahs:8},
-      {id:19,name:"Al-'Alaq",ayahs:19},{id:20,name:"Al-Qadr",ayahs:5},
-      {id:21,name:"Al-Bayyinah",ayahs:8},{id:22,name:"Az-Zalzalah",ayahs:8},
-      {id:23,name:"Al-'Adiyat",ayahs:11},{id:24,name:"Al-Qari'ah",ayahs:11},
-      {id:25,name:"At-Takasur",ayahs:8},{id:26,name:"Al-'Asr",ayahs:3},
-      {id:27,name:"Al-Humazah",ayahs:9},{id:28,name:"Al-Fil",ayahs:5},
-      {id:29,name:"Quraisy",ayahs:4},{id:30,name:"Al-Ma'un",ayahs:7},
-      {id:31,name:"Al-Kausar",ayahs:3},{id:32,name:"Al-Kafirun",ayahs:6},
-      {id:33,name:"An-Nasr",ayahs:3},{id:34,name:"Al-Masad",ayahs:5},
-      {id:35,name:"Al-Ikhlas",ayahs:4},{id:36,name:"Al-Falaq",ayahs:5},
-      {id:37,name:"An-Nas",ayahs:6},
+      { id: 1, name: "An-Nas", ayahs: 6 },
+      { id: 2, name: "Al-Falaq", ayahs: 5 },
+      { id: 3, name: "Al-Ikhlas", ayahs: 4 },
+      { id: 4, name: "Al-Masad", ayahs: 5 },
+      { id: 5, name: "An-Nasr", ayahs: 3 },
+      { id: 6, name: "Al-Kafirun", ayahs: 6 },
+      { id: 7, name: "Al-Kausar", ayahs: 3 },
+      { id: 8, name: "Al-Ma'un", ayahs: 7 },
+      { id: 9, name: "Quraisy", ayahs: 4 },
+      { id: 10, name: "Al-Fil", ayahs: 5 },
+      { id: 11, name: "Al-Humazah", ayahs: 9 },
+      { id: 12, name: "Al-'Asr", ayahs: 3 },
+      { id: 13, name: "At-Takasur", ayahs: 8 },
+      { id: 14, name: "Al-Qari'ah", ayahs: 11 },
+      { id: 15, name: "Al-'Adiyat", ayahs: 11 },
+      { id: 16, name: "Az-Zalzalah", ayahs: 8 },
+      { id: 17, name: "Al-Bayyinah", ayahs: 8 },
+      { id: 18, name: "Al-Qadr", ayahs: 5 },
+      { id: 19, name: "Al-'Alaq", ayahs: 19 },
+      { id: 20, name: "At-Tin", ayahs: 8 },
+      { id: 21, name: "Al-Insyirah", ayahs: 8 },
+      { id: 22, name: "Ad-Duha", ayahs: 11 },
+      { id: 23, name: "Al-Lail", ayahs: 21 },
+      { id: 24, name: "Asy-Syams", ayahs: 15 },
+      { id: 25, name: "Al-Balad", ayahs: 20 },
+      { id: 26, name: "Al-Fajr", ayahs: 30 },
+      { id: 27, name: "Al-Gasyiyah", ayahs: 26 },
+      { id: 28, name: "Al-A'la", ayahs: 19 },
+      { id: 29, name: "At-Tariq", ayahs: 17 },
+      { id: 30, name: "Al-Buruj", ayahs: 22 },
+      { id: 31, name: "Al-Insyiqaq", ayahs: 25 },
+      { id: 32, name: "Al-Mutaffifin", ayahs: 36 },
+      { id: 33, name: "Al-Infitar", ayahs: 19 },
+      { id: 34, name: "At-Takwir", ayahs: 29 },
+      { id: 35, name: "Abasa", ayahs: 42 },
+      { id: 36, name: "An-Nazi'at", ayahs: 46 },
+      { id: 37, name: "An-Naba'", ayahs: 40 }
     ];
 
     // State hafalan
@@ -1526,18 +1561,36 @@ doc.setFontSize(10);
     // ================================================================
     // MODAL UJIAN SUSULAN (trigger dari banner)
     // ================================================================
+    let pendingSusulanUrl = ''; // Variabel sementara untuk menyimpan URL tujuan
+
     window.openSusulanModal = (subject, missedWeeks) => {
-        // Tidak perlu modal baru — cukup arahkan ke halaman ujian yang sudah ada
-        // dengan subject dan week yang sudah diketahui.
-        // Sesuaikan URL ini dengan route halaman ujian kamu.
         const targetWeek = missedWeeks[0];
-        const confirmed  = confirm(
-            `Berikan ujian susulan ${subject.toUpperCase()} Pertemuan ${targetWeek} untuk anak ini?\n\nTekan OK untuk lanjut ke halaman ujian.`
-        );
-        if (confirmed) {
-            window.location.href = `/consultations/fill?id=${studentId}&subject=${subject}&week=${targetWeek}`;
-        }
+        
+        // 1. Update teks di dalam modal agar dinamis
+        const msgEl = document.getElementById('susulanMessage');
+        msgEl.innerHTML = `Buka halaman ujian susulan <b>${subject.toUpperCase()}</b> untuk <b>Pertemuan ${targetWeek}</b>?`;
+        
+        // 2. Simpan URL tujuan
+        pendingSusulanUrl = `/consultations/fill?id=${studentId}&subject=${subject}&week=${targetWeek}`;
+        
+        // 3. Tampilkan modal
+        document.getElementById('modalSusulan').classList.replace('hidden', 'flex');
     };
 
-    fetchData();
+    window.closeSusulanModal = () => {
+        document.getElementById('modalSusulan').classList.replace('flex', 'hidden');
+        pendingSusulanUrl = ''; // Bersihkan memori
+    };
+
+    document.getElementById('btnConfirmSusulan').onclick = () => {
+        // Tombol berubah jadi loading sebentar biar kerasa responsif
+        const btn = document.getElementById('btnConfirmSusulan');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Membuka...';
+        btn.classList.add('opacity-80', 'pointer-events-none');
+
+        // Pindah halaman
+        if (pendingSusulanUrl) window.location.href = pendingSusulanUrl;
+    };
+
+    fetchData(); // Pastikan ini tetap ada di paling bawah
 </script>

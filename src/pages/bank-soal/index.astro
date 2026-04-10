@@ -18,7 +18,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             </button>
         </header>
 
-        <!-- Info petunjuk -->
         <section class="mb-6 bg-green-50 p-4 rounded-2xl border border-green-100">
             <div class="flex items-start gap-3">
                 <i class="fa-solid fa-circle-info text-green-600 mt-1 flex-shrink-0"></i>
@@ -35,18 +34,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
             </div>
         </section>
 
-        <!-- Accordion Bank Soal per Mapel -->
+        <section class="mb-4 flex gap-2">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="number" id="searchWeek" placeholder="Cari pertemuan (cth: 1)" class="w-full pl-9 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-green-500 outline-none shadow-sm placeholder-gray-300">
+            </div>
+            <button id="btnSortWeek" class="w-12 h-[46px] bg-white border border-gray-200 rounded-xl text-gray-600 text-sm shadow-sm active:scale-95 transition-all flex items-center justify-center" title="Urutkan (Asc/Desc)">
+                <i class="fa-solid fa-arrow-down-1-9"></i>
+            </button>
+        </section>
+
         <section class="flex-1 space-y-4" id="accordionContainer">
-            <!-- Skeleton loading -->
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
         </section>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL UPLOAD (Smart Add) -->
-    <!-- ============================================================ -->
     <div id="modalUpload" class="fixed inset-0 bg-black/40 z-[60] hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up">
             <div class="flex justify-between items-center mb-6">
@@ -64,7 +68,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     </select>
                 </div>
 
-                <!-- Smart Add: Pilih mode pertemuan -->
                 <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
                     <p class="text-[10px] font-bold text-blue-700 uppercase mb-2">Target Pertemuan</p>
                     <div class="space-y-2">
@@ -84,7 +87,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         </label>
                     </div>
 
-                    <!-- Dropdown sisipan (muncul jika mode sisipan dipilih) -->
                     <div id="sisipanDropdownWrap" class="hidden mt-3">
                         <select id="sisipanWeek" class="w-full px-3 py-2 bg-white rounded-xl text-sm border border-blue-200 font-medium">
                             <option value="">Pilih minggu...</option>
@@ -109,11 +111,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL PREVIEW / EDITOR SOAL -->
-    <!-- ============================================================ -->
     <div id="modalPreview" class="fixed inset-0 bg-white z-[60] hidden h-screen flex flex-col overflow-hidden">
-    
         <header class="fixed top-0 left-0 w-full p-5 border-b flex justify-between items-center bg-white z-20 flex-shrink-0 shadow-sm">
             <button onclick="closePreview()" class="text-gray-400 text-xl active:scale-95 transition-all"><i class="fa-solid fa-chevron-left"></i></button>
             <h3 class="font-bold text-gray-800">Preview & Edit Soal</h3>
@@ -147,9 +145,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL EDIT SOAL (satu soal yang sudah tersimpan) -->
-    <!-- ============================================================ -->
     <div id="modalEditSoal" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-5">
@@ -210,9 +205,13 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     // State global
-    let summaryData = {};        // { tajwid: { maxWeek, gaps, allWeeks }, ... }
+    let summaryData = {};
     let activeSubjectForUpload = 'tajwid';
     let resolvedWeekForUpload  = 1;
+    
+    // [BARU] State untuk filter & grouping
+    let allWeeksData = {}; // Format: { 1: { tajwid: [...], fiqih: [...] }, 2: { ... } }
+    let isSortAsc = true;
 
     // ================================================================
     // OPEN/CLOSE
@@ -228,7 +227,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
     // SMART ADD — isi dropdown & label otomatis saat mapel/mode berubah
     // ================================================================
     const loadSummaryIntoModal = async () => {
-        // Selalu fresh setiap buka modal
         const res = await fetch(`${API_URL}/api/onboarding/questions/summary`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -242,40 +240,29 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const mode    = document.querySelector('input[name="weekMode"]:checked')?.value || 'baru';
         const info    = summaryData[subject] || { maxWeek: 0, gaps: [], allWeeks: [] };
 
-        // Label pertemuan baru
         const nextWeek = info.maxWeek + 1;
         document.getElementById('labelPertemuanBaru').textContent =
             info.maxWeek === 0
                 ? 'Belum ada soal — akan jadi Pertemuan 1'
                 : `Otomatis ke Pertemuan ${nextWeek} (setelah Mg-${info.maxWeek})`;
 
-        // Dropdown sisipan: gabungkan gap + allWeeks (semua yang sudah ada, untuk nambah soal)
         const sisipanWeekEl = document.getElementById('sisipanWeek');
         const sisipanWrap   = document.getElementById('sisipanDropdownWrap');
 
         if (mode === 'sisipan') {
             sisipanWrap.classList.remove('hidden');
-
-            // Gap = bolong, allWeeks = yang sudah ada
-            const gapOptions  = info.gaps.map(w =>
-                `<option value="${w}">MG-${w} (Kosong / Bolong)</option>`
-            ).join('');
-            const existOptions = info.allWeeks.map(w =>
-                `<option value="${w}">MG-${w} (Tambah soal di pertemuan ini)</option>`
-            ).join('');
-
+            const gapOptions  = info.gaps.map(w => `<option value="${w}">MG-${w} (Kosong / Bolong)</option>`).join('');
+            const existOptions = info.allWeeks.map(w => `<option value="${w}">MG-${w} (Tambah soal di pertemuan ini)</option>`).join('');
             sisipanWeekEl.innerHTML = `<option value="">Pilih minggu...</option>${gapOptions}${existOptions}`;
         } else {
             sisipanWrap.classList.add('hidden');
         }
 
-        // Tentukan resolvedWeek untuk saat simpan
         if (mode === 'baru') {
             resolvedWeekForUpload = nextWeek;
         } else {
             resolvedWeekForUpload = parseInt(sisipanWeekEl.value) || null;
         }
-
         activeSubjectForUpload = subject;
     };
 
@@ -342,8 +329,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         container.innerHTML = '';
 
         questions.forEach((item, idx) => container.appendChild(createSoalCard(item, idx + 1)));
-
-        // Set week & subject di header preview
         document.getElementById('targetWeek').value = resolvedWeekForUpload || 1;
         document.getElementById('previewSubjectLabel').textContent = activeSubjectForUpload;
 
@@ -389,7 +374,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         return div;
     };
 
-    // Tombol tambah manual di dalam preview
     window.addNewQuestionField = () => {
         const container = document.getElementById('previewContent');
         const card = createSoalCard({}, null);
@@ -407,7 +391,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const week    = parseInt(document.getElementById('targetWeek').value);
 
         if (!week || week < 1) {
-            window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.'); return;
+            window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
+            return;
         }
 
         const questionsData = [];
@@ -430,7 +415,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         });
 
         if (questionsData.length === 0) {
-            window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.'); return;
+            window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
+            return;
         }
 
         const btn = document.getElementById('btnFinalSave');
@@ -453,12 +439,13 @@ import ModalAlert from '../../components/ModalAlert.astro';
             console.error(err);
             window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.');
         } finally {
-            btn.textContent = "Simpan"; btn.disabled = false;
+            btn.textContent = "Simpan";
+            btn.disabled = false;
         }
     };
 
     // ================================================================
-    // FETCH & RENDER ACCORDION
+    // FETCH & GROUPING DATA (PER PERTEMUAN)
     // ================================================================
     const fetchAccordion = async () => {
         const container = document.getElementById('accordionContainer');
@@ -468,113 +455,159 @@ import ModalAlert from '../../components/ModalAlert.astro';
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>`;
 
         try {
-            // Fetch semua mapel sekaligus
             const responses = await Promise.all(
                 SUBJECTS.map(s =>
                     fetch(`${API_URL}/api/onboarding/questions/${s}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
-                    }).then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {}, total: result.total_questions || 0 }))
+                    }).then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {} }))
                 )
             );
 
-            container.innerHTML = '';
-
-            let anyData = false;
-            responses.forEach(({ subject, grouped, total }) => {
-                if (total === 0) return; // lewati jika kosong
-                anyData = true;
-                container.appendChild(renderSubjectAccordion(subject, grouped, total));
+            // Bersihkan dan susun ulang data menjadi Grouped By Week
+            allWeeksData = {};
+            responses.forEach(({ subject, grouped }) => {
+                Object.keys(grouped).forEach(weekStr => {
+                    const weekNum = parseInt(weekStr);
+                    if (!allWeeksData[weekNum]) {
+                        allWeeksData[weekNum] = { tajwid: [], fiqih: [], tauhid: [] };
+                    }
+                    allWeeksData[weekNum][subject] = grouped[weekStr];
+                });
             });
 
-            if (!anyData) {
-                container.innerHTML = `
-                    <div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                        <i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Belum ada soal</p>
-                        <p class="text-[10px] text-gray-300 mt-1">Tekan + untuk mulai menambah soal</p>
-                    </div>`;
-            }
+            renderAllWeeks();
+
         } catch (e) {
             console.error("Gagal load accordion:", e);
             container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat data.</p>';
         }
     };
 
-    const renderSubjectAccordion = (subject, grouped, total) => {
-        const c = SUBJECT_COLORS[subject];
-        const weeks = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+    // ================================================================
+    // LOGIKA FILTER & SORTING & RENDER ACCORDION PERTEMUAN
+    // ================================================================
+    document.getElementById('searchWeek').addEventListener('input', () => renderAllWeeks());
+    
+    document.getElementById('btnSortWeek').addEventListener('click', () => {
+        isSortAsc = !isSortAsc;
+        document.getElementById('btnSortWeek').innerHTML = isSortAsc 
+            ? '<i class="fa-solid fa-arrow-down-1-9"></i>' 
+            : '<i class="fa-solid fa-arrow-down-9-1"></i>';
+        renderAllWeeks();
+    });
 
-        const wrapper = document.createElement('div');
-        wrapper.className = `rounded-2xl border ${c.border} overflow-hidden shadow-sm`;
+    const renderAllWeeks = () => {
+        const container = document.getElementById('accordionContainer');
+        container.innerHTML = '';
 
-        // Header mapel
-        const header = document.createElement('div');
-        header.className = `${c.bg} px-5 py-4 flex items-center justify-between cursor-pointer`;
-        header.innerHTML = `
-            <div class="flex items-center gap-3">
-                <span class="text-lg">${subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌'}</span>
-                <div>
-                    <h3 class="font-black ${c.text} uppercase text-sm tracking-wide">${subject}</h3>
-                    <p class="text-[10px] text-gray-400 font-bold">${total} soal • ${weeks.length} pertemuan</p>
-                </div>
-            </div>
-            <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 accordion-arrow"></i>`;
+        const searchTerm = document.getElementById('searchWeek').value.trim();
+        let weeks = Object.keys(allWeeksData).map(Number);
 
-        // Body accordion
-        const body = document.createElement('div');
-        body.className = 'accordion-body bg-white divide-y divide-gray-50';
+        // Fitur Pencarian Pertemuan
+        if (searchTerm) {
+            weeks = weeks.filter(w => w.toString() === searchTerm);
+        }
+
+        // Fitur Sorting (Asc / Desc)
+        weeks.sort((a, b) => isSortAsc ? a - b : b - a);
+
+        if (weeks.length === 0) {
+            container.innerHTML = `
+                <div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                    <i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Data Tidak Ditemukan</p>
+                </div>`;
+            return;
+        }
 
         weeks.forEach(week => {
-            const soalList = grouped[week] || [];
-            const weekSection = document.createElement('div');
+            container.appendChild(renderWeekAccordion(week, allWeeksData[week]));
+        });
+    };
 
-            // Header minggu (bisa juga diklik untuk expand soal)
-            weekSection.innerHTML = `
-                <div class="week-header px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors" data-week="${week}">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-black ${c.text} ${c.bg} px-2 py-1 rounded-lg">MG-${week}</span>
-                        <span class="text-xs text-gray-500 font-medium">${soalList.length} soal</span>
-                        ${renderLevelSummary(soalList)}
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs week-arrow transition-transform duration-200"></i>
+    const renderWeekAccordion = (week, subjectsData) => {
+        // Hitung total soal di minggu ini dari semua mapel
+        const totalQ = (subjectsData.tajwid?.length || 0) + (subjectsData.fiqih?.length || 0) + (subjectsData.tauhid?.length || 0);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
+
+        // ==========================================
+        // HEADER PERTEMUAN (Level 1)
+        // ==========================================
+        const header = document.createElement('div');
+        header.className = `bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors`;
+        header.innerHTML = `
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">
+                    ${week}
                 </div>
-                <div class="week-body hidden px-5 pb-4 space-y-3">
-                    ${soalList.map((q, i) => renderSoalItem(q, i, subject)).join('')}
-                </div>`;
+                <div>
+                    <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
+                    <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
+                </div>
+            </div>
+            <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 accordion-arrow"></i>`;
 
-            // Toggle expand per minggu
-            weekSection.querySelector('.week-header').onclick = function() {
-                const weekBody  = this.nextElementSibling;
-                const arrow     = this.querySelector('.week-arrow');
-                const isHidden  = weekBody.classList.toggle('hidden');
-                arrow.style.transform = isHidden ? '' : 'rotate(90deg)';
-            };
+        // ==========================================
+        // BODY PERTEMUAN (Berisi Sub-Accordion Mapel)
+        // ==========================================
+        const body = document.createElement('div');
+        body.className = 'accordion-body hidden bg-white p-4 space-y-3'; // Wadah untuk mapel-mapel
 
-            body.appendChild(weekSection);
+        SUBJECTS.forEach(subject => {
+            const qList = subjectsData[subject];
+            if (qList && qList.length > 0) {
+                const c = SUBJECT_COLORS[subject];
+                
+                // Wrapper Sub-Accordion Mapel
+                const subjWrapper = document.createElement('div');
+                subjWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white`;
+
+                // Header Mapel (Level 2)
+                const subjHeader = document.createElement('div');
+                subjHeader.className = `${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all`;
+                
+                const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
+
+                subjHeader.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-base">${icon}</span>
+                        <span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span>
+                        <span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${qList.length} soal</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 subj-arrow text-xs"></i>
+                `;
+
+                // Body Mapel (Berisi Daftar Soal)
+                const subjBody = document.createElement('div');
+                subjBody.className = `hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}`;
+                subjBody.innerHTML = qList.map((q, i) => renderSoalItem(q, i, subject)).join('');
+
+                // Interaksi Buka/Tutup Mapel
+                subjHeader.onclick = (e) => {
+                    e.stopPropagation(); // Mencegah klik bocor ke header Pertemuan
+                    const isHidden = subjBody.classList.toggle('hidden');
+                    const arrow = subjHeader.querySelector('.subj-arrow');
+                    arrow.style.transform = isHidden ? '' : 'rotate(180deg)';
+                };
+
+                subjWrapper.appendChild(subjHeader);
+                subjWrapper.appendChild(subjBody);
+                body.appendChild(subjWrapper);
+            }
         });
 
-        // Toggle accordion mapel
+        // Interaksi Buka/Tutup Pertemuan
         header.onclick = () => {
             const isHidden = body.classList.toggle('hidden');
-            const arrow    = header.querySelector('.accordion-arrow');
+            const arrow = header.querySelector('.accordion-arrow');
             arrow.style.transform = isHidden ? '' : 'rotate(180deg)';
         };
 
         wrapper.appendChild(header);
         wrapper.appendChild(body);
         return wrapper;
-    };
-
-    const renderLevelSummary = (soalList) => {
-        const counts = { mudah: 0, sedang: 0, sulit: 0 };
-        soalList.forEach(q => { if (counts[q.difficulty_level] !== undefined) counts[q.difficulty_level]++; });
-        const parts = [];
-        if (counts.mudah  > 0) parts.push(`<span class="text-green-600">${counts.mudah}M</span>`);
-        if (counts.sedang > 0) parts.push(`<span class="text-blue-600">${counts.sedang}S</span>`);
-        if (counts.sulit  > 0) parts.push(`<span class="text-red-500">${counts.sulit}Su</span>`);
-        return parts.length > 0
-            ? `<span class="text-[9px] font-bold text-gray-400">(${parts.join('/')})</span>`
-            : '';
     };
 
     const renderSoalItem = (q, index, subject) => {
@@ -586,7 +619,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const lc = levelColor[q.difficulty_level] || 'text-gray-500 bg-gray-50';
 
         return `
-            <div class="bg-gray-50 rounded-xl p-3 space-y-1.5" data-soal-id="${q.id}">
+            <div class="bg-gray-50 rounded-xl p-3 border border-gray-200 shadow-sm space-y-1.5" data-soal-id="${q.id}">
                 <div class="flex items-start justify-between gap-2">
                     <p class="text-xs font-bold text-gray-800 flex-1 leading-relaxed">${index + 1}. ${q.question}</p>
                     <div class="flex items-center gap-1 flex-shrink-0">
@@ -638,7 +671,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         };
 
         if (!payload.question || !payload.options.A || !payload.options.B) {
-            window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal 2 opsi wajib diisi.'); return;
+            window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal 2 opsi wajib diisi.');
+            return;
         }
 
         try {
