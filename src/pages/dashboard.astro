@@ -74,24 +74,34 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
             </a>
 
-            <div class="grid grid-cols-2 gap-3">
-                <a href="/timer" class="relative bg-yellow-50 p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-3">
-                    <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-stopwatch text-lg"></i>
+            <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                <a href="/timer" class="relative bg-yellow-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-stopwatch text-base sm:text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-yellow-800 text-sm mb-0.5">Timer Mengajar</h3>
-                        <p class="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">Durasi Kelas</p>
+                        <h3 class="font-bold text-yellow-800 text-xs sm:text-sm mb-0.5 leading-tight">Timer</h3>
+                        <p class="text-[8px] sm:text-[10px] text-yellow-500 font-bold uppercase tracking-wider truncate">Durasi Kelas</p>
                     </div>
                 </a>
 
-                <a href="/seats" class="relative bg-green-50 p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-3">
-                    <div class="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-chair text-lg"></i>
+                <a href="/seats" class="relative bg-green-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-chair text-base sm:text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-green-800 text-sm mb-0.5">Denah Duduk</h3>
-                        <p class="text-[10px] text-green-500 font-bold uppercase tracking-wider">Atur Posisi</p>
+                        <h3 class="font-bold text-green-800 text-xs sm:text-sm mb-0.5 leading-tight">Denah</h3>
+                        <p class="text-[8px] sm:text-[10px] text-green-500 font-bold uppercase tracking-wider truncate">Atur Posisi</p>
+                    </div>
+                </a>
+
+                <a href="/hafalan" class="relative bg-emerald-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-book-quran text-base sm:text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-emerald-800 text-xs sm:text-sm mb-0.5 leading-tight">Hafalan</h3>
+                        <p class="text-[8px] sm:text-[10px] text-emerald-500 font-bold uppercase tracking-wider truncate">Juz Amma</p>
                     </div>
                 </a>
             </div>

@@ -1,0 +1,549 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Detail Hafalan - yukNgaji">
+    <div class="px-5 py-7 pb-32 min-h-screen bg-gray-50 flex flex-col gap-5">
+
+        <!-- Header -->
+        <header class="flex items-center gap-3">
+            <a href="/hafalan" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600 active:scale-95 transition-all shrink-0">
+                <i class="fa-solid fa-chevron-left text-sm"></i>
+            </a>
+            <div>
+                <h1 class="text-lg font-bold text-gray-800 tracking-tight leading-none">Detail Hafalan</h1>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Profil & Riwayat</p>
+            </div>
+        </header>
+
+        <!-- Student Info Card -->
+        <section id="studentInfo" class="animate-slide-up">
+            <div class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
+                <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-black shrink-0 border border-emerald-100" id="studentInitials">--</div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="font-bold text-gray-800 text-base capitalize line-clamp-1" id="studentName">Memuat...</h2>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5" id="studentGrade">--</p>
+                </div>
+                <div class="text-right shrink-0">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                    <p class="text-base font-black text-emerald-600 mt-0.5" id="totalAyahs">-- Ayat</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Position Card -->
+        <section class="animate-slide-up" style="animation-delay: 0.08s">
+            <div class="bg-gradient-to-br from-emerald-500 to-green-600 p-5 rounded-3xl shadow-lg shadow-emerald-500/25 text-white relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-36 h-36 bg-white/10 rounded-full pointer-events-none"></div>
+                <div class="absolute -left-4 -bottom-4 w-20 h-20 bg-black/10 rounded-full pointer-events-none"></div>
+                <div class="relative z-10 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <i class="fa-solid fa-book-open text-emerald-200 text-xs"></i>
+                            <h3 class="text-[9px] font-bold text-emerald-100 uppercase tracking-widest">Posisi Saat Ini</h3>
+                        </div>
+                        <h2 class="text-2xl font-black drop-shadow-sm" id="currentSurah">--</h2>
+                        <p class="text-xs font-bold text-emerald-200 mt-0.5" id="currentAyah">Ayat --</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-bold text-emerald-200 uppercase tracking-widest mb-1">Minggu Ini</p>
+                        <div class="bg-white/20 rounded-2xl px-3 py-2 text-center">
+                            <p class="text-xl font-black" id="weeklyAyahs">--</p>
+                            <p class="text-[9px] text-emerald-100 font-bold">ayat</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance Chart Section -->
+        <section class="animate-slide-up" style="animation-delay: 0.16s">
+            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-4 pt-4 pb-3 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-800">Grafik Performa</h3>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Hafalan per minggu</p>
+                    </div>
+                    <div class="flex gap-1.5" id="chartToggle">
+                        <button data-range="4" class="chart-btn active text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all">4 Minggu</button>
+                        <button data-range="8" class="chart-btn text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all">8 Minggu</button>
+                    </div>
+                </div>
+
+                <!-- Chart Area -->
+                <div class="px-4 pb-2 relative" style="height: 140px;">
+                    <canvas id="performanceChart" style="width:100%;height:100%;"></canvas>
+                    <div id="chartEmpty" class="hidden absolute inset-0 flex items-center justify-center">
+                        <p class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Belum ada data</p>
+                    </div>
+                </div>
+
+                <!-- Chart Legend / Stats Row -->
+                <div class="px-4 pb-4 pt-1 grid grid-cols-3 gap-2">
+                    <div class="bg-gray-50 rounded-2xl p-2.5 text-center">
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Rata-rata</p>
+                        <p class="text-sm font-black text-gray-700 mt-0.5" id="avgAyahs">--</p>
+                        <p class="text-[9px] text-gray-400">ayat/minggu</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-2xl p-2.5 text-center border border-emerald-100">
+                        <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Terbaik</p>
+                        <p class="text-sm font-black text-emerald-600 mt-0.5" id="bestAyahs">--</p>
+                        <p class="text-[9px] text-emerald-400">ayat/minggu</p>
+                    </div>
+                    <div class="rounded-2xl p-2.5 text-center" id="trendCard">
+                        <p class="text-[9px] font-bold uppercase tracking-widest" id="trendLabel">Tren</p>
+                        <p class="text-sm font-black mt-0.5" id="trendValue">--</p>
+                        <p class="text-[9px]" id="trendSub">vs minggu lalu</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section class="flex-1 animate-slide-up" style="animation-delay: 0.24s">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-800">Riwayat Setoran</h3>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5" id="logCount"></p>
+                </div>
+                <div class="flex gap-1" id="filterBtns">
+                    <button data-filter="all"  class="filter-btn active text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all">Semua</button>
+                    <button data-filter="up"   class="filter-btn text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all">Maju</button>
+                    <button data-filter="down" class="filter-btn text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all">Mundur</button>
+                </div>
+            </div>
+
+            <div id="logsContainer" class="space-y-2.5">
+                <div class="text-center py-10">
+                    <i class="fa-solid fa-spinner fa-spin text-emerald-500 text-2xl"></i>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-3">Memuat riwayat...</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <NavbarGuru activeMenu="hafalan" />
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+    if (!studentId) window.location.replace('/hafalan');
+
+    const JUZ_AMMA = [
+        { id: 1,  name: "An-Nas",       ayahs: 6  },
+        { id: 2,  name: "Al-Falaq",     ayahs: 5  },
+        { id: 3,  name: "Al-Ikhlas",    ayahs: 4  },
+        { id: 4,  name: "Al-Masad",     ayahs: 5  },
+        { id: 5,  name: "An-Nasr",      ayahs: 3  },
+        { id: 6,  name: "Al-Kafirun",   ayahs: 6  },
+        { id: 7,  name: "Al-Kausar",    ayahs: 3  },
+        { id: 8,  name: "Al-Ma'un",     ayahs: 7  },
+        { id: 9,  name: "Quraisy",      ayahs: 4  },
+        { id: 10, name: "Al-Fil",       ayahs: 5  },
+        { id: 11, name: "Al-Humazah",   ayahs: 9  },
+        { id: 12, name: "Al-'Asr",      ayahs: 3  },
+        { id: 13, name: "At-Takasur",   ayahs: 8  },
+        { id: 14, name: "Al-Qari'ah",   ayahs: 11 },
+        { id: 15, name: "Al-'Adiyat",   ayahs: 11 },
+        { id: 16, name: "Az-Zalzalah",  ayahs: 8  },
+        { id: 17, name: "Al-Bayyinah",  ayahs: 8  },
+        { id: 18, name: "Al-Qadr",      ayahs: 5  },
+        { id: 19, name: "Al-'Alaq",     ayahs: 19 },
+        { id: 20, name: "At-Tin",       ayahs: 8  },
+        { id: 21, name: "Al-Insyirah",  ayahs: 8  },
+        { id: 22, name: "Ad-Duha",      ayahs: 11 },
+        { id: 23, name: "Al-Lail",      ayahs: 21 },
+        { id: 24, name: "Asy-Syams",    ayahs: 15 },
+        { id: 25, name: "Al-Balad",     ayahs: 20 },
+        { id: 26, name: "Al-Fajr",      ayahs: 30 },
+        { id: 27, name: "Al-Gasyiyah",  ayahs: 26 },
+        { id: 28, name: "Al-A'la",      ayahs: 19 },
+        { id: 29, name: "At-Tariq",     ayahs: 17 },
+        { id: 30, name: "Al-Buruj",     ayahs: 22 },
+        { id: 31, name: "Al-Insyiqaq",  ayahs: 25 },
+        { id: 32, name: "Al-Mutaffifin",ayahs: 36 },
+        { id: 33, name: "Al-Infitar",   ayahs: 19 },
+        { id: 34, name: "At-Takwir",    ayahs: 29 },
+        { id: 35, name: "Abasa",        ayahs: 42 },
+        { id: 36, name: "An-Nazi'at",   ayahs: 46 },
+        { id: 37, name: "An-Naba'",     ayahs: 40 }
+    ];
+
+    let allLogs = [];
+    let currentFilter = 'all';
+    let currentRange = 4;
+
+    // ─── Chart ───────────────────────────────────────────────────────────────
+    function getWeekKey(dateStr) {
+        const d = new Date(dateStr);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const mon = new Date(d.setDate(diff));
+        return mon.toISOString().slice(0, 10);
+    }
+
+    function getWeekLabel(weekKey) {
+        const d = new Date(weekKey);
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    }
+
+    function buildWeeklyData(logs, rangeWeeks) {
+        const map = {};
+        logs.forEach(log => {
+            if (log.added_ayahs > 0) {
+                const wk = getWeekKey(log.date);
+                map[wk] = (map[wk] || 0) + log.added_ayahs;
+            }
+        });
+        const keys = Object.keys(map).sort();
+        const sliced = keys.slice(-rangeWeeks);
+        return {
+            labels: sliced.map(getWeekLabel),
+            values: sliced.map(k => map[k])
+        };
+    }
+
+    let chartInstance = null;
+
+    function drawChart(logs, range) {
+        const canvas = document.getElementById('performanceChart');
+        const ctx = canvas.getContext('2d');
+        const { labels, values } = buildWeeklyData(logs, range);
+
+        if (values.length === 0) {
+            document.getElementById('chartEmpty').classList.remove('hidden');
+            canvas.style.display = 'none';
+            return;
+        }
+        document.getElementById('chartEmpty').classList.add('hidden');
+        canvas.style.display = '';
+
+        const dpr = window.devicePixelRatio || 1;
+        const W = canvas.parentElement.clientWidth - 32;
+        const H = 140;
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.scale(dpr, dpr);
+
+        const padL = 32, padR = 12, padT = 16, padB = 32;
+        const chartW = W - padL - padR;
+        const chartH = H - padT - padB;
+        const maxVal = Math.max(...values, 1);
+        const n = values.length;
+
+        // Grid lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 0.5;
+        [0.25, 0.5, 0.75, 1].forEach(ratio => {
+            const y = padT + chartH * (1 - ratio);
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(padL + chartW, y);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.font = '9px system-ui';
+            ctx.textAlign = 'right';
+            ctx.fillText(Math.round(maxVal * ratio), padL - 4, y + 3);
+        });
+
+        // Gradient area
+        const getX = i => padL + (i / (n - 1 || 1)) * chartW;
+        const getY = v => padT + chartH * (1 - v / maxVal);
+
+        if (n === 1) {
+            // Single bar fallback
+            const barW = Math.min(40, chartW * 0.4);
+            const x = padL + chartW / 2 - barW / 2;
+            const barH = chartH * (values[0] / maxVal);
+            const grad = ctx.createLinearGradient(0, getY(values[0]), 0, padT + chartH);
+            grad.addColorStop(0, '#10b981');
+            grad.addColorStop(1, '#10b98120');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(x, getY(values[0]), barW, barH, [4, 4, 0, 0]);
+            ctx.fill();
+        } else {
+            // Fill area
+            const areaGrad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+            areaGrad.addColorStop(0, '#10b98140');
+            areaGrad.addColorStop(1, '#10b98100');
+            ctx.beginPath();
+            ctx.moveTo(getX(0), padT + chartH);
+            values.forEach((v, i) => {
+                if (i === 0) ctx.lineTo(getX(i), getY(v));
+                else {
+                    const cp1x = getX(i - 1) + (getX(i) - getX(i - 1)) / 2;
+                    ctx.bezierCurveTo(cp1x, getY(values[i-1]), cp1x, getY(v), getX(i), getY(v));
+                }
+            });
+            ctx.lineTo(getX(n - 1), padT + chartH);
+            ctx.closePath();
+            ctx.fillStyle = areaGrad;
+            ctx.fill();
+
+            // Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            values.forEach((v, i) => {
+                if (i === 0) ctx.moveTo(getX(i), getY(v));
+                else {
+                    const cp1x = getX(i - 1) + (getX(i) - getX(i - 1)) / 2;
+                    ctx.bezierCurveTo(cp1x, getY(values[i-1]), cp1x, getY(v), getX(i), getY(v));
+                }
+            });
+            ctx.stroke();
+
+            // Dots
+            values.forEach((v, i) => {
+                ctx.beginPath();
+                ctx.arc(getX(i), getY(v), 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        // X-axis labels
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.font = '9px system-ui';
+        ctx.textAlign = 'center';
+        values.forEach((_, i) => {
+            // Show max 6 labels to avoid crowding
+            if (n <= 6 || i % Math.ceil(n / 5) === 0 || i === n - 1) {
+                ctx.fillText(labels[i], getX(i), H - 8);
+            }
+        });
+    }
+
+    function updateStats(logs, range) {
+        const { values } = buildWeeklyData(logs, range);
+
+        const total = logs.filter(l => l.added_ayahs > 0).reduce((s, l) => s + l.added_ayahs, 0);
+        document.getElementById('totalAyahs').textContent = total + ' Ayat';
+
+        // Weekly this week
+        const thisWeek = getWeekKey(new Date().toISOString());
+        const weekLogs = logs.filter(l => getWeekKey(l.date) === thisWeek && l.added_ayahs > 0);
+        const weekSum = weekLogs.reduce((s, l) => s + l.added_ayahs, 0);
+        document.getElementById('weeklyAyahs').textContent = weekSum;
+
+        if (values.length > 0) {
+            const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+            const best = Math.max(...values);
+            document.getElementById('avgAyahs').textContent = avg;
+            document.getElementById('bestAyahs').textContent = best;
+
+            // Trend vs prev week
+            const trendCard = document.getElementById('trendCard');
+            if (values.length >= 2) {
+                const diff = values[values.length - 1] - values[values.length - 2];
+                const trendVal = document.getElementById('trendValue');
+                const trendLbl = document.getElementById('trendLabel');
+                const trendSub = document.getElementById('trendSub');
+                if (diff > 0) {
+                    trendCard.className = 'bg-emerald-50 rounded-2xl p-2.5 text-center border border-emerald-100';
+                    trendLbl.className = 'text-[9px] font-bold text-emerald-500 uppercase tracking-widest';
+                    trendLbl.textContent = 'Naik ↑';
+                    trendVal.className = 'text-sm font-black text-emerald-600 mt-0.5';
+                    trendVal.textContent = '+' + diff;
+                    trendSub.className = 'text-[9px] text-emerald-400';
+                } else if (diff < 0) {
+                    trendCard.className = 'bg-amber-50 rounded-2xl p-2.5 text-center border border-amber-100';
+                    trendLbl.className = 'text-[9px] font-bold text-amber-500 uppercase tracking-widest';
+                    trendLbl.textContent = 'Turun ↓';
+                    trendVal.className = 'text-sm font-black text-amber-600 mt-0.5';
+                    trendVal.textContent = diff;
+                    trendSub.className = 'text-[9px] text-amber-400';
+                } else {
+                    trendCard.className = 'bg-gray-50 rounded-2xl p-2.5 text-center';
+                    trendLbl.className = 'text-[9px] font-bold text-gray-400 uppercase tracking-widest';
+                    trendLbl.textContent = 'Stabil';
+                    trendVal.className = 'text-sm font-black text-gray-600 mt-0.5';
+                    trendVal.textContent = '=';
+                    trendSub.className = 'text-[9px] text-gray-400';
+                }
+                trendSub.textContent = 'vs minggu lalu';
+            } else {
+                document.getElementById('trendCard').className = 'bg-gray-50 rounded-2xl p-2.5 text-center';
+                document.getElementById('trendLabel').textContent = 'Tren';
+                document.getElementById('trendValue').textContent = '--';
+            }
+        } else {
+            document.getElementById('avgAyahs').textContent = '0';
+            document.getElementById('bestAyahs').textContent = '0';
+        }
+    }
+
+    // ─── Render Logs ─────────────────────────────────────────────────────────
+    const renderLogs = (logs) => {
+        const container = document.getElementById('logsContainer');
+        const filtered = currentFilter === 'all' ? logs
+            : currentFilter === 'up'   ? logs.filter(l => l.added_ayahs > 0)
+            : logs.filter(l => l.added_ayahs <= 0);
+
+        document.getElementById('logCount').textContent = filtered.length + ' entri';
+
+        if (!filtered || filtered.length === 0) {
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-3xl border border-dashed border-gray-200 text-center shadow-sm">
+                    <i class="fa-solid fa-clock-rotate-left text-3xl text-gray-200 mb-3 block"></i>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Belum ada riwayat</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map((log, idx) => {
+            const dateObj  = new Date(log.date);
+            const dateStr  = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            const isAdd    = log.added_ayahs > 0;
+            const icon     = isAdd ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+            const colorCls = isAdd ? 'text-emerald-500 bg-emerald-50 border-emerald-100' : 'text-amber-500 bg-amber-50 border-amber-100';
+            const textCls  = isAdd ? 'text-emerald-600' : 'text-amber-600';
+            const sign     = isAdd ? '+' : '';
+
+            return `
+                <div class="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3 transition-all active:scale-[0.98]" style="animation:fadeIn 0.25s ease both;animation-delay:${idx * 0.04}s">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${colorCls}">
+                        <i class="fa-solid ${icon} text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-gray-800 text-sm leading-tight">${log.surah_name}</h4>
+                        <p class="text-[10px] text-gray-400 font-medium mt-0.5">Ayat ${log.start_ayah} — ${log.end_ayah}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-xs font-black ${textCls}">${sign}${log.added_ayahs} Ayat</p>
+                        <p class="text-[9px] text-gray-400 font-bold mt-0.5 tracking-wide">${dateStr}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    // ─── Chart Toggle ─────────────────────────────────────────────────────────
+    document.getElementById('chartToggle').addEventListener('click', e => {
+        const btn = e.target.closest('[data-range]');
+        if (!btn) return;
+        currentRange = parseInt(btn.dataset.range);
+        document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (allLogs.length) {
+            drawChart(allLogs, currentRange);
+            updateStats(allLogs, currentRange);
+        }
+    });
+
+    // ─── Filter Toggle ────────────────────────────────────────────────────────
+    document.getElementById('filterBtns').addEventListener('click', e => {
+        const btn = e.target.closest('[data-filter]');
+        if (!btn) return;
+        currentFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderLogs(allLogs);
+    });
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    const init = async () => {
+        try {
+            const [stdRes, logsRes] = await Promise.all([
+                fetch(`${API_URL}/api/students/${studentId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${API_URL}/api/students/${studentId}/memorization-logs`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
+            if (!stdRes.ok)  throw new Error('Gagal mengambil data santri');
+            if (!logsRes.ok) throw new Error('Gagal mengambil riwayat');
+
+            const student = (await stdRes.json()).data;
+            allLogs = (await logsRes.json()).data || [];
+
+            // Render student info
+            document.getElementById('studentName').innerText     = student.name;
+            document.getElementById('studentInitials').innerText = student.name.substring(0, 2).toUpperCase();
+            document.getElementById('studentGrade').innerText    = student.grade;
+
+            if (student.current_surah_id) {
+                const surah = JUZ_AMMA.find(s => s.id === student.current_surah_id);
+                document.getElementById('currentSurah').innerText = surah ? surah.name : 'Unknown';
+                document.getElementById('currentAyah').innerText  = `Ayat ${student.current_ayah} / ${surah?.ayahs ?? '--'}`;
+            } else {
+                document.getElementById('currentSurah').innerText = 'Belum Mulai';
+                document.getElementById('currentAyah').innerText  = '';
+            }
+
+            // Chart & stats
+            drawChart(allLogs, currentRange);
+            updateStats(allLogs, currentRange);
+
+            // Logs
+            renderLogs(allLogs);
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('logsContainer').innerHTML = `
+                <div class="bg-red-50 p-6 rounded-3xl border border-dashed border-red-200 text-center">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl text-red-300 mb-2 block"></i>
+                    <p class="text-xs text-red-500 font-bold uppercase tracking-widest">Terjadi Kesalahan</p>
+                    <p class="text-[10px] text-red-400 mt-1">${err.message}</p>
+                </div>`;
+            window.showToast?.('danger', 'Error', err.message);
+        }
+    };
+
+    init();
+</script>
+
+<style>
+    .animate-slide-up {
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+    }
+    @keyframes slideUp {
+        from { transform: translateY(16px); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Chart toggle buttons */
+    .chart-btn {
+        color: #9ca3af;
+        background: transparent;
+    }
+    .chart-btn.active {
+        color: #059669;
+        background: #ecfdf5;
+    }
+
+    /* Filter buttons */
+    .filter-btn {
+        color: #9ca3af;
+        background: transparent;
+    }
+    .filter-btn.active {
+        color: #059669;
+        background: #ecfdf5;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>

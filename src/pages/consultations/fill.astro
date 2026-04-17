@@ -17,15 +17,20 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 <i class="fa-solid fa-stopwatch text-green-500 mr-1" id="timerIcon"></i> <span id="timerText">--:--</span>
             </div>
 
-            <a href="/consultations" class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 active:scale-95">Keluar</a>
+            <a href="javascript:void(0)" onclick="handleBack()" class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 active:scale-95">Keluar</a>
         </header>
 
-        <!-- Progress Bar Gamifikasi -->
+        <div id="previewBanner" class="hidden bg-amber-500 text-white text-center text-[10px] font-black py-2.5 uppercase tracking-widest relative z-40 shadow-md">
+            <div class="flex items-center justify-center gap-2">
+                <i class="fa-solid fa-eye animate-pulse"></i> Mode Simulasi Ustadz
+            </div>
+            <!-- <button onclick="exitPreview()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-lg transition-colors font-bold">Keluar</button> -->
+        </div>
+
         <div class="w-full h-1.5 bg-gray-100 z-50 relative">
             <div id="progressBar" class="h-full bg-green-500 w-0 transition-all duration-500 ease-out rounded-r-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
         </div>
 
-        <!-- Vignette Bahaya: 4 strip merah di tepi layar -->
         <div id="vigLeft"   style="pointer-events:none;position:fixed;top:0;left:0;width:60px;height:100vh;z-index:9999;background:linear-gradient(to right,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
         <div id="vigRight"  style="pointer-events:none;position:fixed;top:0;right:0;width:60px;height:100vh;z-index:9999;background:linear-gradient(to left,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
         <div id="vigTop"    style="pointer-events:none;position:fixed;top:0;left:0;width:100vw;height:60px;z-index:9999;background:linear-gradient(to bottom,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
@@ -73,9 +78,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     
                     <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-4 shadow-sm">
                         <div id="kuesionerContainer" class="space-y-4 mb-4"></div>
-                        <!-- <input type="hidden" id="akhlak_score" name="akhlak_score" value="0">
-                        <input type="hidden" id="disiplin_score" name="disiplin_score" value="0">
-                        <input type="hidden" id="aktif_score" name="aktif_score" value="0"> -->
                         <div>
                             <label class="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 ml-1">FOTO RAPORT (Bisa Nanti)</label>
                             <button type="button" onclick="openCameraModal()" id="btnOpenCamera" class="w-full h-32 border-2 border-dashed border-blue-300 rounded-2xl bg-white/50 flex flex-col items-center justify-center hover:bg-blue-100 transition-colors active:scale-95">
@@ -103,14 +105,9 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             </div>
             <h3 class="font-bold text-gray-800 text-lg mb-2">Selesai Lebih Awal?</h3>
             <p class="text-sm text-gray-500 mb-6 leading-relaxed">Yakin ingin mengunci bagian akademik sekarang? Sisa waktu Anda akan dihanguskan.</p>
-            
             <div class="flex gap-3">
-                <button onclick="closeEarlyFinishModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">
-                    Batal
-                </button>
-                <button onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">
-                    Ya, Kunci
-                </button>
+                <button onclick="closeEarlyFinishModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">Batal</button>
+                <button onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">Ya, Kunci</button>
             </div>
         </div>
     </div>
@@ -121,15 +118,9 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 <i class="fa-solid fa-wifi"></i>
             </div>
             <h3 class="font-bold text-gray-800 text-lg mb-2">Jaringan Lambat</h3>
-            <p class="text-sm text-gray-500 mb-4 leading-relaxed">
-                Sepertinya jaringan anda sedang lambat, silahkan angkat HP anda sejajar dengan wajah (seperti gambar) agar sinyal lebih kuat.
-            </p>
-            
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">Sepertinya jaringan anda sedang lambat, silahkan angkat HP anda sejajar dengan wajah (seperti gambar) agar sinyal lebih kuat.</p>
             <img src="/images/image_tutor.png" alt="Instruksi Sinyal" class="w-50 h-32 mx-auto mb-6 object-cover rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50">
-            
-            <button id="btnRetryNetwork" disabled class="w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">
-                Tunggu (3)
-            </button>
+            <button id="btnRetryNetwork" disabled class="w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">Tunggu (3)</button>
         </div>
     </div>
 
@@ -138,7 +129,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             <div class="absolute -top-20 -right-20 w-40 h-40 bg-green-500/10 rounded-full blur-3xl"></div>
             <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-            <div id="resultEmoji" class="text-6xl mb-4 relative z-10 animate-bounce drop-shadow-sm">🌟</div>
+            <div id="resultEmoji" class="text-6xl mb-4 relative z-10 animate-bounce drop-shadow-sm">🏆</div>
             <h3 id="resultTitle" class="font-black text-gray-800 text-2xl mb-2 relative z-10">Luar Biasa!</h3>
             <p id="resultMessage" class="text-xs text-gray-500 mb-6 leading-relaxed relative z-10">Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.</p>
             
@@ -159,7 +150,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 </div>
             </div>
             
-            <button onclick="window.location.replace('/consultations')" class="w-full py-4 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all relative z-10">
+            <button id="btnReturnResult" onclick="window.location.replace('/consultations')" class="w-full py-4 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all relative z-10">
                 Kembali ke Beranda
             </button>
         </div>
@@ -172,16 +163,18 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
 
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
     const subject = urlParams.get('subject');
     const week = urlParams.get('week');
-    const token = localStorage.getItem('token');
+    const isPreview = urlParams.get('preview') === 'true'; 
 
     const parsedWeek = parseInt(week) || 1;
     let timeLeft = parsedWeek === 1 ? 90 : 180;
-    let finalTimeTaken = 0; // [BARU] Menyimpan waktu riil yang dihabiskan
+    let finalTimeTaken = 0;
     
     const timeKey = `timer_${studentId}_${subject}_${week}`;
     const ansKey = `ans_${studentId}_${subject}_${week}`;
@@ -204,6 +197,18 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     let selfieFileToUpload = null;
     let currentStudentName = "Si Anak";
     let hasPriorPhoto = false;
+
+    window.exitPreview = () => {
+        window.location.href = '/bank-soal';
+    };
+
+    window.handleBack = () => {
+        if (isPreview) {
+            window.location.href = '/bank-soal';
+        } else {
+            window.location.href = '/consultations';
+        }
+    };
 
     window.openCameraModal = () => {
         window.openPhotoBooth(currentStudentName, week, (capturedFile) => {
@@ -263,42 +268,58 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         </div>
     `).join('');
 
-// ==========================================
+    // ==========================================
     // 2. FETCH DATA & RENDER AKADEMIK
     // ==========================================
     const init = async () => {
         try {
-            // [UPDATE]: Kita ambil data murid, riwayat konsultasi (untuk cek foto), dan soal sekaligus
-            const [stdRes, consRes, qRes] = await Promise.all([
-                fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
-                fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
-                fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }})
-            ]);
+            let allQuestions = [];
 
-            const student = await stdRes.json();
-            const consData = await consRes.json();
-            const qData = await qRes.json();
-
-            currentStudentName = student.data.name;
-            
-            // [LOGIKA FOTO DIPERBAIKI] 
-            // Cek apakah di riwayat konsultasi anak ini ada minimal 1 data yang image_url-nya tidak kosong
-            if (consData.data && consData.data.length > 0) {
-                hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
-            } else {
+            if (isPreview) {
+                // --- MODE SIMULASI USTADZ ---
+                document.getElementById('previewBanner').classList.remove('hidden');
+                document.getElementById('headerName').innerText = "Mode Simulasi Ustadz";
+                document.getElementById('headerInitials').innerText = "PR";
                 hasPriorPhoto = false;
+
+                // [PERBAIKAN BUG] Jangan mengirim parameter week agar Backend tidak memicu Mode Adaptif
+                const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const qData = await qRes.json();
+                
+                // Ekstrak data soal dari grouping mingguan
+                if (qData.data && !Array.isArray(qData.data)) {
+                    allQuestions = qData.data[week] || [];
+                } else {
+                    allQuestions = qData.data || [];
+                }
+
+            } else {
+                // --- MODE NORMAL SISWA ---
+                const [stdRes, consRes, qRes] = await Promise.all([
+                    fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                    fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                    fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }})
+                ]);
+                const student = await stdRes.json();
+                const consData = await consRes.json();
+                const qData = await qRes.json();
+
+                currentStudentName = student.data.name;
+                if (consData.data && consData.data.length > 0) {
+                    hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
+                } else {
+                    hasPriorPhoto = false;
+                }
+
+                document.getElementById('headerName').innerText = student.data.name;
+                document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
+                allQuestions = qData.data || [];
             }
-
-            document.getElementById('headerName').innerText = student.data.name;
-            document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
-
-            let allQuestions = qData.data || [];
 
             let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
             questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
 
             const targetDisplay = parsedWeek === 1 ? Math.min(3, allQuestions.length) : allQuestions.length;
-
             if (questions.length !== targetDisplay && targetDisplay > 0) {
                 questions = shuffleArray(allQuestions).slice(0, targetDisplay);
                 localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
@@ -309,8 +330,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             
             updateTimerUI();
             checkExistingSession();
+
         } catch (e) {
             console.error(e);
+            window.showToast?.('danger', 'Error', 'Gagal memuat ujian.');
         }
     };
 
@@ -350,13 +373,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
             if (selected) answers[qId] = selected;
         });
-
         const psych = {
             akhlak: document.querySelector('input[name="q_akhlak"]:checked')?.value,
             disiplin: document.querySelector('input[name="q_disiplin"]:checked')?.value,
             aktif: document.querySelector('input[name="q_aktif"]:checked')?.value,
         };
-
         localStorage.setItem(ansKey, JSON.stringify({ answers, psych }));
     };
 
@@ -370,15 +391,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             });
         }
         if (saved.psych) {
-            if (saved.psych.akhlak) { const r = document.querySelector(`input[name="q_akhlak"][value="${saved.psych.akhlak}"]`); if (r) r.checked = true; }
-            if (saved.psych.disiplin) { const r = document.querySelector(`input[name="q_disiplin"][value="${saved.psych.disiplin}"]`); if (r) r.checked = true; }
-            if (saved.psych.aktif) { const r = document.querySelector(`input[name="q_aktif"][value="${saved.psych.aktif}"]`); if (r) r.checked = true; }
-            validate(); 
+            if (saved.psych.akhlak) { const r = document.querySelector(`input[name="q_akhlak"][value="${saved.psych.akhlak}"]`);
+            if (r) r.checked = true; }
+            if (saved.psych.disiplin) { const r = document.querySelector(`input[name="q_disiplin"][value="${saved.psych.disiplin}"]`);
+            if (r) r.checked = true; }
+            if (saved.psych.aktif) { const r = document.querySelector(`input[name="q_aktif"][value="${saved.psych.aktif}"]`);
+            if (r) r.checked = true; }
+            validate();
         }
     };
 
     const validate = () => {
-        // Hitung & update progress bar
         const totalQuestions = questions.length + 3;
         let answeredCount = 0;
         document.querySelectorAll('.question-block').forEach(block => {
@@ -425,12 +448,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         const savedEndTime = localStorage.getItem(timeKey);
         if (savedEndTime) {
             const overlay = document.getElementById('startOverlay');
-            overlay.classList.add('hidden'); 
-            
+            overlay.classList.add('hidden');
             const now = Date.now();
             timeLeft = Math.floor((savedEndTime - now) / 1000);
-            if (timeLeft > 0) { startTest(false); } 
-            else { timeLeft = 0; startTest(false); disableAcademicSection(); }
+            if (timeLeft > 0) { startTest(false);
+            } 
+            else { timeLeft = 0; startTest(false); disableAcademicSection();
+            }
         }
     };
 
@@ -455,16 +479,14 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
     const startTest = (isNewSession = true) => {
         document.getElementById('testContent').classList.remove('hidden');
-        
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         updateTimerUI();
         if (timeLeft <= 0) return;
-
         timerInterval = setInterval(() => {
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000);
             if (timeLeft <= 0) {
                 timeLeft = 0; 
-                finalTimeTaken = parsedWeek === 1 ? 90 : 180; // Jika waktu habis, berarti full terpakai
+                finalTimeTaken = parsedWeek === 1 ? 90 : 180; 
                 updateTimerUI(); 
                 clearInterval(timerInterval); 
                 disableAcademicSection();
@@ -472,7 +494,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }, 1000);
     };
 
-    // Kontrol vignette 4-sisi
     let vigPulseInterval = null;
     const setVignette = (active) => {
         const ids = ['vigLeft','vigRight','vigTop','vigBottom'];
@@ -490,7 +511,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             });
             return;
         }
-        // Pulse: alternasi antara strong dan soft
         let bright = true;
         const applyVig = () => {
             const alpha = bright ? '0.65' : '0.25';
@@ -512,7 +532,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         
         const timerContainer = document.getElementById('timerDisplay');
         const icon = document.getElementById('timerIcon');
-
         if (timeLeft <= 10 && timeLeft > 0) {
             timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white rounded-full font-mono font-black text-xl border-2 border-red-700 shadow-md animate-pulse';
             icon.className = 'fa-solid fa-stopwatch text-white mr-1';
@@ -543,7 +562,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
     };
 
-    // [UPDATE] Tangkap sisa waktu saat anak selesai lebih awal
     window.confirmEarlyFinish = () => {
         const maxTime = parsedWeek === 1 ? 90 : 180;
         finalTimeTaken = maxTime - timeLeft; 
@@ -555,12 +573,16 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         closeEarlyFinishModal();
     };
 
-
     // ==========================================
     // 5. SUBMIT & DARK PATTERN FAKE NETWORK
     // ==========================================
     document.getElementById('btnSubmit').onclick = async () => {
         const btn = document.getElementById('btnSubmit');
+
+        // Bypas Cek Kamera/Fake Network kalau mode Simulasi Ustadz
+        if (isPreview) {
+            return proceedSubmit();
+        }
 
         if (!selfieFileToUpload && !hasPriorPhoto) {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Jaringan...';
@@ -596,7 +618,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
-                        
                         setTimeout(() => {
                             btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedikit lagi, tahan posisi HP...';
                         }, 2500);
@@ -607,14 +628,12 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                         await video.play();
 
                         await new Promise(resolve => setTimeout(resolve, 5000));
-
                         const canvas = document.createElement('canvas');
                         canvas.width = video.videoWidth;
                         canvas.height = video.videoHeight;
                         canvas.getContext('2d').drawImage(video, 0, 0);
                         
                         stream.getTracks().forEach(track => track.stop());
-
                         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
                         selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
                     } catch(err) {
@@ -657,22 +676,20 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         if (selfieFileToUpload) formData.append('image', selfieFileToUpload);
 
         try {
-            await Promise.all([
-                fetch(`${API_URL}/api/onboarding/submit-grade`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: studentId, subject, week, student_answers: answers })
-                }),
-                fetch(`${API_URL}/api/consultations`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                })
-            ]);
-
-            // ==========================================
-            // KALKULASI DATA UNTUK MODAL SUMMARY
-            // ==========================================
+            if (!isPreview) {
+                await Promise.all([
+                    fetch(`${API_URL}/api/onboarding/submit-grade`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ student_id: studentId, subject, week, student_answers: answers })
+                    }),
+                    fetch(`${API_URL}/api/consultations`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    })
+                ]);
+            }
             
             // 1. Kalkulasi Skor Akademik
             let correctCount = 0;
@@ -683,14 +700,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 }
             });
             const score = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
-
+            
             // 2. Kalkulasi Waktu Riil
             const maxTime = parsedWeek === 1 ? 90 : 180;
-            // Jika finalTimeTaken belum tersave (anak gak klik Selesai Cepat), hitung dari sisa waktu saat itu
             const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0');
             const secUsed = (timeUsed % 60).toString().padStart(2, '0');
-
+            
             // 3. Kalkulasi Skor Pojok Curhat
             const akhlak = parseInt(document.querySelector('input[name="q_akhlak"]:checked')?.value || 0);
             const disiplin = parseInt(document.querySelector('input[name="q_disiplin"]:checked')?.value || 0);
@@ -699,7 +715,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             let socialGrade = 'Cukup';
             if (avgSocial >= 80) socialGrade = 'Sangat Baik';
             else if (avgSocial >= 60) socialGrade = 'Baik';
-
+            
             // 4. Update UI Modal Summary
             const emojiEl = document.getElementById('resultEmoji');
             const titleEl = document.getElementById('resultTitle');
@@ -711,11 +727,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             scoreEl.innerText = score;
 
             if (score >= 80) {
-                emojiEl.innerText = '🌟';
+                emojiEl.innerText = '🏆';
                 titleEl.innerText = 'Luar Biasa!';
                 msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.';
                 scoreEl.className = 'text-6xl font-black text-green-600 drop-shadow-sm';
-                // Confetti selebrasi nilai A
                 setTimeout(() => {
                     confetti({ particleCount: 120, spread: 70, origin: { x: 0.3, y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#eab308'] });
                     confetti({ particleCount: 120, spread: 70, origin: { x: 0.7, y: 0.6 }, colors: ['#22c55e', '#f472b6', '#a78bfa'] });
@@ -732,13 +747,20 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 scoreEl.className = 'text-6xl font-black text-amber-500 drop-shadow-sm';
             }
 
-            // Pembersihan Memori
+            if (isPreview) {
+                msgEl.innerText = "Simulasi Selesai. Data ini tidak tersimpan ke database anak.";
+                const btnHome = document.getElementById('btnReturnResult');
+                if (btnHome) {
+                    btnHome.innerText = "Kembali ke Editor Soal";
+                    btnHome.onclick = () => window.location.replace('/bank-soal');
+                }
+            }
+
             localStorage.removeItem(timeKey);
             localStorage.removeItem(ansKey);
             localStorage.removeItem(qKey);
             localStorage.removeItem(psychKey);
 
-            // Tampilkan Modal
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Selesai';
             btn.classList.replace('bg-green-600', 'bg-gray-800');
             
@@ -764,13 +786,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         100% { transform: translateY(0) scale(1); opacity: 1; }
     }
 
-    /* Micro-animation: pop saat jawaban dipilih (soal akademik) */
     .question-block input[type="radio"]:checked + span {
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         color: #16a34a;
     }
 
-    /* Micro-animation: pop saat jawaban dipilih (kuesioner sosial) */
     #kuesionerContainer input[type="radio"]:checked + span {
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         color: #1d4ed8;
@@ -782,7 +802,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         100% { transform: scale(1); }
     }
 
-    /* Label jawaban terpilih - highlight background */
     .question-block label:has(input:checked) {
         background-color: #f0fdf4;
         border-color: #86efac;

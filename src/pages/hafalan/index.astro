@@ -1,0 +1,209 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Hafalan Siswa / Anak - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50 flex flex-col">
+        
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Hafalan</h1>
+                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-widest">Pantau Setoran Siswa / Anak</p>
+            </div>
+            <button id="btnRefresh" class="w-10 h-10 bg-white border border-gray-200 text-gray-400 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-sm">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </header>
+
+        <section class="mb-5">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-green-500 transition-all shadow-sm outline-none" placeholder="Cari nama Siswa / Anak...">
+            </div>
+        </section>
+
+        <section class="mb-6">
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2" id="filterContainer">
+                <button class="filter-chip px-4 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold whitespace-nowrap transition-all shadow-sm" data-filter="all">Semua Siswa / Anak</button>
+                <button class="filter-chip px-4 py-2 bg-white text-gray-500 border border-gray-100 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all shadow-sm" data-filter="active">Sedang Berjalan</button>
+                <button class="filter-chip px-4 py-2 bg-white text-gray-500 border border-gray-100 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all shadow-sm" data-filter="empty">Belum Mulai</button>
+            </div>
+        </section>
+
+        <section id="mainContent" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="col-span-full text-center py-10">
+                <i class="fa-solid fa-spinner fa-spin text-green-500 text-2xl"></i>
+                <p class="text-xs text-gray-400 font-bold mt-3 uppercase tracking-widest">Memuat data...</p>
+            </div>
+        </section>
+        
+    </div>
+
+    <NavbarGuru activeMenu="hafalan" />
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    const JUZ_AMMA = [
+        { id: 1, name: "An-Nas", ayahs: 6 },
+        { id: 2, name: "Al-Falaq", ayahs: 5 },
+        { id: 3, name: "Al-Ikhlas", ayahs: 4 },
+        { id: 4, name: "Al-Masad", ayahs: 5 },
+        { id: 5, name: "An-Nasr", ayahs: 3 },
+        { id: 6, name: "Al-Kafirun", ayahs: 6 },
+        { id: 7, name: "Al-Kausar", ayahs: 3 },
+        { id: 8, name: "Al-Ma'un", ayahs: 7 },
+        { id: 9, name: "Quraisy", ayahs: 4 },
+        { id: 10, name: "Al-Fil", ayahs: 5 },
+        { id: 11, name: "Al-Humazah", ayahs: 9 },
+        { id: 12, name: "Al-'Asr", ayahs: 3 },
+        { id: 13, name: "At-Takasur", ayahs: 8 },
+        { id: 14, name: "Al-Qari'ah", ayahs: 11 },
+        { id: 15, name: "Al-'Adiyat", ayahs: 11 },
+        { id: 16, name: "Az-Zalzalah", ayahs: 8 },
+        { id: 17, name: "Al-Bayyinah", ayahs: 8 },
+        { id: 18, name: "Al-Qadr", ayahs: 5 },
+        { id: 19, name: "Al-'Alaq", ayahs: 19 },
+        { id: 20, name: "At-Tin", ayahs: 8 },
+        { id: 21, name: "Al-Insyirah", ayahs: 8 },
+        { id: 22, name: "Ad-Duha", ayahs: 11 },
+        { id: 23, name: "Al-Lail", ayahs: 21 },
+        { id: 24, name: "Asy-Syams", ayahs: 15 },
+        { id: 25, name: "Al-Balad", ayahs: 20 },
+        { id: 26, name: "Al-Fajr", ayahs: 30 },
+        { id: 27, name: "Al-Gasyiyah", ayahs: 26 },
+        { id: 28, name: "Al-A'la", ayahs: 19 },
+        { id: 29, name: "At-Tariq", ayahs: 17 },
+        { id: 30, name: "Al-Buruj", ayahs: 22 },
+        { id: 31, name: "Al-Insyiqaq", ayahs: 25 },
+        { id: 32, name: "Al-Mutaffifin", ayahs: 36 },
+        { id: 33, name: "Al-Infitar", ayahs: 19 },
+        { id: 34, name: "At-Takwir", ayahs: 29 },
+        { id: 35, name: "Abasa", ayahs: 42 },
+        { id: 36, name: "An-Nazi'at", ayahs: 46 },
+        { id: 37, name: "An-Naba'", ayahs: 40 }
+    ];
+
+    let allStudents = [];
+    let activeFilter = 'all';
+    let searchQuery = '';
+
+    const fetchStudents = async () => {
+        const res = await fetch(`${API_URL}/api/students`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (res.ok) return result.data;
+        throw new Error(result.message);
+    };
+
+    const getHafalanStatus = (student) => {
+        if (!student.current_surah_id) {
+            return `<span class="text-[9px] bg-gray-100 text-gray-400 font-bold px-2 py-1 rounded-md border border-gray-200 shadow-sm uppercase tracking-widest">Belum Mulai</span>`;
+        }
+        
+        const surah = JUZ_AMMA.find(s => s.id === student.current_surah_id);
+        if (!surah) return `<span class="text-[9px] bg-red-50 text-red-500 font-bold px-2 py-1 rounded-md border border-red-100 shadow-sm">Data Error</span>`;
+
+        return `
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200 shadow-sm mb-1 uppercase tracking-wider">${surah.name}</span>
+                <span class="text-[9px] font-bold text-gray-400">Ayat ${student.current_ayah} / ${surah.ayahs}</span>
+            </div>
+        `;
+    };
+
+    const renderCards = () => {
+        const container = document.getElementById('mainContent');
+        let filtered = allStudents.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        if (activeFilter === 'active') filtered = filtered.filter(s => s.current_surah_id);
+        if (activeFilter === 'empty') filtered = filtered.filter(s => !s.current_surah_id);
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-full text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm">
+                    <i class="fa-solid fa-users-slash text-4xl text-gray-200 mb-3 block"></i>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Siswa / Anak tidak ditemukan</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(s => `
+            <div onclick="window.location.href='/hafalan/detail?id=${s.id}'" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer flex items-center gap-3">
+                <div class="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-lg font-black shrink-0">
+                    ${s.name.substring(0,2).toUpperCase()}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-gray-800 text-xs truncate capitalize">${s.name}</h3>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">${s.grade}</p>
+                </div>
+                <div class="text-right flex flex-col items-end">
+                    ${getHafalanStatus(s)}
+                </div>
+            </div>
+        `).join('');
+    };
+
+    // Logika Filter Chips
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            // Reset semua chip ke warna abu-abu
+            document.querySelectorAll('.filter-chip').forEach(c => {
+                c.className = "filter-chip px-4 py-2 bg-white text-gray-500 border border-gray-100 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all shadow-sm";
+            });
+            // Nyalakan chip yang diklik dengan warna hijau
+            e.target.className = "filter-chip active px-4 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold whitespace-nowrap transition-all shadow-sm";
+            
+            activeFilter = e.target.dataset.filter;
+            renderCards();
+        });
+    });
+
+    // Logika Live Search
+    let searchTimer;
+    document.getElementById('searchInput').addEventListener('input', e => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            searchQuery = e.target.value;
+            renderCards();
+        }, 200);
+    });
+
+    // Logika Refresh Manual
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+        const btn = document.getElementById('btnRefresh');
+        btn.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-green-500"></i>';
+        loadData();
+    });
+
+    // Init Load
+    const loadData = async () => {
+        try {
+            allStudents = await fetchStudents();
+            renderCards();
+        } catch (err) {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="col-span-full text-center py-10 bg-red-50 rounded-3xl border border-dashed border-red-200 shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-red-300 mb-3 block"></i>
+                    <p class="text-xs text-red-500 font-bold uppercase tracking-widest">Gagal memuat data</p>
+                    <p class="text-[10px] text-red-400 mt-1">${err.message}</p>
+                </div>`;
+        } finally {
+            document.getElementById('btnRefresh').innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+        }
+    };
+
+    loadData();
+</script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>

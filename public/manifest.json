@@ -1,7 +1,7 @@
 {
     "name": "yukNgaji - Sistem Manajemen",
     "short_name": "yukNgaji",
-    "description": "Aplikasi manajemen absensi, nilai, dan tugas santri yukNgaji.",
+    "description": "Aplikasi manajemen absensi, nilai, dan tugas Siswa / Anak yukNgaji.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",

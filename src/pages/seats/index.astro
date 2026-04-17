@@ -22,7 +22,7 @@ import Toast from '../../components/Toast.astro';
                 <button id="btnReset" class="text-[10px] bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-all"><i class="fa-solid fa-rotate-left mr-1"></i> Reset Semua</button>
             </div>
             <div id="unassignedPool" class="flex gap-4 overflow-x-auto pb-4 pt-2 px-1 no-scrollbar min-h-[100px]">
-                <div class="flex items-center justify-center w-full text-xs text-gray-400 italic">Memuat data santri...</div>
+                <div class="flex items-center justify-center w-full text-xs text-gray-400 italic">Memuat data Siswa / Anak...</div>
             </div>
         </section>
 
@@ -76,7 +76,7 @@ import Toast from '../../components/Toast.astro';
             renderUI();
         } catch (e) {
             console.error(e);
-            window.showToast?.('danger', 'Error', 'Gagal memuat data santri.');
+            window.showToast?.('danger', 'Error', 'Gagal memuat data Siswa / Anak.');
         }
     };
 
@@ -123,7 +123,7 @@ import Toast from '../../components/Toast.astro';
         const unassignedStudents = students.filter(s => !seatedStudentIds.includes(s.id));
 
         if (unassignedStudents.length === 0) {
-            poolEl.innerHTML = `<div class="flex items-center justify-center w-full text-[10px] font-bold text-green-500 bg-green-50 rounded-xl py-4 border border-green-100">🎉 Semua santri sudah duduk!</div>`;
+            poolEl.innerHTML = `<div class="flex items-center justify-center w-full text-[10px] font-bold text-green-500 bg-green-50 rounded-xl py-4 border border-green-100">🎉 Semua Siswa / Anak sudah duduk!</div>`;
         } else {
             poolEl.innerHTML = unassignedStudents.map(s => {
                 const isSelected = selectedStudentId === s.id;
@@ -193,7 +193,7 @@ import Toast from '../../components/Toast.astro';
 
     window.placeStudent = (seatId) => {
         if (!selectedStudentId) {
-            window.showToast?.('warning', 'Pilih Santri', 'Ketuk santri di atas terlebih dahulu.');
+            window.showToast?.('warning', 'Pilih Siswa / Anak', 'Ketuk Siswa / Anak di atas terlebih dahulu.');
             return;
         }
         seatMap[seatId] = selectedStudentId;
