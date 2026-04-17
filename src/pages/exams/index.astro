@@ -1,0 +1,279 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+import Toast from '../../components/Toast.astro';
+import ModalAlert from '../../components/ModalAlert.astro';
+---
+
+<Layout title="Bank Ujian - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
+        
+        <header class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Bank Ujian</h1>
+                <p class="text-xs text-gray-500 font-medium">Kelola evaluasi & ujian siswa</p>
+            </div>
+            <button onclick="openCreateModal()" class="w-10 h-10 bg-green-600 text-white rounded-xl shadow-lg shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-lg"></i>
+            </button>
+        </header>
+
+        <main id="examList" class="space-y-4">
+            <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-green-500 text-2xl"></i></div>
+        </main>
+
+    </div>
+
+    <div id="modalCreateExam" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-gray-800 text-lg">Buat Ujian Baru</h3>
+                <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="formCreateExam" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Mata Pelajaran</label>
+                    <select id="examSubject" required class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="tajwid">Tajwid</option>
+                        <option value="fiqih">Fiqih</option>
+                        <option value="tauhid">Tauhid</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Judul Ujian</label>
+                    <input type="text" id="examTitle" required placeholder="Contoh: UTS Semester 1" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Durasi (Menit)</label>
+                    <input type="number" id="examDuration" required min="5" value="60" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <button type="submit" id="btnSubmitCreate" class="w-full py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
+                    Buat & Mulai Ketik Soal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditExam" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-gray-800 text-lg">Pengaturan Ujian</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="formEditExam" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Judul Ujian</label>
+                    <input type="text" id="editTitle" required class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Durasi (Menit)</label>
+                    <input type="number" id="editDuration" required min="5" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Status Publikasi</label>
+                    <select id="editStatus" required class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="false">Draft (Tersembunyi)</option>
+                        <option value="true">Published (Bisa diakses siswa)</option>
+                    </select>
+                </div>
+                <button type="submit" id="btnSubmitEdit" class="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
+                    Simpan Pengaturan
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <NavbarGuru activeMenu="exams" />
+    <Toast />
+    <ModalAlert />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    let currentEditExamId = null;
+    let currentEditQuestions = []; 
+    
+    // [OPTIMASI CACHE] Tempat menyimpan detail ujian yang sudah pernah di-klik
+    let cachedExamDetails = {}; 
+
+    const fetchExams = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/exams`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const result = await res.json();
+            
+            const list = document.getElementById('examList');
+            if (result.data.length === 0) {
+                list.innerHTML = `<div class="text-center py-12 bg-white rounded-3xl border border-gray-100"><i class="fa-solid fa-folder-open text-4xl text-gray-200 mb-3 block"></i><p class="text-gray-400 text-xs font-bold">Belum ada ujian. Klik tombol + untuk membuat.</p></div>`;
+                return;
+            }
+
+            list.innerHTML = result.data.map(exam => `
+                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative group overflow-hidden">
+                    <a href="/exams/${exam.id}" class="block active:scale-[0.98] transition-all">
+                        <div class="flex justify-between items-start mb-2 pr-20">
+                            <div>
+                                <span class="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded bg-blue-50 text-blue-600">${exam.subject}</span>
+                                <h3 class="font-bold text-gray-800 text-base mt-2">${exam.title}</h3>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-[10px] text-gray-400 font-bold mt-3 border-t border-gray-50 pt-3">
+                            <span><i class="fa-regular fa-clock mr-1"></i> ${exam.duration_minutes} Menit</span>
+                            <span><i class="fa-regular fa-calendar mr-1"></i> ${new Date(exam.created_at).toLocaleDateString('id-ID')}</span>
+                        </div>
+                    </a>
+                    
+                    <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
+                        ${exam.is_active 
+                            ? `<span class="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100"><i class="fa-solid fa-check"></i> Published</span>` 
+                            : `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">Draft</span>`
+                        }
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <button onclick="openEditModal('${exam.id}')" class="w-8 h-8 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-gear"></i></button>
+                            <button onclick="confirmDelete('${exam.id}', '${exam.title}')" class="w-8 h-8 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) { console.error(error); }
+    };
+
+    // --- LOGIKA BUAT UJIAN ---
+    window.openCreateModal = () => document.getElementById('modalCreateExam').classList.replace('hidden', 'flex');
+    window.closeCreateModal = () => document.getElementById('modalCreateExam').classList.replace('flex', 'hidden');
+
+    document.getElementById('formCreateExam').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitCreate');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...'; btn.disabled = true;
+
+        const payload = {
+            subject: document.getElementById('examSubject').value,
+            title: document.getElementById('examTitle').value,
+            duration_minutes: parseInt(document.getElementById('examDuration').value)
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/api/exams`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (res.ok) window.location.href = `/exams/${result.data.id}`;
+            else throw new Error(result.message);
+        } catch (error) {
+            window.showToast?.('danger', 'Gagal', error.message);
+            btn.innerHTML = 'Buat & Mulai Ketik Soal'; btn.disabled = false;
+        }
+    };
+
+    // --- LOGIKA EDIT PENGATURAN (DENGAN CACHE) ---
+    window.openEditModal = async (id) => {
+        document.getElementById('modalEditExam').classList.replace('hidden', 'flex');
+        const btn = document.getElementById('btnSubmitEdit');
+
+        // 1. Cek apakah detail ujian ini sudah ada di Cache
+        if (cachedExamDetails[id]) {
+            const data = cachedExamDetails[id];
+            currentEditExamId = data.id;
+            currentEditQuestions = data.questions || [];
+            
+            document.getElementById('editTitle').value = data.title;
+            document.getElementById('editDuration').value = data.duration_minutes;
+            document.getElementById('editStatus').value = data.is_active ? 'true' : 'false';
+            
+            btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
+            return; // Berhenti di sini, tidak perlu fetch ke server!
+        }
+
+        // 2. Jika belum ada di cache, Fetch dari Server
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat Data...'; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/exams/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const result = await res.json();
+            
+            if (res.ok) {
+                cachedExamDetails[id] = result.data; // Simpan ke Cache
+
+                currentEditExamId = result.data.id;
+                currentEditQuestions = result.data.questions || [];
+                
+                document.getElementById('editTitle').value = result.data.title;
+                document.getElementById('editDuration').value = result.data.duration_minutes;
+                document.getElementById('editStatus').value = result.data.is_active ? 'true' : 'false';
+                
+                btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
+            }
+        } catch (e) {
+            window.showToast?.('danger', 'Error', 'Gagal memuat detail ujian.');
+            closeEditModal();
+        }
+    };
+    
+    window.closeEditModal = () => document.getElementById('modalEditExam').classList.replace('flex', 'hidden');
+
+    document.getElementById('formEditExam').onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const isPublishing = document.getElementById('editStatus').value === 'true';
+        
+        if (isPublishing && currentEditQuestions.length < 10) {
+            window.showToast?.('warning', 'Gagal', 'Ujian tidak bisa di-publish karena memiliki kurang dari 10 soal.');
+            return;
+        }
+
+        const btn = document.getElementById('btnSubmitEdit');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.disabled = true;
+
+        const payload = {
+            title: document.getElementById('editTitle').value,
+            duration_minutes: parseInt(document.getElementById('editDuration').value),
+            is_active: isPublishing,
+            questions: currentEditQuestions 
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/api/exams/${currentEditExamId}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                window.showToast?.('success', 'Berhasil', 'Pengaturan ujian diperbarui.');
+                
+                // Update Cache agar selalu sinkron dengan data terbaru
+                if (cachedExamDetails[currentEditExamId]) {
+                    cachedExamDetails[currentEditExamId].title = payload.title;
+                    cachedExamDetails[currentEditExamId].duration_minutes = payload.duration_minutes;
+                    cachedExamDetails[currentEditExamId].is_active = payload.is_active;
+                }
+
+                closeEditModal();
+                fetchExams();
+            } else throw new Error((await res.json()).message);
+        } catch (error) {
+            window.showToast?.('danger', 'Gagal', error.message);
+            btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
+        }
+    };
+
+    // --- LOGIKA HAPUS UJIAN ---
+    window.confirmDelete = (id, title) => {
+        window.openAlertModal('Hapus Ujian?', `Yakin ingin menghapus ujian "${title}" beserta semua soalnya? Tindakan ini tidak dapat dibatalkan.`, 'Ya, Hapus', async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/exams/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+                if(res.ok) {
+                    window.showToast?.('success', 'Terhapus', 'Ujian berhasil dihapus.');
+                    
+                    // Bersihkan ujian yang dihapus dari Cache
+                    delete cachedExamDetails[id]; 
+
+                    fetchExams();
+                }
+            } catch(e) { window.showToast?.('danger', 'Error', 'Gagal menghapus ujian.'); }
+        });
+    };
+
+    fetchExams();
+</script>
+
+<style>
+    .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { 0% { transform: translateY(30px) scale(0.95); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+</style>

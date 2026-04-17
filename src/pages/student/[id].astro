@@ -7,68 +7,60 @@ import Toast from '../../components/Toast.astro';
 <Layout title="Detail Anak - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
         
-        <header class="mb-6">
+        <header class="mb-0">
             <!-- Row 1: Back + Title + Actions -->
-            <div class="flex items-center justify-between mb-0">
-                <div class="flex items-center gap-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
                     <a href="/students" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600">
                         <i class="fa-solid fa-chevron-left"></i>
                     </a>
                     <h1 class="text-xl font-bold text-gray-800">Detail Perkembangan</h1>
                 </div>
-               
-                <div class="flex items-center gap-2">
-                    <!-- Toggle navigator — ikon berbeda dari tombol back -->
-                    <button id="btnToggleNav" onclick="toggleStudentNav()"
-                        class="w-10 h-10 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all text-gray-400"
-                        title="Ganti siswa">
-                        <i class="fa-solid fa-users-between-lines text-sm"></i>
-                    </button>
-                </div>
+                <button id="btnToggleNav" onclick="toggleStudentNav()"
+                    class="w-10 h-10 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all text-gray-400"
+                    title="Ganti siswa">
+                    <i class="fa-solid fa-users-between-lines text-sm"></i>
+                </button>
             </div>
-
+        
             <!-- Row 2: Student Navigator (collapsible) -->
             <div id="studentNavPanel"
                 class="overflow-hidden transition-all duration-300 ease-in-out"
-                style="max-height: 0; opacity: 0;">
-                <div class="pt-3">
-                    <!-- Label hint -->
-                    <div class="flex items-center justify-between mb-2 px-0.5">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pindah Siswa</span>
-                        <span id="studentNavCounter" class="text-[10px] font-bold text-gray-400 tabular-nums">-/-</span>
+                style="max-height: 0; opacity: 0; margin-top: 0;">
+                <div class="pt-4 pb-1">
+        
+                    <div class="flex items-center justify-between mb-2.5 px-0.5">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <i class="fa-solid fa-users text-gray-300 mr-1"></i> Pindah Siswa
+                        </span>
+                        <span id="studentNavCounter"
+                            class="text-[10px] font-bold text-gray-400 tabular-nums bg-white px-2 py-0.5 rounded-md border border-gray-100">
+                            - / -
+                        </span>
                     </div>
-
-                    <div class="flex items-center gap-2">
-                        <!-- Prev -->
-                        <button id="btnPrevStudent" onclick="navigateStudent(-1)"
-                            class="w-9 h-9 flex-shrink-0 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-all"
-                            title="Siswa sebelumnya">
-                            <i class="fa-solid fa-chevron-left text-xs"></i>
-                        </button>
-
-                        <!-- Search -->
-                        <div class="relative flex-1">
-                            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl shadow-sm px-3 py-2.5">
-                                <i class="fa-solid fa-magnifying-glass text-gray-300 text-xs flex-shrink-0"></i>
-                                <input
-                                    type="text"
-                                    id="studentSearchInput"
-                                    placeholder="Cari nama siswa..."
-                                    class="flex-1 text-sm font-medium text-gray-700 bg-transparent outline-none placeholder-gray-300 min-w-0"
-                                    autocomplete="off"
-                                />
-                            </div>
-                            <!-- Dropdown -->
-                            <div id="studentSearchDropdown"
-                                class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden max-h-52 overflow-y-auto">
-                            </div>
+        
+                    <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-500 transition-all mb-2.5 relative">
+                        <i class="fa-solid fa-magnifying-glass text-gray-300 text-xs flex-shrink-0"></i>
+                        <input
+                            type="text"
+                            id="studentSearchInput"
+                            placeholder="Cari nama siswa..."
+                            class="w-full text-sm font-bold text-gray-700 bg-transparent outline-none placeholder-gray-300"
+                            autocomplete="off"
+                        />
+                        <div id="studentSearchDropdown"
+                            class="hidden absolute top-[110%] left-0 right-0 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-52 overflow-y-auto no-scrollbar">
                         </div>
-
-                        <!-- Next -->
+                    </div>
+        
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button id="btnPrevStudent" onclick="navigateStudent(-1)"
+                            class="w-full py-2.5 bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-500 font-bold text-xs active:scale-95 transition-all disabled:opacity-40 disabled:bg-gray-50">
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i> Sebelumnya
+                        </button>
                         <button id="btnNextStudent" onclick="navigateStudent(1)"
-                            class="w-9 h-9 flex-shrink-0 bg-white border border-gray-100 rounded-xl shadow-sm flex items-center justify-center text-gray-500 active:scale-95 transition-all"
-                            title="Siswa berikutnya">
-                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                            class="w-full py-2.5 bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-500 font-bold text-xs active:scale-95 transition-all disabled:opacity-40 disabled:bg-gray-50">
+                            Selanjutnya <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>
                 </div>
@@ -246,10 +238,28 @@ import Toast from '../../components/Toast.astro';
 
                 <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
                     <h4 class="text-xs font-bold text-blue-800 mb-2">A. Akademik (Otomatis)</h4>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div><label class="text-[9px] text-gray-500">Tajwid</label><input type="text" id="rapTajwid" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
-                        <div><label class="text-[9px] text-gray-500">Fiqih</label><input type="text" id="rapFiqih" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
-                        <div><label class="text-[9px] text-gray-500">Tauhid</label><input type="text" id="rapTauhid" disabled class="w-full bg-white px-2 py-1 text-xs text-center rounded font-bold"></div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center bg-white p-2 rounded-lg border border-blue-100/50 shadow-sm">
+                            <span class="text-xs font-bold text-gray-700">Tajwid</span>
+                            <div class="flex items-center gap-3">
+                                <p class="text-[9px] text-gray-400 font-bold text-right leading-tight">Tg: <span id="rapNumTajwidWeekly" class="text-blue-500">0</span> (30%)<br>Uj: <span id="rapNumTajwidExam" class="text-amber-500">0</span> (70%)</p>
+                                <input type="text" id="rapTajwid" disabled class="w-8 bg-blue-100 text-blue-700 text-center rounded font-black text-xs border-none py-1.5">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white p-2 rounded-lg border border-blue-100/50 shadow-sm">
+                            <span class="text-xs font-bold text-gray-700">Fiqih</span>
+                            <div class="flex items-center gap-3">
+                                <p class="text-[9px] text-gray-400 font-bold text-right leading-tight">Tg: <span id="rapNumFiqihWeekly" class="text-blue-500">0</span> (30%)<br>Uj: <span id="rapNumFiqihExam" class="text-amber-500">0</span> (70%)</p>
+                                <input type="text" id="rapFiqih" disabled class="w-8 bg-blue-100 text-blue-700 text-center rounded font-black text-xs border-none py-1.5">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white p-2 rounded-lg border border-blue-100/50 shadow-sm">
+                            <span class="text-xs font-bold text-gray-700">Tauhid</span>
+                            <div class="flex items-center gap-3">
+                                <p class="text-[9px] text-gray-400 font-bold text-right leading-tight">Tg: <span id="rapNumTauhidWeekly" class="text-blue-500">0</span> (30%)<br>Uj: <span id="rapNumTauhidExam" class="text-amber-500">0</span> (70%)</p>
+                                <input type="text" id="rapTauhid" disabled class="w-8 bg-blue-100 text-blue-700 text-center rounded font-black text-xs border-none py-1.5">
+                            </div>
+                        </div>
                     </div>
                     <div class="mt-2">
                         <label class="text-[10px] font-bold text-blue-800">Al-Quran / Iqro (Manual)</label>
@@ -433,6 +443,7 @@ import Toast from '../../components/Toast.astro';
     let allStudents = [];       // [{id, name, grade}, ...]
     let currentStudentIndex = -1;
     let searchDebounceTimer = null;
+    let studentExamResults = [];
 
     const loadAllStudents = async () => {
         try {
@@ -550,31 +561,28 @@ import Toast from '../../components/Toast.astro';
     let navPanelOpen = false;
 
     window.toggleStudentNav = () => {
-        const panel  = document.getElementById('studentNavPanel');
-        const btn    = document.getElementById('btnToggleNav');
-        const input  = document.getElementById('studentSearchInput');
-        navPanelOpen = !navPanelOpen;
+        const panel    = document.getElementById('studentNavPanel');
+        const btn      = document.getElementById('btnToggleNav');
+        const input    = document.getElementById('studentSearchInput');
+        navPanelOpen   = !navPanelOpen;
 
         if (navPanelOpen) {
-            panel.style.maxHeight = '120px';
-            panel.style.opacity   = '1';
+            panel.style.maxHeight  = '260px';
+            panel.style.opacity    = '1';
+            panel.style.marginTop  = '12px';
             btn.classList.remove('text-gray-400', 'bg-white', 'border-gray-100');
             btn.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
-            
-            // [TAMBAHAN] Ganti overflow setelah animasi selesai (320ms)
             setTimeout(() => {
                 panel.classList.remove('overflow-hidden');
                 panel.classList.add('overflow-visible');
                 input.focus();
             }, 320);
-
         } else {
-            // [TAMBAHAN] Kembalikan ke overflow-hidden SEBELUM animasi menutup
             panel.classList.remove('overflow-visible');
             panel.classList.add('overflow-hidden');
-            
-            panel.style.maxHeight = '0';
-            panel.style.opacity   = '0';
+            panel.style.maxHeight  = '0';
+            panel.style.opacity    = '0';
+            panel.style.marginTop  = '0';
             btn.classList.remove('text-green-600', 'bg-green-50', 'border-green-200');
             btn.classList.add('text-gray-400', 'bg-white', 'border-gray-100');
             document.getElementById('studentSearchDropdown').classList.add('hidden');
@@ -728,15 +736,19 @@ import Toast from '../../components/Toast.astro';
     const fetchData = async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [stdRes, progRes, todoRes, consRes, rapRes, attRes, lagRes] = await Promise.all([
+            const [stdRes, progRes, todoRes, consRes, rapRes, attRes, lagRes, examRes] = await Promise.all([
                 fetch(`${API_URL}/api/students/${studentId}`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/progress`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/todos`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/raports`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers }),
-                fetch(`${API_URL}/api/students/${studentId}/lag-status`, { headers })
+                fetch(`${API_URL}/api/students/${studentId}/lag-status`, { headers }),
+                fetch(`${API_URL}/api/exams/student/${studentId}/results`, { headers }) // <--- INI TAMBAHANNYA
             ]);
+            
+            const examData = await examRes.json();
+            studentExamResults = examData.data || [];
 
             const student  = await stdRes.json();
             const progress = await progRes.json();
@@ -994,14 +1006,26 @@ import Toast from '../../components/Toast.astro';
 
     window.openRaportModal = () => {
         document.getElementById('rapName').value = document.getElementById('studentName').innerText;
-        hapusFotoRaport(); // reset foto tiap buka modal
+        hapusFotoRaport();
 
-        const valT  = parseInt(document.getElementById('avgTajwid').innerText) || 0;
-        const valF  = parseInt(document.getElementById('avgFiqih').innerText)  || 0;
-        const valTh = parseInt(document.getElementById('avgTauhid').innerText) || 0;
-        document.getElementById('rapTajwid').value = convertToGrade(valT);
-        document.getElementById('rapFiqih').value  = convertToGrade(valF);
-        document.getElementById('rapTauhid').value = convertToGrade(valTh);
+        // --- RUMUS BOBOT AKADEMIK (30% Tugas, 70% Ujian) ---
+        const calcWeightedScore = (subject, avgElementId) => {
+            const weeklyScore = parseInt(document.getElementById(avgElementId).innerText) || 0;
+            const examScore = studentExamResults.find(e => e.subject === subject)?.score || 0;
+            
+            // Hitung nilai akhir berbobot
+            const finalScore = Math.round((weeklyScore * 0.3) + (examScore * 0.7));
+
+            // Update UI teks breakdown di modal
+            document.getElementById(`rapNum${subject.charAt(0).toUpperCase() + subject.slice(1)}Weekly`).innerText = weeklyScore;
+            document.getElementById(`rapNum${subject.charAt(0).toUpperCase() + subject.slice(1)}Exam`).innerText = examScore;
+
+            return convertToGrade(finalScore);
+        };
+
+        document.getElementById('rapTajwid').value = calcWeightedScore('tajwid', 'avgTajwid');
+        document.getElementById('rapFiqih').value  = calcWeightedScore('fiqih', 'avgFiqih');
+        document.getElementById('rapTauhid').value = calcWeightedScore('tauhid', 'avgTauhid');
 
         document.getElementById('rapHadir').innerText = attendanceStatsGlobal.hadir;
         document.getElementById('rapIzin').innerText  = attendanceStatsGlobal.izin;

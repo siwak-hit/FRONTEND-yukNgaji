@@ -18,6 +18,24 @@ import ModalAlert from '../../components/ModalAlert.astro';
             </button>
         </header>
 
+        <a href="/exams" class="mb-6 bg-gradient-to-br from-amber-400 to-orange-500 p-5 rounded-3xl shadow-lg shadow-orange-500/20 flex items-center justify-between active:scale-[0.98] transition-all block relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+            <div class="absolute right-10 -bottom-8 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+
+            <div class="flex items-center gap-4 relative z-10">
+                <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white text-xl backdrop-blur-sm border border-white/20 shadow-inner">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h2 class="text-white font-bold text-base leading-tight drop-shadow-sm">Ujian & Evaluasi <span class="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1 align-top uppercase tracking-widest font-black animate-pulse">Baru</span></h2>
+                    <p class="text-orange-50 text-[10px] mt-0.5 font-medium leading-relaxed">Buat ujian khusus dengan timer, gambar, & hint.</p>
+                </div>
+            </div>
+            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white relative z-10 backdrop-blur-sm">
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+            </div>
+        </a>
+
         <section class="mb-6 bg-green-50 p-4 rounded-2xl border border-green-100">
             <div class="flex items-start gap-3">
                 <i class="fa-solid fa-circle-info text-green-600 mt-1 flex-shrink-0"></i>
@@ -208,30 +226,42 @@ import ModalAlert from '../../components/ModalAlert.astro';
     let summaryData = {};
     let activeSubjectForUpload = 'tajwid';
     let resolvedWeekForUpload  = 1;
-    
-    // [BARU] State untuk filter & grouping
-    let allWeeksData = {}; // Format: { 1: { tajwid: [...], fiqih: [...] }, 2: { ... } }
+    let allWeeksData = {}; 
     let isSortAsc = true;
+    
+    // [BARU] Pelacak Cache untuk endpoint /summary
+    let isSummaryCached = false; 
 
     // ================================================================
-    // OPEN/CLOSE
+    // OPEN/CLOSE & SMART ADD (DENGAN OPTIMASI CACHE)
     // ================================================================
     document.getElementById('btnOpenUpload').onclick = async () => {
         await loadSummaryIntoModal();
         document.getElementById('modalUpload').classList.remove('hidden');
     };
+    
     window.closeUpload  = () => document.getElementById('modalUpload').classList.add('hidden');
     window.closePreview = () => document.getElementById('modalPreview').classList.add('hidden');
 
-    // ================================================================
-    // SMART ADD — isi dropdown & label otomatis saat mapel/mode berubah
-    // ================================================================
     const loadSummaryIntoModal = async () => {
-        const res = await fetch(`${API_URL}/api/onboarding/questions/summary`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const result = await res.json();
-        summaryData = result.data || {};
+        // Cek apakah data summary sudah tersimpan di memori (Cache Hit)
+        if (!isSummaryCached) {
+            const btn = document.getElementById('btnOpenUpload');
+            const oldContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg"></i>'; // Animasi loading
+            
+            try {
+                const res = await fetch(`${API_URL}/api/onboarding/questions/summary`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const result = await res.json();
+                summaryData = result.data || {};
+                isSummaryCached = true; // Tandai bahwa data sudah dicache
+            } catch (e) {
+                console.error("Gagal mengambil summary", e);
+            } finally {
+                btn.innerHTML = oldContent; // Kembalikan icon Plus
+            }
+        }
+        
         updateSmartAddUI();
     };
 
@@ -241,10 +271,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const info    = summaryData[subject] || { maxWeek: 0, gaps: [], allWeeks: [] };
 
         const nextWeek = info.maxWeek + 1;
-        document.getElementById('labelPertemuanBaru').textContent =
-            info.maxWeek === 0
-                ? 'Belum ada soal — akan jadi Pertemuan 1'
-                : `Otomatis ke Pertemuan ${nextWeek} (setelah Mg-${info.maxWeek})`;
+        document.getElementById('labelPertemuanBaru').textContent = info.maxWeek === 0 ? 'Belum ada soal — akan jadi Pertemuan 1' : `Otomatis ke Pertemuan ${nextWeek} (setelah Mg-${info.maxWeek})`;
 
         const sisipanWeekEl = document.getElementById('sisipanWeek');
         const sisipanWrap   = document.getElementById('sisipanDropdownWrap');
@@ -258,22 +285,18 @@ import ModalAlert from '../../components/ModalAlert.astro';
             sisipanWrap.classList.add('hidden');
         }
 
-        if (mode === 'baru') {
-            resolvedWeekForUpload = nextWeek;
-        } else {
-            resolvedWeekForUpload = parseInt(sisipanWeekEl.value) || null;
-        }
+        if (mode === 'baru') resolvedWeekForUpload = nextWeek;
+        else resolvedWeekForUpload = parseInt(sisipanWeekEl.value) || null;
+        
         activeSubjectForUpload = subject;
     };
 
     document.getElementById('upSubject').onchange = updateSmartAddUI;
     document.querySelectorAll('input[name="weekMode"]').forEach(r => r.onchange = updateSmartAddUI);
-    document.getElementById('sisipanWeek').onchange = () => {
-        resolvedWeekForUpload = parseInt(document.getElementById('sisipanWeek').value) || null;
-    };
+    document.getElementById('sisipanWeek').onchange = () => resolvedWeekForUpload = parseInt(document.getElementById('sisipanWeek').value) || null;
 
     // ================================================================
-    // DOWNLOAD TEMPLATE
+    // DOWNLOAD TEMPLATE & UPLOAD
     // ================================================================
     document.getElementById('btnDownloadTemplate').onclick = () => {
         const templateText = `Q: Contoh perbuatan syirik adalah?\nA: Shalat tepat waktu\nB: Berdoa kepada Allah\nC: Meminta kepada kuburan\nD: Membaca Al-Qur'an\nKUNCI: C\nLEVEL: MUDAH\n\nQ: Apa arti dari kalimat "Laa ilaaha illallah"?\nA: Allah Maha Besar\nB: Tiada tuhan selain Allah\nC: Allah Maha Pengasih\nD: Segala puji bagi Allah\nKUNCI: B\nLEVEL: SEDANG`;
@@ -284,14 +307,10 @@ import ModalAlert from '../../components/ModalAlert.astro';
         URL.revokeObjectURL(url);
     };
 
-    // ================================================================
-    // UPLOAD FILE → PARSE → PREVIEW
-    // ================================================================
     document.getElementById('formUpload').onsubmit = (e) => {
         e.preventDefault();
         const file = document.getElementById('upFile').files[0];
         if (!file) { openManualFromModal(); return; }
-
         const reader = new FileReader();
         reader.onload = (ev) => {
             const questions = parseTextToJSON(ev.target.result);
@@ -300,10 +319,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         reader.readAsText(file);
     };
 
-    window.openManualFromModal = () => {
-        closeUpload();
-        renderPreview([]);
-    };
+    window.openManualFromModal = () => { closeUpload(); renderPreview([]); };
 
     const parseTextToJSON = (text) => {
         const blocks = text.split(/\r?\n\r?\n/);
@@ -327,11 +343,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.renderPreview = (questions) => {
         const container = document.getElementById('previewContent');
         container.innerHTML = '';
-
         questions.forEach((item, idx) => container.appendChild(createSoalCard(item, idx + 1)));
         document.getElementById('targetWeek').value = resolvedWeekForUpload || 1;
         document.getElementById('previewSubjectLabel').textContent = activeSubjectForUpload;
-
         document.getElementById('modalUpload').classList.add('hidden');
         document.getElementById('modalPreview').classList.remove('hidden');
     };
@@ -382,18 +396,13 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
     document.getElementById('btnTambahManual').onclick = window.addNewQuestionField;
 
-    // ================================================================
-    // SIMPAN SOAL BARU (dari preview editor)
-    // ================================================================
+    // SIMPAN SOAL BARU
     document.getElementById('btnFinalSave').onclick = async () => {
         const cards   = document.querySelectorAll('#previewContent .soal-card');
         const subject = activeSubjectForUpload;
         const week    = parseInt(document.getElementById('targetWeek').value);
 
-        if (!week || week < 1) {
-            window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
-            return;
-        }
+        if (!week || week < 1) return window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
 
         const questionsData = [];
         cards.forEach(card => {
@@ -405,19 +414,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
             const key   = card.querySelector('.key-input').value;
             const level = card.querySelector('.level-input').value;
             if (question && optA && optB) {
-                questionsData.push({
-                    question,
-                    options: { A: optA, B: optB, C: optC, D: optD },
-                    correct_answer: key,
-                    difficulty_level: level
-                });
+                questionsData.push({ question, options: { A: optA, B: optB, C: optC, D: optD }, correct_answer: key, difficulty_level: level });
             }
         });
 
-        if (questionsData.length === 0) {
-            window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
-            return;
-        }
+        if (questionsData.length === 0) return window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
 
         const btn = document.getElementById('btnFinalSave');
         btn.textContent = "Menyimpan..."; btn.disabled = true;
@@ -430,22 +431,19 @@ import ModalAlert from '../../components/ModalAlert.astro';
             });
             const result = await res.json();
             if (res.ok) {
-                window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan ke Pertemuan ${week}.`);
-                setTimeout(() => { closePreview(); fetchAccordion(); }, 1200);
-            } else {
-                window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
-            }
-        } catch (err) {
-            console.error(err);
-            window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.');
-        } finally {
-            btn.textContent = "Simpan";
-            btn.disabled = false;
-        }
+                window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan.`);
+                
+                // [PENTING] Hapus cache karena jumlah soal/minggu berubah!
+                isSummaryCached = false; 
+
+                setTimeout(() => { closePreview(); fetchAccordion(); }, 1200); 
+            } else window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
+        } catch (err) { console.error(err); window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
+        finally { btn.textContent = "Simpan"; btn.disabled = false; }
     };
 
     // ================================================================
-    // FETCH & GROUPING DATA (PER PERTEMUAN)
+    // FETCH DATA AWAL (CUMA 1 KALI SAAT LOAD HALAMAN)
     // ================================================================
     const fetchAccordion = async () => {
         const container = document.getElementById('accordionContainer');
@@ -453,30 +451,21 @@ import ModalAlert from '../../components/ModalAlert.astro';
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
             <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>`;
-
         try {
-            const responses = await Promise.all(
-                SUBJECTS.map(s =>
-                    fetch(`${API_URL}/api/onboarding/questions/${s}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    }).then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {} }))
-                )
-            );
+            const responses = await Promise.all(SUBJECTS.map(s =>
+                    fetch(`${API_URL}/api/onboarding/questions/${s}`, { headers: { 'Authorization': `Bearer ${token}` } })
+                    .then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {} }))
+            ));
 
-            // Bersihkan dan susun ulang data menjadi Grouped By Week
             allWeeksData = {};
             responses.forEach(({ subject, grouped }) => {
                 Object.keys(grouped).forEach(weekStr => {
                     const weekNum = parseInt(weekStr);
-                    if (!allWeeksData[weekNum]) {
-                        allWeeksData[weekNum] = { tajwid: [], fiqih: [], tauhid: [] };
-                    }
+                    if (!allWeeksData[weekNum]) allWeeksData[weekNum] = { tajwid: [], fiqih: [], tauhid: [] };
                     allWeeksData[weekNum][subject] = grouped[weekStr];
                 });
             });
-
             renderAllWeeks();
-
         } catch (e) {
             console.error("Gagal load accordion:", e);
             container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat data.</p>';
@@ -484,31 +473,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     // ================================================================
-    // LOGIKA FILTER & SORTING & RENDER ACCORDION PERTEMUAN
+    // LOGIKA FILTER & SORTING & RENDER ACCORDION
     // ================================================================
     document.getElementById('searchWeek').addEventListener('input', () => renderAllWeeks());
-    
     document.getElementById('btnSortWeek').addEventListener('click', () => {
         isSortAsc = !isSortAsc;
         document.getElementById('btnSortWeek').innerHTML = isSortAsc 
-            ? '<i class="fa-solid fa-arrow-down-1-9"></i>' 
-            : '<i class="fa-solid fa-arrow-down-9-1"></i>';
+            ? '<i class="fa-solid fa-arrow-down-1-9"></i>' : '<i class="fa-solid fa-arrow-down-9-1"></i>';
         renderAllWeeks();
     });
 
     const renderAllWeeks = () => {
         const container = document.getElementById('accordionContainer');
         container.innerHTML = '';
-
         const searchTerm = document.getElementById('searchWeek').value.trim();
         let weeks = Object.keys(allWeeksData).map(Number);
 
-        // Fitur Pencarian Pertemuan
-        if (searchTerm) {
-            weeks = weeks.filter(w => w.toString() === searchTerm);
-        }
-
-        // Fitur Sorting (Asc / Desc)
+        if (searchTerm) weeks = weeks.filter(w => w.toString() === searchTerm);
         weeks.sort((a, b) => isSortAsc ? a - b : b - a);
 
         if (weeks.length === 0) {
@@ -519,57 +500,39 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 </div>`;
             return;
         }
-
-        weeks.forEach(week => {
-            container.appendChild(renderWeekAccordion(week, allWeeksData[week]));
-        });
+        weeks.forEach(week => container.appendChild(renderWeekAccordion(week, allWeeksData[week])));
     };
 
     const renderWeekAccordion = (week, subjectsData) => {
-        // Hitung total soal di minggu ini dari semua mapel
         const totalQ = (subjectsData.tajwid?.length || 0) + (subjectsData.fiqih?.length || 0) + (subjectsData.tauhid?.length || 0);
-
         const wrapper = document.createElement('div');
         wrapper.className = `rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
-
-        // ==========================================
-        // HEADER PERTEMUAN (Level 1)
-        // ==========================================
+        
         const header = document.createElement('div');
         header.className = `bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors`;
         header.innerHTML = `
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">
-                    ${week}
-                </div>
+                <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div>
                 <div>
                     <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
                     <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
                 </div>
             </div>
             <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 accordion-arrow"></i>`;
-
-        // ==========================================
-        // BODY PERTEMUAN (Berisi Sub-Accordion Mapel)
-        // ==========================================
+        
         const body = document.createElement('div');
-        body.className = 'accordion-body hidden bg-white p-4 space-y-3'; // Wadah untuk mapel-mapel
+        body.className = 'accordion-body hidden bg-white p-4 space-y-3'; 
 
         SUBJECTS.forEach(subject => {
             const qList = subjectsData[subject];
             if (qList && qList.length > 0) {
                 const c = SUBJECT_COLORS[subject];
-                
-                // Wrapper Sub-Accordion Mapel
                 const subjWrapper = document.createElement('div');
                 subjWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white`;
 
-                // Header Mapel (Level 2)
                 const subjHeader = document.createElement('div');
                 subjHeader.className = `${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all`;
-                
                 const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
-
                 subjHeader.innerHTML = `
                     <div class="flex items-center gap-3">
                         <span class="text-base">${icon}</span>
@@ -579,17 +542,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 subj-arrow text-xs"></i>
                 `;
 
-                // Body Mapel (Berisi Daftar Soal)
                 const subjBody = document.createElement('div');
                 subjBody.className = `hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}`;
                 subjBody.innerHTML = qList.map((q, i) => renderSoalItem(q, i, subject)).join('');
 
-                // Interaksi Buka/Tutup Mapel
                 subjHeader.onclick = (e) => {
-                    e.stopPropagation(); // Mencegah klik bocor ke header Pertemuan
+                    e.stopPropagation();
                     const isHidden = subjBody.classList.toggle('hidden');
-                    const arrow = subjHeader.querySelector('.subj-arrow');
-                    arrow.style.transform = isHidden ? '' : 'rotate(180deg)';
+                    subjHeader.querySelector('.subj-arrow').style.transform = isHidden ? '' : 'rotate(180deg)';
                 };
 
                 subjWrapper.appendChild(subjHeader);
@@ -598,11 +558,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
             }
         });
 
-        // Interaksi Buka/Tutup Pertemuan
         header.onclick = () => {
             const isHidden = body.classList.toggle('hidden');
-            const arrow = header.querySelector('.accordion-arrow');
-            arrow.style.transform = isHidden ? '' : 'rotate(180deg)';
+            header.querySelector('.accordion-arrow').style.transform = isHidden ? '' : 'rotate(180deg)';
         };
 
         wrapper.appendChild(header);
@@ -614,7 +572,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const optHtml = Object.entries(q.options || {})
             .map(([k, v]) => `<span class="${k === q.correct_answer ? 'text-green-600 font-bold' : 'text-gray-400'}">${k}: ${v}</span>`)
             .join(' · ');
-
         const levelColor = { mudah: 'text-green-600 bg-green-50', sedang: 'text-blue-600 bg-blue-50', sulit: 'text-red-500 bg-red-50' };
         const lc = levelColor[q.difficulty_level] || 'text-gray-500 bg-gray-50';
 
@@ -624,14 +581,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <p class="text-xs font-bold text-gray-800 flex-1 leading-relaxed">${index + 1}. ${q.question}</p>
                     <div class="flex items-center gap-1 flex-shrink-0">
                         <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${lc}">${q.difficulty_level}</span>
-                        <button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})"
-                            class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 rounded-lg text-[10px] active:scale-95 transition-all" title="Edit">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button onclick="hapusSoal('${q.id}', '${subject}')"
-                            class="w-6 h-6 flex items-center justify-center bg-red-100 text-red-500 rounded-lg text-[10px] active:scale-95 transition-all" title="Hapus">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                        <button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})" class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 rounded-lg text-[10px] active:scale-95 transition-all" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="hapusSoal('${q.id}', '${subject}')" class="w-6 h-6 flex items-center justify-center bg-red-100 text-red-500 rounded-lg text-[10px] active:scale-95 transition-all" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="text-[10px] leading-relaxed">${optHtml}</div>
@@ -639,7 +590,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     // ================================================================
-    // EDIT SOAL (yang sudah tersimpan)
+    // EDIT SOAL (OPTIMASI UI, TANPA FETCH ULANG KE SERVER)
     // ================================================================
     window.openEditSoal = (q) => {
         document.getElementById('editSoalId').value    = q.id;
@@ -653,27 +604,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
         document.getElementById('modalEditSoal').classList.replace('hidden', 'flex');
     };
 
-    window.closeEditSoal = () =>
-        document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
-
+    window.closeEditSoal = () => document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
+    
     window.submitEditSoal = async () => {
         const id = document.getElementById('editSoalId').value;
         const payload = {
-            question:         document.getElementById('editSoalQ').value.trim(),
+            question: document.getElementById('editSoalQ').value.trim(),
             options: {
                 A: document.getElementById('editSoalA').value.trim(),
                 B: document.getElementById('editSoalB').value.trim(),
                 C: document.getElementById('editSoalC').value.trim(),
                 D: document.getElementById('editSoalD').value.trim(),
             },
-            correct_answer:   document.getElementById('editSoalKey').value,
+            correct_answer: document.getElementById('editSoalKey').value,
             difficulty_level: document.getElementById('editSoalLevel').value,
         };
 
-        if (!payload.question || !payload.options.A || !payload.options.B) {
-            window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal 2 opsi wajib diisi.');
-            return;
-        }
+        if (!payload.question || !payload.options.A || !payload.options.B) return window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal 2 opsi wajib diisi.');
 
         try {
             const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, {
@@ -684,18 +631,25 @@ import ModalAlert from '../../components/ModalAlert.astro';
             if (res.ok) {
                 window.showToast('success', 'Berhasil', 'Soal berhasil diperbarui.');
                 closeEditSoal();
-                fetchAccordion();
-            } else {
-                const r = await res.json();
-                window.showToast('danger', 'Error', r.message || 'Gagal update.');
-            }
-        } catch (e) {
-            window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.');
-        }
+                
+                // [OPTIMASI UI] Update memory lokal, hemat 3 panggilan server
+                for (const week in allWeeksData) {
+                    for (const subj in allWeeksData[week]) {
+                        const qIndex = allWeeksData[week][subj].findIndex(q => q.id === id);
+                        if (qIndex !== -1) {
+                            allWeeksData[week][subj][qIndex] = { ...allWeeksData[week][subj][qIndex], ...payload };
+                            break;
+                        }
+                    }
+                }
+                renderAllWeeks(); // Refresh UI langsung dari memori
+
+            } else window.showToast('danger', 'Error', (await res.json()).message || 'Gagal update.');
+        } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
     // ================================================================
-    // HAPUS SOAL
+    // HAPUS SOAL (OPTIMASI UI, TANPA FETCH ULANG KE SERVER)
     // ================================================================
     window.hapusSoal = async (id, subject) => {
         if (!confirm(`Hapus soal ini dari bank soal ${subject}? Tindakan tidak bisa dibatalkan.`)) return;
@@ -707,29 +661,32 @@ import ModalAlert from '../../components/ModalAlert.astro';
             });
             if (res.ok) {
                 window.showToast('success', 'Terhapus', 'Soal berhasil dihapus.');
-                fetchAccordion();
-            } else {
-                window.showToast('danger', 'Error', 'Gagal menghapus soal.');
-            }
-        } catch {
-            window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.');
-        }
+                
+                // [PENTING] Hapus cache karena jumlah soal/minggu bisa berubah!
+                isSummaryCached = false; 
+
+                // [OPTIMASI UI] Hapus dari memory lokal, hemat 3 panggilan server
+                for (const week in allWeeksData) {
+                    if (allWeeksData[week][subject]) {
+                        const qIndex = allWeeksData[week][subject].findIndex(q => q.id === id);
+                        if (qIndex !== -1) {
+                            allWeeksData[week][subject].splice(qIndex, 1);
+                            break;
+                        }
+                    }
+                }
+                renderAllWeeks(); // Refresh UI langsung dari memori
+
+            } else window.showToast('danger', 'Error', 'Gagal menghapus soal.');
+        } catch { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
-    // ================================================================
-    // INIT
-    // ================================================================
     fetchAccordion();
 </script>
 
 <style>
-    .animate-slide-up {
-        animation: slideUp 0.3s ease-out;
-    }
-    @keyframes slideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
-    }
+    .animate-slide-up { animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .accordion-body { display: block; }
     .accordion-body.hidden { display: none; }
     .week-body.hidden { display: none; }

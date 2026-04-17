@@ -12,6 +12,18 @@ import Toast from '../../components/Toast.astro';
             <p class="text-xs text-gray-500 font-medium mt-1 uppercase tracking-widest">Input nilai onboarding Anak</p>
         </header>
 
+        <div id="examPortalBanner" class="mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative flex items-center justify-between transition-all duration-300">
+            <div class="relative z-10 flex items-center gap-4">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-spinner fa-spin text-xl text-gray-300"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black mb-1 text-gray-400">Portal Ujian Siswa</h2>
+                    <p class="text-[10px] font-bold">Mengecek ketersediaan ujian...</p>
+                </div>
+            </div>
+        </div>
+
         <section class="mb-8">
             <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">1. Pilih Mata Pelajaran</h3>
             <div class="grid grid-cols-3 gap-3">
@@ -28,8 +40,7 @@ import Toast from '../../components/Toast.astro';
 
         <section id="weekSection" class="mb-8 opacity-30 pointer-events-none transition-all duration-500">
             <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">2. Pertemuan Ke-</h3>
-            <div id="weekContainer" class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                </div>
+            <div id="weekContainer" class="flex gap-3 overflow-x-auto no-scrollbar pb-2"></div>
         </section>
 
         <section id="studentSection" class="hidden animate-slide-up">
@@ -38,19 +49,47 @@ import Toast from '../../components/Toast.astro';
                     <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">3. Pilih Anak</h3>
                     <span id="sessionBadge" class="text-[9px] bg-green-600 text-white px-3 py-1 rounded-full font-bold shadow-sm shadow-green-200"></span>
                 </div>
-
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                    <input type="text" id="studentSearch" 
-                        class="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-2 focus:ring-green-500 transition-all shadow-sm" 
-                        placeholder="Cari nama Anak...">
+                    <input type="text" id="studentSearch" class="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-2 focus:ring-green-500 transition-all shadow-sm" placeholder="Cari nama Anak...">
                 </div>
             </div>
-            
-            <div id="studentGrid" class="grid grid-cols-2 gap-3">
-                </div>
+            <div id="studentGrid" class="grid grid-cols-2 gap-3"></div>
         </section>
 
+    </div>
+
+    <div id="modalExamPortal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl animate-slide-up relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-gray-800 text-lg"><i class="fa-solid fa-rocket text-indigo-500 mr-2"></i> Setup Ujian</h3>
+                <button onclick="closeExamPortal()" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full active:scale-95"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-5">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">1. Pilih Ujian (Siswa Belum Selesai)</label>
+                    <select id="portalExamSelect" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Memuat ujian aktif...</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">2. Pilih Siswa (Pengerja)</label>
+                    <div class="relative mt-2 mb-3">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input type="text" id="portalStudentSearch" class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cari nama siswa...">
+                    </div>
+
+                    <div id="portalStudentList" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar border border-gray-100 p-2 rounded-xl bg-gray-50/50">
+                        </div>
+                    <input type="hidden" id="portalStudentSelectValue" value="">
+                </div>
+                
+                <button onclick="startExam()" class="w-full py-4 mt-2 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm uppercase tracking-wider">
+                    Mulai Ujian!
+                </button>
+            </div>
+        </div>
     </div>
 
     <NavbarGuru activeMenu="chat" />
@@ -59,15 +98,103 @@ import Toast from '../../components/Toast.astro';
 
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
-    let selectedSubject = null;
-    let selectedWeek = null;
-    let allStudents = []; // Variabel ini harus diisi saat fetch
-    let finishedStudentIds = []; // Simpan ID yang sudah selesai di sini
     const token = localStorage.getItem('token');
-
     if (!token) window.location.replace('/');
 
-    // 1. Logic Pilih Mapel (Tetap sama, hanya pastikan panggil render)
+    let selectedSubject = null;
+    let selectedWeek = null;
+    let allStudents = [];
+    let finishedStudentIds = [];
+    
+    // CACHE MEMORY
+    let cachedWeeks = {};
+    let cachedActiveExams = []; 
+    let selectedPortalStudentId = null; 
+
+    // ================================================================
+    // PENGECEKAN STATUS UJIAN AKTIF (LOGIKA TUNTAS UJIAN)
+    // ================================================================
+    const checkActiveExams = async () => {
+        const banner = document.getElementById('examPortalBanner');
+        try {
+            // 1. Ambil Ujian Aktif
+            const res = await fetch(`${API_URL}/api/exams`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (!res.ok) throw new Error("API Error"); 
+            const result = await res.json();
+            const activeExams = (result.data || []).filter(e => e.is_active);
+
+            // Jika tidak ada ujian sama sekali (KOSONG)
+            if (activeExams.length === 0) {
+                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-lock mr-2 text-gray-300"></i> Portal Terkunci</h2><p class="text-[10px] font-bold">Belum ada ujian yang di-publish oleh Ustadz.</p></div><div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center relative z-10 border border-gray-200"><i class="fa-solid fa-lock text-lg text-gray-300"></i></div>`;
+                return;
+            }
+
+            // 2. Ambil Daftar Seluruh Siswa (Untuk Cek Apakah Semua Udah Mengerjakan)
+            if (allStudents.length === 0) {
+                const stdRes = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const stdData = await stdRes.json();
+                allStudents = stdData.data || [];
+            }
+
+            // 3. Cek Status Tiap Ujian Aktif
+            let availableExamsCount = 0;
+            
+            cachedActiveExams = await Promise.all(activeExams.map(async (exam) => {
+                const rRes = await fetch(`${API_URL}/api/exams/${exam.id}/results`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const rData = await rRes.json();
+                
+                exam.results = rData.data || []; // Simpan data siapa aja yg udah mengerjakan ujian ini
+                
+                // Cek apakah jumlah yang mengerjakan sudah sama dengan jumlah seluruh siswa
+                exam.isFullyCompleted = exam.results.length >= allStudents.length;
+                
+                // Jika belum selesai semua, berarti ujian ini masih tersedia (Available)
+                if (!exam.isFullyCompleted) availableExamsCount++;
+                
+                return exam;
+            }));
+
+            // 4. Render Banner Sesuai Status
+            if (availableExamsCount > 0) {
+                // ADA YANG BELUM SELESAI: Nyalakan Banner
+                banner.className = "mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden flex items-center justify-between cursor-pointer active:scale-95 transition-transform";
+                banner.setAttribute('onclick', 'openExamPortal()');
+                banner.innerHTML = `
+                    <div class="relative z-10">
+                        <h2 class="text-xl font-black mb-1"><i class="fa-solid fa-gamepad mr-2 animate-bounce"></i> Portal Ujian Siswa</h2>
+                        <p class="text-[10px] font-medium text-indigo-100">Ada <b>${availableExamsCount} Ujian</b> yang belum tuntas dikerjakan. Klik di sini!</p>
+                    </div>
+                    <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm relative z-10 border border-white/30">
+                        <i class="fa-solid fa-play text-xl ml-1"></i>
+                    </div>
+                    <i class="fa-solid fa-puzzle-piece absolute -right-4 -bottom-4 text-8xl text-white/10 rotate-12"></i>
+                `;
+            } else {
+                // SEMUA UJIAN SUDAH SELESAI SEMUA SISWA: Matikan Banner dengan Tema Hijau Sukses
+                banner.className = "mb-8 bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-emerald-600 relative overflow-hidden flex items-center justify-between opacity-90 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `
+                    <div class="relative z-10">
+                        <h2 class="text-xl font-black mb-1"><i class="fa-solid fa-flag-checkered mr-2 text-emerald-500"></i> Ujian Tuntas</h2>
+                        <p class="text-[10px] font-bold text-emerald-600/70">Seluruh siswa telah menyelesaikan semua ujian.</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center relative z-10 border border-emerald-200">
+                        <i class="fa-solid fa-check text-xl text-emerald-500"></i>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            console.error("Gagal mengecek ujian", e);
+            banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
+            banner.removeAttribute('onclick');
+            banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Gagal Memuat</h2><p class="text-[10px] font-bold">Terjadi kesalahan saat mengecek ujian.</p></div>`;
+        }
+    };
+    checkActiveExams();
+
+    // --- LOGIKA HALAMAN ONBOARDING/KONSULTASI ---
     document.querySelectorAll('.subject-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             document.querySelectorAll('.subject-btn').forEach(b => {
@@ -76,38 +203,32 @@ import Toast from '../../components/Toast.astro';
             });
             btn.classList.replace('border-gray-100', 'border-green-600');
             btn.classList.add('ring-2', 'ring-green-100');
-            
             selectedSubject = btn.getAttribute('data-value');
             
-            try {
-                const res = await fetch(`${API_URL}/api/onboarding/available-weeks/${selectedSubject}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const result = await res.json();
-                
-                renderWeekButtons(result.data);
-
-                const weekSection = document.getElementById('weekSection');
-                weekSection.classList.remove('opacity-30', 'pointer-events-none');
-                
-                // Sembunyikan grid jika ganti mapel tapi belum pilih minggu
+            if (cachedWeeks[selectedSubject]) {
+                renderWeekButtons(cachedWeeks[selectedSubject]);
+                document.getElementById('weekSection').classList.remove('opacity-30', 'pointer-events-none');
                 document.getElementById('studentSection').classList.add('hidden');
-            } catch (e) {
-                console.error("Gagal fetch week:", e);
+            } else {
+                try {
+                    const res = await fetch(`${API_URL}/api/onboarding/available-weeks/${selectedSubject}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const result = await res.json();
+                    cachedWeeks[selectedSubject] = result.data; 
+                    renderWeekButtons(result.data);
+                    document.getElementById('weekSection').classList.remove('opacity-30', 'pointer-events-none');
+                    document.getElementById('studentSection').classList.add('hidden');
+                } catch (e) { console.error("Gagal fetch week:", e); }
             }
         });
     });
 
-    // 2. Render Tombol Minggu
     const renderWeekButtons = (weeksArray) => {
         const container = document.getElementById('weekContainer');
         container.innerHTML = '';
-
         if (!weeksArray || weeksArray.length === 0) {
             container.innerHTML = `<div class="p-4 text-xs text-orange-500 bg-orange-50 rounded-xl w-full">Belum ada materi...</div>`;
             return;
         }
-
         weeksArray.forEach(weekNum => {
             const btn = document.createElement('button');
             btn.className = "week-btn flex-shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-xl font-bold text-gray-500 transition-all active:scale-90 shadow-sm";
@@ -118,73 +239,53 @@ import Toast from '../../components/Toast.astro';
                     b.classList.add('bg-white', 'text-gray-500');
                 });
                 btn.classList.add('bg-green-600', 'text-white', 'border-green-600');
-                
                 selectedWeek = weekNum;
-                fetchStudents(); // Trigger fetch nama santri
+                fetchStudents();
             };
             container.appendChild(btn);
         });
     };
 
-    // 3. Fetch & Simpan Data ke allStudents
     const fetchStudents = async () => {
         if (!selectedSubject || !selectedWeek) return;
-
         try {
-            // Tampilkan section dulu
             const studentSection = document.getElementById('studentSection');
             studentSection.classList.remove('hidden');
             document.getElementById('sessionBadge').innerText = `${selectedSubject.toUpperCase()} - MG ${selectedWeek}`;
 
-            // Fetch Status (Siapa yang sudah beres)
-            const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
+            const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const status = await resStatus.json();
             finishedStudentIds = status.data || [];
 
-            // Fetch Semua Santri
-            const resStd = await fetch(`${API_URL}/api/students`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
-            const students = await resStd.json();
-            
-            // KUNCI PERBAIKAN: Isi variabel global allStudents agar bisa difilter di search
-            allStudents = students.data; 
+            if (allStudents.length === 0) {
+                const resStd = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const students = await resStd.json();
+                allStudents = students.data || [];
+            }
             
             renderStudentGrid(allStudents, finishedStudentIds);
-            
-            // Auto scroll ke bawah biar kelihatan gridnya
             studentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } catch (e) {
-            console.error("Gagal sinkronisasi data:", e);
-        }
+        } catch (e) { console.error("Gagal sinkronisasi data:", e); }
     };
 
-    // 4. Render Grid (Pakai data dari parameter agar fleksibel untuk filter)
     const renderStudentGrid = (students, doneIds) => {
         const grid = document.getElementById('studentGrid');
         grid.innerHTML = '';
-
         if (!students || students.length === 0) {
             grid.innerHTML = '<p class="col-span-2 text-center py-10 text-gray-400 text-xs italic">Nama tidak ditemukan...</p>';
             return;
         }
-
         students.forEach(student => {
             const isFinished = doneIds.includes(student.id);
-
             grid.innerHTML += `
                 <div class="student-card ${isFinished ? 'opacity-40 grayscale pointer-events-none' : 'active:scale-95 cursor-pointer'} bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex flex-col items-center text-center gap-3 transition-all"
                     ${!isFinished ? `onclick="window.location.href='/consultations/fill?id=${student.id}&subject=${selectedSubject}&week=${selectedWeek}'"` : ''}>
-                    
                     <div class="relative">
                         <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-lg font-bold">
                             ${student.name.substring(0, 2).toUpperCase()}
                         </div>
                         ${isFinished ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm"><i class="fa-solid fa-check"></i></div>' : ''}
                     </div>
-                    
                     <div>
                         <h4 class="font-bold text-gray-800 text-[11px] line-clamp-1 capitalize">${student.name}</h4>
                         <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">${isFinished ? 'SELESAI' : student.grade}</p>
@@ -194,19 +295,128 @@ import Toast from '../../components/Toast.astro';
         });
     };
 
-    // 5. Live Search Logic (Menggunakan data allStudents yang sudah terisi)
     document.getElementById('studentSearch').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
         renderStudentGrid(filtered, finishedStudentIds);
     });
+
+    // ================================================================
+    // LOGIKA PORTAL UJIAN (DIOPTIMASI & UI BARU)
+    // ================================================================
+    window.openExamPortal = () => {
+        document.getElementById('modalExamPortal').classList.replace('hidden', 'flex');
+        
+        const examSelect = document.getElementById('portalExamSelect');
+        
+        // HANYA TAMPILKAN UJIAN YANG BELUM TUNTAS DI DROPDOWN
+        const pendingExams = cachedActiveExams.filter(e => !e.isFullyCompleted);
+        
+        if (pendingExams.length > 0) {
+            examSelect.innerHTML = pendingExams.map(e => `<option value="${e.id}">${e.subject.toUpperCase()} - ${e.title}</option>`).join('');
+            
+            // Render siswa untuk ujian pertama di dropdown
+            const firstExamId = pendingExams[0].id;
+            renderPortalStudents(allStudents, firstExamId);
+        } else {
+            // Fail-safe (Seharusnya tidak terjadi karena modal tak bisa diklik jika tuntas)
+            examSelect.innerHTML = `<option value="">Semua ujian telah tuntas!</option>`;
+            renderPortalStudents([], null);
+        }
+    };
+
+    // Saat Dropdown Ujian Diganti -> Render ulang status centang siswanya
+    document.getElementById('portalExamSelect').addEventListener('change', (e) => {
+        const selectedExamId = e.target.value;
+        const term = document.getElementById('portalStudentSearch').value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+        renderPortalStudents(filtered, selectedExamId);
+    });
+
+    // Saat Cari Nama Siswa di Dalam Modal
+    document.getElementById('portalStudentSearch').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+        const selectedExamId = document.getElementById('portalExamSelect').value;
+        renderPortalStudents(filtered, selectedExamId);
+    });
+
+    // Fungsi Render Grid Siswa
+    window.renderPortalStudents = (studentsData, examId) => {
+        const container = document.getElementById('portalStudentList');
+        if (studentsData.length === 0) {
+            container.innerHTML = '<p class="col-span-2 text-center py-6 text-xs text-gray-400 font-bold italic">Siswa tidak ditemukan.</p>';
+            return;
+        }
+
+        // Cari riwayat pengerjaan dari Cache untuk ujian yang dipilih
+        const exam = cachedActiveExams.find(e => e.id === examId);
+        const results = exam ? exam.results : [];
+
+        container.innerHTML = studentsData.map(s => {
+            // Cek apakah anak ini sudah ngerjain ujiannya
+            const studentResult = results.find(r => r.student_id === s.id);
+            
+            if (studentResult) {
+                // JIKA SUDAH SELESAI: Card menjadi Hijau Redup, Tercoret, Tidak bisa diklik, Muncul Nilai
+                return `
+                    <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 opacity-60 grayscale pointer-events-none">
+                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-emerald-200 text-emerald-700">
+                            ${s.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-black text-gray-800 line-through truncate">${s.name}</p>
+                            <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Nilai: ${studentResult.score}</p>
+                        </div>
+                        <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i>
+                    </div>
+                `;
+            } else {
+                // JIKA BELUM SELESAI: Normal
+                const isSelected = selectedPortalStudentId === s.id;
+                return `
+                    <div onclick="selectPortalStudent('${s.id}')" class="cursor-pointer p-3 rounded-xl border ${isSelected ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-gray-200'} flex items-center gap-3 transition-all active:scale-95">
+                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black ${isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'}">
+                            ${s.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-black text-gray-800 truncate mb-0.5">${s.name}</p>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${s.grade}</p>
+                        </div>
+                        ${isSelected ? '<i class="fa-solid fa-circle-check text-indigo-500 text-base"></i>' : ''}
+                    </div>
+                `;
+            }
+        }).join('');
+    };
+
+    window.selectPortalStudent = (id) => {
+        selectedPortalStudentId = id;
+        document.getElementById('portalStudentSelectValue').value = id;
+        
+        const term = document.getElementById('portalStudentSearch').value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+        const selectedExamId = document.getElementById('portalExamSelect').value;
+        renderPortalStudents(filtered, selectedExamId);
+    };
+
+    window.closeExamPortal = () => {
+        document.getElementById('modalExamPortal').classList.replace('flex', 'hidden');
+    };
+
+    window.startExam = () => {
+        const examId = document.getElementById('portalExamSelect').value;
+        const studentId = document.getElementById('portalStudentSelectValue').value;
+        
+        if(!examId) return window.showToast?.('warning', 'Oops!', 'Pilih ujian terlebih dahulu.');
+        if(!studentId) return window.showToast?.('warning', 'Pilih Siswa', 'Tentukan siswa yang akan mengerjakan ujian.');
+        
+        window.location.href = `/play/${examId}?student_id=${studentId}`;
+    };
 </script>
 
 <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
-    .animate-slide-up { animation: slideUp 0.4s ease-out; }
-    @keyframes slideUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 </style>

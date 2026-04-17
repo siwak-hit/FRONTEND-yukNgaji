@@ -20,6 +20,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             <a href="/consultations" class="text-xs font-bold text-gray-400 hover:text-red-500 transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 active:scale-95">Keluar</a>
         </header>
 
+        <!-- Progress Bar Gamifikasi -->
+        <div class="w-full h-1.5 bg-gray-100 z-50 relative">
+            <div id="progressBar" class="h-full bg-green-500 w-0 transition-all duration-500 ease-out rounded-r-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+        </div>
+
+        <!-- Vignette Bahaya: 4 strip merah di tepi layar -->
+        <div id="vigLeft"   style="pointer-events:none;position:fixed;top:0;left:0;width:60px;height:100vh;z-index:9999;background:linear-gradient(to right,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
+        <div id="vigRight"  style="pointer-events:none;position:fixed;top:0;right:0;width:60px;height:100vh;z-index:9999;background:linear-gradient(to left,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
+        <div id="vigTop"    style="pointer-events:none;position:fixed;top:0;left:0;width:100vw;height:60px;z-index:9999;background:linear-gradient(to bottom,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
+        <div id="vigBottom" style="pointer-events:none;position:fixed;bottom:0;left:0;width:100vw;height:60px;z-index:9999;background:linear-gradient(to top,rgba(239,68,68,0),rgba(239,68,68,0));transition:background 0.4s ease;"></div>
+
         <main class="flex-1 relative overflow-y-auto px-6 py-8 pb-32">
             
             <div id="startOverlay" class="absolute inset-0 bg-white z-40 flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
@@ -62,9 +73,9 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     
                     <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-4 shadow-sm">
                         <div id="kuesionerContainer" class="space-y-4 mb-4"></div>
-                        <input type="hidden" id="akhlak_score" name="akhlak_score" value="0">
+                        <!-- <input type="hidden" id="akhlak_score" name="akhlak_score" value="0">
                         <input type="hidden" id="disiplin_score" name="disiplin_score" value="0">
-                        <input type="hidden" id="aktif_score" name="aktif_score" value="0">
+                        <input type="hidden" id="aktif_score" name="aktif_score" value="0"> -->
                         <div>
                             <label class="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 ml-1">FOTO RAPORT (Bisa Nanti)</label>
                             <button type="button" onclick="openCameraModal()" id="btnOpenCamera" class="w-full h-32 border-2 border-dashed border-blue-300 rounded-2xl bg-white/50 flex flex-col items-center justify-center hover:bg-blue-100 transition-colors active:scale-95">
@@ -157,9 +168,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     <PhotoBooth />
     <Toast />
 </Layout>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
 
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
     const urlParams = new URLSearchParams(window.location.search);
     const studentId = urlParams.get('id');
     const subject = urlParams.get('subject');
@@ -365,6 +378,19 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     const validate = () => {
+        // Hitung & update progress bar
+        const totalQuestions = questions.length + 3;
+        let answeredCount = 0;
+        document.querySelectorAll('.question-block').forEach(block => {
+            const qId = block.getAttribute('data-id');
+            if (block.querySelector(`input[name="q-${qId}"]:checked`)) answeredCount++;
+        });
+        if (document.querySelector('input[name="q_akhlak"]:checked')) answeredCount++;
+        if (document.querySelector('input[name="q_disiplin"]:checked')) answeredCount++;
+        if (document.querySelector('input[name="q_aktif"]:checked')) answeredCount++;
+        const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+        document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
         const btn = document.getElementById('btnSubmit');
         const ansAkhlak = document.querySelector('input[name="q_akhlak"]:checked');
         const ansDisiplin = document.querySelector('input[name="q_disiplin"]:checked');
@@ -383,7 +409,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
     };
 
-    document.getElementById('questionsList').addEventListener('change', saveDraftAnswers);
+    document.getElementById('questionsList').addEventListener('change', () => {
+        saveDraftAnswers();
+        validate();
+    });
     document.getElementById('kuesionerContainer').addEventListener('change', () => {
         validate();
         saveDraftAnswers();
@@ -443,6 +472,38 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }, 1000);
     };
 
+    // Kontrol vignette 4-sisi
+    let vigPulseInterval = null;
+    const setVignette = (active) => {
+        const ids = ['vigLeft','vigRight','vigTop','vigBottom'];
+        const grads = [
+            'linear-gradient(to right,rgba(239,68,68,{a}),rgba(239,68,68,0))',
+            'linear-gradient(to left,rgba(239,68,68,{a}),rgba(239,68,68,0))',
+            'linear-gradient(to bottom,rgba(239,68,68,{a}),rgba(239,68,68,0))',
+            'linear-gradient(to top,rgba(239,68,68,{a}),rgba(239,68,68,0))',
+        ];
+        if (!active) {
+            clearInterval(vigPulseInterval);
+            vigPulseInterval = null;
+            ids.forEach((id, i) => {
+                document.getElementById(id).style.background = grads[i].replace('{a}','0');
+            });
+            return;
+        }
+        // Pulse: alternasi antara strong dan soft
+        let bright = true;
+        const applyVig = () => {
+            const alpha = bright ? '0.65' : '0.25';
+            ids.forEach((id, i) => {
+                document.getElementById(id).style.background = grads[i].replace('{a}', alpha);
+            });
+            bright = !bright;
+        };
+        applyVig();
+        clearInterval(vigPulseInterval);
+        vigPulseInterval = setInterval(applyVig, 500);
+    };
+
     const updateTimerUI = () => {
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
@@ -455,12 +516,15 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         if (timeLeft <= 10 && timeLeft > 0) {
             timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white rounded-full font-mono font-black text-xl border-2 border-red-700 shadow-md animate-pulse';
             icon.className = 'fa-solid fa-stopwatch text-white mr-1';
+            setVignette(true);
         } else if (timeLeft <= 0) {
             timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-gray-200 text-gray-500 rounded-full font-mono font-black text-xl border-2 border-gray-300 shadow-md';
             icon.className = 'fa-solid fa-stopwatch text-gray-400 mr-1';
+            setVignette(false);
         } else {
             timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-white text-gray-800 rounded-full font-mono font-black text-xl border-2 border-gray-200 shadow-md transition-colors';
             icon.className = 'fa-solid fa-stopwatch text-green-500 mr-1';
+            setVignette(false);
         }
     };
 
@@ -651,6 +715,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 titleEl.innerText = 'Luar Biasa!';
                 msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.';
                 scoreEl.className = 'text-6xl font-black text-green-600 drop-shadow-sm';
+                // Confetti selebrasi nilai A
+                setTimeout(() => {
+                    confetti({ particleCount: 120, spread: 70, origin: { x: 0.3, y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#eab308'] });
+                    confetti({ particleCount: 120, spread: 70, origin: { x: 0.7, y: 0.6 }, colors: ['#22c55e', '#f472b6', '#a78bfa'] });
+                }, 400);
             } else if (score >= 60) {
                 emojiEl.innerText = '👍';
                 titleEl.innerText = 'Kerja Bagus!';
@@ -693,5 +762,33 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     @keyframes slideUp {
         0% { transform: translateY(20px) scale(0.95); opacity: 0; }
         100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    /* Micro-animation: pop saat jawaban dipilih (soal akademik) */
+    .question-block input[type="radio"]:checked + span {
+        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        color: #16a34a;
+    }
+
+    /* Micro-animation: pop saat jawaban dipilih (kuesioner sosial) */
+    #kuesionerContainer input[type="radio"]:checked + span {
+        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        color: #1d4ed8;
+    }
+
+    @keyframes pop {
+        0%   { transform: scale(1); }
+        50%  { transform: scale(1.08); }
+        100% { transform: scale(1); }
+    }
+
+    /* Label jawaban terpilih - highlight background */
+    .question-block label:has(input:checked) {
+        background-color: #f0fdf4;
+        border-color: #86efac;
+    }
+    #kuesionerContainer label:has(input:checked) {
+        background-color: #eff6ff;
+        border-color: #93c5fd;
     }
 </style>

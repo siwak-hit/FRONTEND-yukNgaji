@@ -6,7 +6,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 ---
 
 <Layout title="Dashboard Guru - yukNgaji">
-    <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
+    <div class="px-6 py-8 pb-16 min-h-screen flex flex-col">
 
         <header class="flex justify-between items-center mb-8">
             <div>
@@ -18,79 +18,83 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             </button>
         </header>
 
-        <section class="mb-10">
-            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Ringkasan Kelas</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-2 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/30">
+        <section class="mb-16">
+            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Ringkasan Kelas</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2 bg-green-50 rounded-2xl p-5">
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="text-green-100 text-sm font-medium mb-1">Total Anak</p>
-                            <h3 class="text-4xl font-bold" id="statStudents">-</h3>
+                            <p class="text-green-600 text-xs font-semibold mb-1">Total Anak</p>
+                            <h3 class="text-4xl font-bold text-green-700" id="statStudents">-</h3>
                         </div>
-                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl text-green-500">
                             <i class="fa-solid fa-users"></i>
                         </div>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div class="bg-orange-50 rounded-2xl p-4 flex flex-col justify-between">
                     <div class="w-8 h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3">
                         <i class="fa-solid fa-clipboard-list text-xs"></i>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-800" id="statTasks">-</h3>
-                        <p class="text-[10px] text-gray-500 font-medium mt-0.5 uppercase">Tugas Pending</p>
+                        <h3 class="text-2xl font-bold text-orange-700" id="statTasks">-</h3>
+                        <p class="text-[10px] text-orange-500 font-semibold mt-0.5 uppercase tracking-wide">Tugas Pending</p>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col justify-between">
-                    <div class="w-8 h-8 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-3">
+                <div class="bg-sky-50 rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="w-8 h-8 bg-sky-100 text-sky-500 rounded-full flex items-center justify-center mb-3">
                         <i class="fa-solid fa-envelope text-xs"></i>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-800" id="statMessages">-</h3>
-                        <p class="text-[10px] text-gray-500 font-medium mt-0.5 uppercase">Konsul Baru</p>
+                        <h3 class="text-2xl font-bold text-sky-700" id="statMessages">-</h3>
+                        <p class="text-[10px] text-sky-500 font-semibold mt-0.5 uppercase tracking-wide">Konsul Baru</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <a href="/absensi" id="btnAbsensi" class="relative block w-full bg-white border border-gray-100 p-4 rounded-2xl shadow-sm overflow-hidden mb-6 active:scale-[0.98] transition-all">
-            <div class="flex items-center justify-between z-10 relative">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-calendar-check text-lg"></i>
+        <div class="mb-6">
+            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Aksi Cepat</h2>
+
+            <a href="/absensi" id="btnAbsensi" class="relative block w-full bg-blue-50 p-4 rounded-2xl overflow-hidden mb-3 active:scale-[0.98] transition-all">
+                <div class="flex items-center justify-between z-10 relative">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-500 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-calendar-check text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-blue-800 text-sm">Absensi Hari Ini</h3>
+                            <p id="absensiStatusText" class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Mengecek status...</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-blue-300 text-xs"></i>
+                </div>
+                <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
+            </a>
+
+            <div class="grid grid-cols-2 gap-3">
+                <a href="/timer" class="relative bg-yellow-50 p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-3">
+                    <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-stopwatch text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-800 text-sm">Absensi Hari Ini</h3>
-                        <p id="absensiStatusText" class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Mengecek status...</p>
+                        <h3 class="font-bold text-yellow-800 text-sm mb-0.5">Timer Mengajar</h3>
+                        <p class="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">Durasi Kelas</p>
                     </div>
-                </div>
-                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                </a>
+
+                <a href="/seats" class="relative bg-green-50 p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-3">
+                    <div class="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-chair text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-green-800 text-sm mb-0.5">Denah Duduk</h3>
+                        <p class="text-[10px] text-green-500 font-bold uppercase tracking-wider">Atur Posisi</p>
+                    </div>
+                </a>
             </div>
-            <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
-        </a>
-
-        <div class="grid grid-cols-2 gap-4 mb-10">
-            <a href="/timer" class="relative bg-white border border-gray-100 p-4 rounded-3xl shadow-sm overflow-hidden active:scale-95 transition-transform flex flex-col justify-center gap-3">
-                <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
-                    <i class="fa-solid fa-stopwatch text-xl"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-800 text-sm mb-0.5">Timer Mengajar</h3>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Durasi Kelas</p>
-                </div>
-            </a>
-
-            <a href="/seats" class="relative bg-white border border-gray-100 p-4 rounded-3xl shadow-sm overflow-hidden active:scale-95 transition-transform flex flex-col justify-center gap-3">
-                <div class="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center">
-                    <i class="fa-solid fa-chair text-xl"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-800 text-sm mb-0.5">Denah Duduk</h3>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Atur Posisi</p>
-                </div>
-            </a>
         </div>
 
         <section class="flex-1">
@@ -156,8 +160,51 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             </div>
 
         </section>
-
+        <section class="mb-6">
+            <div class="mt-8 mb-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative z-20">
+                <button onclick="toggleDangerZone()" class="w-full px-5 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors active:scale-95">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-gear"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700 uppercase tracking-widest">Pengaturan Lanjutan</span>
+                    </div>
+                    <i id="dangerIcon" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                </button>
+                
+                <div id="dangerContent" class="hidden px-5 py-4 border-t border-gray-100 bg-white">
+                    <div class="bg-red-50 border border-red-100 rounded-2xl p-4">
+                        <h4 class="text-sm font-bold text-red-600 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Zona Bahaya</h4>
+                        <p class="text-[10px] text-red-500 leading-relaxed mb-4">Menghapus permanen seluruh data nilai, absen, tugas, dan kuesioner. Hanya nama siswa yang dipertahankan.</p>
+                        <button onclick="openResetModal()" class="w-full py-3 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
+                            <i class="fa-solid fa-bomb mr-1"></i> Reset Tahun Ajaran
+                        </button>
+                    </div>
+                </div>
+            </div>
+    
+        </section> 
+        </div> <div id="modalReset" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slide-up relative overflow-hidden">
+                <div class="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="font-black text-gray-800 text-lg mb-1 text-center">Verifikasi Keamanan</h3>
+                <p class="text-[10px] text-gray-500 mb-5 leading-relaxed text-center">
+                    Masukkan <b>Password Akun</b> Anda untuk mengonfirmasi reset data. Sistem akan otomatis mengunduh file backup JSON.
+                </p>
+                <div class="bg-gray-50 p-1.5 rounded-xl border border-gray-200 mb-6">
+                    <input type="password" id="resetPasswordInput" placeholder="Password Anda..." class="w-full px-3 py-2.5 bg-transparent text-sm font-bold text-gray-800 focus:outline-none text-center tracking-widest">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="closeResetModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 text-xs font-bold rounded-xl active:scale-95 transition-all">Batal</button>
+                    <button id="btnExecuteReset" class="flex-1 py-3.5 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Hapus Data</button>
+                </div>
+            </div>
+        </div>
     </div>
+
 
     <Toast />
     <ModalAlert />
@@ -457,6 +504,94 @@ const renderLeaderboard = () => {
         } catch (e) { console.error("Gagal cek status absensi"); }
     };
     checkAbsensiStatus();
+
+
+    // ================================================================
+    // LOGIKA PENGATURAN LANJUTAN & RESET TAHUN AJARAN
+    // ================================================================
+    window.toggleDangerZone = () => {
+        const content = document.getElementById('dangerContent');
+        const icon = document.getElementById('dangerIcon');
+        content.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    };
+
+    const resetPassInput = document.getElementById('resetPasswordInput');
+    const btnExecuteReset = document.getElementById('btnExecuteReset');
+
+    window.openResetModal = () => {
+        resetPassInput.value = '';
+        btnExecuteReset.disabled = true;
+        btnExecuteReset.innerHTML = 'Hapus Data';
+        document.getElementById('modalReset').classList.replace('hidden', 'flex');
+        
+        // Auto fokus ke input saat modal terbuka
+        setTimeout(() => resetPassInput.focus(), 100);
+    };
+
+    window.closeResetModal = () => {
+        document.getElementById('modalReset').classList.replace('flex', 'hidden');
+    };
+
+    // Tombol aktif jika password diisi minimal 3 karakter
+    resetPassInput.addEventListener('input', (e) => {
+        btnExecuteReset.disabled = e.target.value.trim().length < 3;
+    });
+
+    btnExecuteReset.onclick = async () => {
+        const password = resetPassInput.value.trim();
+        if (!password) return;
+
+        if (!confirm('Peringatan Terakhir: Anda yakin ingin menghapus SELURUH data transaksi?')) return;
+
+        btnExecuteReset.disabled = true;
+        btnExecuteReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/admin/factory-reset`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ password: password }) // Mengirim password ke backend
+            });
+
+            const result = await res.json();
+
+            if (res.ok) {
+                // Proses Download File Backup JSON
+                const dataStr = JSON.stringify(result.backup, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Backup_YukNgaji_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                window.showToast?.('success', 'Reset Selesai', 'Data berhasil dihapus dan dibackup.');
+                closeResetModal();
+                
+                // Refresh halaman agar kembali bersih
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast?.('danger', 'Akses Ditolak', err.message || 'Terjadi kesalahan.');
+            
+            // Kembalikan status tombol jika password salah
+            btnExecuteReset.innerHTML = 'Hapus Data';
+            btnExecuteReset.disabled = true;
+            resetPassInput.value = '';
+            resetPassInput.focus();
+        }
+    };
 
 </script>
 
