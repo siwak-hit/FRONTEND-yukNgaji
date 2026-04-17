@@ -7,7 +7,7 @@ import Toast from '../../components/Toast.astro';
 <Layout title="Detail Anak - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
         
-        <header class="mb-0">
+        <header class="mb-6">
             <!-- Row 1: Back + Title + Actions -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -952,24 +952,36 @@ import Toast from '../../components/Toast.astro';
         img.src = url;
     });
 
-    // ================================================================
-    // AKSI FOTO MODAL
+// ================================================================
+    // AKSI FOTO MODAL (Update: Gabungan Konsultasi + Ujian)
     // ================================================================
     window.acakFotoRaport = async () => {
-        const btn        = document.getElementById('btnAcakFoto');
-        const statusText = document.getElementById('fotoStatusText');
-        const previewImg = document.getElementById('fotoPreviewImg');
+        const btn         = document.getElementById('btnAcakFoto');
+        const statusText  = document.getElementById('fotoStatusText');
+        const previewImg  = document.getElementById('fotoPreviewImg');
         const placeholder = document.getElementById('fotoPlaceholder');
 
-        const fotoList = (globalConsultations?.data || []).filter(c => c.image_url);
-        if (fotoList.length === 0) {
-            statusText.innerText = 'Belum ada foto di kuesioner anak ini.';
+        // 1. Kumpulkan URL foto dari sesi Konsultasi
+        const fotoKonsul = (globalConsultations?.data || [])
+            .filter(c => c.image_url)
+            .map(c => c.image_url);
+
+        // 2. Kumpulkan URL foto dari jepretan Ujian (Anti-Cheat)
+        const fotoUjian = (studentExamResults || [])
+            .filter(e => e.capture_url)
+            .map(e => e.capture_url);
+
+        // 3. Gabungkan semua foto menjadi satu array
+        const semuaFotoUrl = [...fotoKonsul, ...fotoUjian];
+
+        if (semuaFotoUrl.length === 0) {
+            statusText.innerText = 'Belum ada foto dari kuesioner maupun ujian anak ini.';
             return;
         }
 
-        const picked = fotoList[Math.floor(Math.random() * fotoList.length)];
-        selectedFotoUrl = picked.image_url;
-
+        // 4. Pilih 1 URL secara acak dari total gabungan
+        selectedFotoUrl = semuaFotoUrl[Math.floor(Math.random() * semuaFotoUrl.length)];
+        
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
 
@@ -979,6 +991,9 @@ import Toast from '../../components/Toast.astro';
             previewImg.classList.remove('hidden');
             placeholder.classList.add('hidden');
             document.getElementById('btnHapusFoto').classList.remove('hidden');
+            
+            // Ubah teks status agar Ustadz tahu fotonya berhasil dimuat
+            statusText.innerText = 'Foto berhasil dipilih!';
         } catch (e) {
             console.error('Foto gagal diload:', e);
             statusText.innerText = 'Gagal memuat foto. Coba lagi.';

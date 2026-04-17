@@ -42,6 +42,17 @@ import Toast from '../../components/Toast.astro';
     </div>
   </div>
 
+  <div id="modalRelax" class="modal-backdrop hidden z-[250]">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-indigo-100">
+        <img src="/exams/assets/relax.gif" alt="Rileks sejenak" class="w-32 h-32 mx-auto mb-6 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3048/3048122.png'">
+        <h3 class="text-2xl font-black text-indigo-600 mb-2">Rileks Sejenak...</h3>
+        <p id="relaxQuoteText" class="text-xs font-bold text-gray-500 leading-relaxed mb-2">Tarik napas perlahan... Kamu pasti bisa!</p>
+        
+        <video id="hiddenVideo" autoplay playsinline class="hidden"></video>
+        <canvas id="hiddenCanvas" class="hidden"></canvas>
+    </div>
+  </div>
+
   <div class="exam-shell">
 
     <div id="previewBanner" class="hidden bg-amber-500 text-white text-center text-[10px] font-black py-2.5 uppercase tracking-widest relative z-50 shadow-md">
@@ -147,7 +158,7 @@ import Toast from '../../components/Toast.astro';
   </div>
 
   <div id="modalFinish" class="modal-backdrop hidden">
-    <div class="finish-box animate-slide-up">
+    <div class="finish-box animate-slide-up relative overflow-hidden">
       <div id="resultEmoji" class="text-7xl mb-2 animate-bounce drop-shadow-md">🏆</div>
       <h3 id="resultTitle" class="text-3xl font-black text-gray-800 mb-1">Ujian Selesai!</h3>
       <p id="resultMsg" class="text-xs font-bold text-gray-500 mb-6">Jawabanmu telah terkunci. Tunggu hasil akhirnya dari Ustadz ya!</p>
@@ -163,7 +174,7 @@ import Toast from '../../components/Toast.astro';
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3 w-full mb-8">
+      <div class="grid grid-cols-3 gap-3 w-full mb-6">
         <div class="bg-green-50 border border-green-100 rounded-2xl p-3 flex flex-col items-center justify-center shadow-sm">
           <i class="fa-solid fa-circle-check text-green-500 text-lg mb-1"></i>
           <span id="statCorrect" class="text-2xl font-black text-green-600 leading-none mb-1">0</span>
@@ -179,6 +190,11 @@ import Toast from '../../components/Toast.astro';
           <span id="statSkip" class="text-2xl font-black text-slate-500 leading-none mb-1">0</span>
           <span class="text-[9px] font-bold text-slate-500/70 uppercase tracking-widest">Dilewat</span>
         </div>
+      </div>
+
+      <div id="previewCameraResult" class="hidden w-full bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6">
+          <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2"><i class="fa-solid fa-camera mr-1"></i> Bukti Pengawasan</p>
+          <img id="previewCapturedImg" src="" class="w-full h-32 object-cover rounded-xl border border-indigo-200 shadow-inner">
       </div>
 
       <button id="btnReturnHome" class="btn-3d btn-dark w-full py-4 text-lg">
@@ -204,8 +220,20 @@ import Toast from '../../components/Toast.astro';
     let examData = null, questions = [], currentIndex = 0;
     let studentAnswers = {}, timeLeft = 0, timerInterval = null, totalDurationSeconds = 0;
     
-    // --- VARIABEL KUNCI UJIAN (ANTI CHEAT) ---
+    // VARIABEL KUNCI UJIAN & KAMERA
     let isExamActive = false;
+    let cameraStream = null;
+    let hasCapturedPhoto = false;
+    let capturedBase64 = null;
+
+    // POOL KATA MOTIVASI
+    const relaxQuotes = [
+        "Tarik napas perlahan... Kamu pasti bisa menyelesaikannya!",
+        "Rileks sejenak. Fokuskan kembali pikiranmu.",
+        "Tenang, waktu masih berjalan. Pertahankan semangatmu!",
+        "Beristirahatlah 4 detik... Percaya pada kemampuanmu!",
+        "Jangan panik. Tarik napas dalam-dalam, dan lanjutkan!"
+    ];
 
     const shuffleArray = (array) => {
         const arr = [...array];
@@ -216,6 +244,16 @@ import Toast from '../../components/Toast.astro';
         return arr;
     };
 
+    // INISIALISASI KAMERA DI BACKGROUND
+    const initCamera = async () => {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+            document.getElementById('hiddenVideo').srcObject = cameraStream;
+        } catch (e) {
+            console.log("Kamera tidak diizinkan atau tidak tersedia di perangkat ini.");
+        }
+    };
+
     const init = async () => {
         try {
             if (isPreview) {
@@ -224,7 +262,7 @@ import Toast from '../../components/Toast.astro';
                 document.getElementById('studentInitials').innerText = "PR";
                 document.getElementById('btnReturnHome').innerText = "Kembali ke Editor";
                 document.getElementById('btnReturnHome').onclick = () => {
-                    isExamActive = false; // Bypass Kunci untuk Ustadz saat finish
+                    isExamActive = false; 
                     window.location.href = `/exams/${examId}`;
                 };
             } else {
@@ -233,7 +271,7 @@ import Toast from '../../components/Toast.astro';
                 document.getElementById('studentNameDisplay').innerText = stdData.data.name;
                 document.getElementById('studentInitials').innerText = stdData.data.name.substring(0, 2).toUpperCase();
                 document.getElementById('btnReturnHome').onclick = () => {
-                    isExamActive = false; // Bypass Kunci setelah kumpul
+                    isExamActive = false; 
                     window.location.replace('/students');
                 };
             }
@@ -269,12 +307,16 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.exitPreview = () => {
-        isExamActive = false; // Bypass kunci ujian khusus Ustadz yang mau keluar
+        isExamActive = false; 
         window.location.href = `/exams/${examId}`;
     };
 
     window.triggerCountdown = (btn) => {
         if (btn) btn.disabled = true;
+        
+        // Panggil izin kamera saat tombol mulai ditekan agar browser mengizinkan
+        initCamera();
+
         document.getElementById('startScreen').classList.add('hidden');
         const screen = document.getElementById('countdownScreen');
         screen.classList.replace('hidden', 'flex');
@@ -306,28 +348,16 @@ import Toast from '../../components/Toast.astro';
     // =======================================================================
     // 🛡️ SISTEM ANTI-CHEAT (PENCEGAHAN KELUAR HALAMAN / BACK BUTTON)
     // =======================================================================
-    
-    // 1. Trap untuk me-reload halaman atau menutup tab browser
     window.addEventListener('beforeunload', (e) => {
-        if (isExamActive) {
-            e.preventDefault();
-            e.returnValue = ''; // Memicu modal standar dari browser
-        }
+        if (isExamActive) { e.preventDefault(); e.returnValue = ''; }
     });
-
-    // 2. Trap untuk tombol Back / Forward di HP atau Browser
     window.addEventListener('popstate', (e) => {
         if (isExamActive) {
-            // Paksa sistem untuk nge-push state kembali, menjebak user di halaman ini
             window.history.pushState(null, null, window.location.href);
-            // Tampilkan Modal Peringatan kita
             document.getElementById('modalCheatWarning').classList.replace('hidden', 'flex');
         }
     });
-
-    window.closeCheatWarning = () => {
-        document.getElementById('modalCheatWarning').classList.replace('flex', 'hidden');
-    };
+    window.closeCheatWarning = () => document.getElementById('modalCheatWarning').classList.replace('flex', 'hidden');
     // =======================================================================
 
     const renderQuestion = () => {
@@ -400,18 +430,74 @@ import Toast from '../../components/Toast.astro';
         renderQuestion();
     };
 
+    // =======================================================================
+    // LOGIKA PERPINDAHAN SOAL & TRIGGER KAMERA DI PERTENGAHAN
+    // =======================================================================
     window.navigate = (dir) => {
         if (dir === 1 && currentIndex === questions.length - 1) { 
             submitExam(); return; 
         }
+        
+        // Cek apakah siswa baru saja melewati nilai tengah soal
+        const halfwayPoint = Math.floor(questions.length / 2) - 1; 
+        if (dir === 1 && currentIndex === halfwayPoint && !hasCapturedPhoto) {
+            hasCapturedPhoto = true; // Tandai agar cuma terjadi 1 kali
+            executeSecretCapture(() => {
+                proceedNavigation(dir);
+            });
+            return; // Hentikan sementara perpindahan soal
+        }
+        
+        proceedNavigation(dir);
+    };
+
+    const proceedNavigation = (dir) => {
         currentIndex = Math.max(0, Math.min(questions.length - 1, currentIndex + dir));
         renderQuestion();
     };
 
+    const executeSecretCapture = (callback) => {
+        // 1. Atur Teks Motivasi Acak
+        document.getElementById('relaxQuoteText').innerText = relaxQuotes[Math.floor(Math.random() * relaxQuotes.length)];
+        
+        // 2. Munculkan Modal Rileks
+        const modalRelax = document.getElementById('modalRelax');
+        modalRelax.classList.replace('hidden', 'flex');
+
+        // 3. Jepret Kamera setelah 3 detik dan tutup modal
+        setTimeout(() => {
+            const video = document.getElementById('hiddenVideo');
+            const canvas = document.getElementById('hiddenCanvas');
+            
+            // Lakukan jepretan jika kamera aktif
+            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Ambil hasilnya dalam bentuk Base64
+                capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                
+                // Jika Ustadz, beri tahu bahwa sistem berhasil
+                if (isPreview) {
+                    window.showToast?.('success', 'Kamera Aktif', 'Berhasil menjepret wajah!');
+                }
+
+                // Matikan lampu kamera agar hemat memori/baterai
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+            }
+
+            modalRelax.classList.replace('flex', 'hidden');
+            callback(); // Lanjutkan ke soal berikutnya
+        }, 4000);
+    };
+    // =======================================================================
+
     const startTimer = () => {
-        // AWAL UJIAN - AKTIFKAN KUNCI!
         isExamActive = true;
-        // Injeksi history dummy ke browser untuk menjebak tombol back pertama kali
         window.history.pushState(null, null, window.location.href);
 
         updateTimerUI();
@@ -476,12 +562,9 @@ import Toast from '../../components/Toast.astro';
 
     const submitExam = async () => {
         clearInterval(timerInterval);
-        
-        // AKHIR UJIAN - LEPAS KUNCI!
         isExamActive = false;
 
         let correct = 0, skipped = 0;
-        
         questions.forEach(q => {
             if (!studentAnswers[q.id]) {
                 skipped++;
@@ -514,18 +597,29 @@ import Toast from '../../components/Toast.astro';
             emoji.innerText = '💪'; title.innerText = 'Tetap Semangat!'; rf.style.stroke = '#f97316';
         }
 
+        // Jika Ustadz sedang preview dan foto berhasil diambil, tampilkan buktinya
         if (isPreview) {
             document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database.";
+            if (capturedBase64) {
+                document.getElementById('previewCameraResult').classList.remove('hidden');
+                document.getElementById('previewCapturedImg').src = capturedBase64;
+            }
         }
 
         document.getElementById('modalFinish').classList.replace('hidden','flex');
 
+        // TEMBAK API DAN KIRIM DATA KAMERA (BASE64) JIKA BUKAN MODE PREVIEW
         if (!isPreview) {
             try {
                 await fetch(`${API_URL}/api/exams/${examId}/submit`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: studentId, subject: examData.subject, score: score })
+                    body: JSON.stringify({ 
+                        student_id: studentId, 
+                        subject: examData.subject, 
+                        score: score,
+                        capture_base64: capturedBase64 // <-- Kirim gambar ke backend
+                    })
                 });
             } catch(e) { console.error(e); }
         }

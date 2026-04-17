@@ -106,14 +106,15 @@ import Toast from '../../components/Toast.astro';
     let allStudents = [];
     let finishedStudentIds = [];
     
-    // CACHE MEMORY
+    // ================================================================
+    // CACHE MEMORY SUPER KETAT
+    // ================================================================
     let cachedWeeks = {};
     let cachedActiveExams = []; 
+    let cachedStatus = {}; // <--- BARU: Menyimpan status pengerjaan "Mapel_Minggu"
     let selectedPortalStudentId = null; 
 
-    // ================================================================
     // PENGECEKAN STATUS UJIAN AKTIF (LOGIKA TUNTAS UJIAN)
-    // ================================================================
     const checkActiveExams = async () => {
         const banner = document.getElementById('examPortalBanner');
         try {
@@ -131,7 +132,7 @@ import Toast from '../../components/Toast.astro';
                 return;
             }
 
-            // 2. Ambil Daftar Seluruh Siswa (Untuk Cek Apakah Semua Udah Mengerjakan)
+            // 2. Ambil Daftar Seluruh Siswa
             if (allStudents.length === 0) {
                 const stdRes = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const stdData = await stdRes.json();
@@ -145,12 +146,8 @@ import Toast from '../../components/Toast.astro';
                 const rRes = await fetch(`${API_URL}/api/exams/${exam.id}/results`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const rData = await rRes.json();
                 
-                exam.results = rData.data || []; // Simpan data siapa aja yg udah mengerjakan ujian ini
-                
-                // Cek apakah jumlah yang mengerjakan sudah sama dengan jumlah seluruh siswa
+                exam.results = rData.data || []; 
                 exam.isFullyCompleted = exam.results.length >= allStudents.length;
-                
-                // Jika belum selesai semua, berarti ujian ini masih tersedia (Available)
                 if (!exam.isFullyCompleted) availableExamsCount++;
                 
                 return exam;
@@ -158,7 +155,6 @@ import Toast from '../../components/Toast.astro';
 
             // 4. Render Banner Sesuai Status
             if (availableExamsCount > 0) {
-                // ADA YANG BELUM SELESAI: Nyalakan Banner
                 banner.className = "mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden flex items-center justify-between cursor-pointer active:scale-95 transition-transform";
                 banner.setAttribute('onclick', 'openExamPortal()');
                 banner.innerHTML = `
@@ -172,7 +168,6 @@ import Toast from '../../components/Toast.astro';
                     <i class="fa-solid fa-puzzle-piece absolute -right-4 -bottom-4 text-8xl text-white/10 rotate-12"></i>
                 `;
             } else {
-                // SEMUA UJIAN SUDAH SELESAI SEMUA SISWA: Matikan Banner dengan Tema Hijau Sukses
                 banner.className = "mb-8 bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-emerald-600 relative overflow-hidden flex items-center justify-between opacity-90 cursor-not-allowed";
                 banner.removeAttribute('onclick');
                 banner.innerHTML = `
@@ -253,9 +248,16 @@ import Toast from '../../components/Toast.astro';
             studentSection.classList.remove('hidden');
             document.getElementById('sessionBadge').innerText = `${selectedSubject.toUpperCase()} - MG ${selectedWeek}`;
 
-            const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const status = await resStatus.json();
-            finishedStudentIds = status.data || [];
+            // --- OPTIMASI CACHE STATUS PENGERJAAN ---
+            const statusKey = `${selectedSubject}_${selectedWeek}`;
+            if (cachedStatus[statusKey]) {
+                finishedStudentIds = cachedStatus[statusKey];
+            } else {
+                const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const status = await resStatus.json();
+                finishedStudentIds = status.data || [];
+                cachedStatus[statusKey] = finishedStudentIds; // Simpan ke dalam Cache
+            }
 
             if (allStudents.length === 0) {
                 const resStd = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -308,24 +310,18 @@ import Toast from '../../components/Toast.astro';
         document.getElementById('modalExamPortal').classList.replace('hidden', 'flex');
         
         const examSelect = document.getElementById('portalExamSelect');
-        
-        // HANYA TAMPILKAN UJIAN YANG BELUM TUNTAS DI DROPDOWN
         const pendingExams = cachedActiveExams.filter(e => !e.isFullyCompleted);
         
         if (pendingExams.length > 0) {
             examSelect.innerHTML = pendingExams.map(e => `<option value="${e.id}">${e.subject.toUpperCase()} - ${e.title}</option>`).join('');
-            
-            // Render siswa untuk ujian pertama di dropdown
             const firstExamId = pendingExams[0].id;
             renderPortalStudents(allStudents, firstExamId);
         } else {
-            // Fail-safe (Seharusnya tidak terjadi karena modal tak bisa diklik jika tuntas)
             examSelect.innerHTML = `<option value="">Semua ujian telah tuntas!</option>`;
             renderPortalStudents([], null);
         }
     };
 
-    // Saat Dropdown Ujian Diganti -> Render ulang status centang siswanya
     document.getElementById('portalExamSelect').addEventListener('change', (e) => {
         const selectedExamId = e.target.value;
         const term = document.getElementById('portalStudentSearch').value.toLowerCase();
@@ -333,7 +329,6 @@ import Toast from '../../components/Toast.astro';
         renderPortalStudents(filtered, selectedExamId);
     });
 
-    // Saat Cari Nama Siswa di Dalam Modal
     document.getElementById('portalStudentSearch').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
@@ -341,7 +336,6 @@ import Toast from '../../components/Toast.astro';
         renderPortalStudents(filtered, selectedExamId);
     });
 
-    // Fungsi Render Grid Siswa
     window.renderPortalStudents = (studentsData, examId) => {
         const container = document.getElementById('portalStudentList');
         if (studentsData.length === 0) {
@@ -349,16 +343,13 @@ import Toast from '../../components/Toast.astro';
             return;
         }
 
-        // Cari riwayat pengerjaan dari Cache untuk ujian yang dipilih
         const exam = cachedActiveExams.find(e => e.id === examId);
         const results = exam ? exam.results : [];
 
         container.innerHTML = studentsData.map(s => {
-            // Cek apakah anak ini sudah ngerjain ujiannya
             const studentResult = results.find(r => r.student_id === s.id);
             
             if (studentResult) {
-                // JIKA SUDAH SELESAI: Card menjadi Hijau Redup, Tercoret, Tidak bisa diklik, Muncul Nilai
                 return `
                     <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 opacity-60 grayscale pointer-events-none">
                         <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-emerald-200 text-emerald-700">
@@ -372,7 +363,6 @@ import Toast from '../../components/Toast.astro';
                     </div>
                 `;
             } else {
-                // JIKA BELUM SELESAI: Normal
                 const isSelected = selectedPortalStudentId === s.id;
                 return `
                     <div onclick="selectPortalStudent('${s.id}')" class="cursor-pointer p-3 rounded-xl border ${isSelected ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-gray-200'} flex items-center gap-3 transition-all active:scale-95">
