@@ -117,7 +117,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">File Template (.txt) <span class="text-gray-300 normal-case font-normal">(opsional jika manual)</span></label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">File Template (.txt) <span class="text-gray-300 normal-case font-normal">(opsional)</span></label>
                     <input type="file" id="upFile" accept=".txt" class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer">
                 </div>
 
@@ -141,99 +141,95 @@ import ModalAlert from '../../components/ModalAlert.astro';
         </header>
 
         <div class="mt-[72px] bg-green-50 p-4 border-b flex items-center gap-2 flex-shrink-0">
-            <label class="text-[10px] font-bold text-green-700 uppercase">Mapel:</label>
-            <span id="previewSubjectLabel" class="text-xs font-black text-green-700 uppercase mr-4">-</span>
-            <label class="text-[10px] font-bold text-green-700 uppercase">Target Pertemuan:</label>
+            <label class="text-[10px] font-bold text-green-700 uppercase shrink-0">Mapel:</label>
+            <span id="previewSubjectLabel" class="text-xs font-black text-green-700 uppercase mr-2 sm:mr-4">-</span>
+            <label class="text-[10px] font-bold text-green-700 uppercase shrink-0">Target:</label>
             <span class="text-[10px] text-gray-500 font-bold">MG-</span>
             <input type="number" id="targetWeek" value="1" min="1" class="w-12 h-8 rounded-lg border-none text-center font-bold text-green-600 focus:ring-2 focus:ring-green-500">
         </div>
 
-        <div class="bg-blue-50 border-b border-blue-100 p-4 flex gap-3 items-start flex-shrink-0">
-            <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
-            <p class="text-[10px] text-blue-800 font-medium leading-relaxed">
-                <b class="uppercase tracking-wider">Info Otak Adaptif AI:</b><br>
-                Sistem otomatis memberikan soal <b>Mudah/Sedang/Sulit</b> secara dinamis berdasarkan riwayat nilai minggu sebelumnya.
-            </p>
-        </div>
-
-        <div id="previewContent" class="flex-1 overflow-y-auto p-6 space-y-6 pb-[100px] no-scrollbar bg-gray-50"></div>
+        <div id="previewContent" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-[100px] no-scrollbar bg-gray-50"></div>
     
         <div class="fixed bottom-0 sm:bottom-[72px] left-0 w-full p-4 bg-gradient-to-t from-white via-white to-transparent z-10 flex-shrink-0">
             <div class="max-w-md mx-auto">
-                <button id="btnTambahManual" class="w-full py-4 bg-white border-2 border-dashed border-green-200 rounded-2xl text-green-600 font-bold text-xs shadow-lg active:scale-95 transition-all">
-                    <i class="fa-solid fa-plus mr-1"></i> Tambah Soal Manual
+                <button id="btnTambahManual" onclick="addNewQuestionField()" class="w-full py-4 bg-white border-2 border-dashed border-green-200 rounded-2xl text-green-600 font-bold text-xs shadow-lg active:scale-95 transition-all">
+                    <i class="fa-solid fa-plus mr-1"></i> Tambah Soal Baru
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="modalEditSoal" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar card-core-logic">
-            <div class="flex justify-between items-center mb-4">
+    <div id="modalEditSoal" class="fixed inset-0 bg-black/60 z-[70] hidden items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
+        <div class="bg-white w-full h-[90vh] sm:h-auto sm:max-h-[90vh] sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl overflow-y-auto no-scrollbar card-core-logic flex flex-col animate-slide-up">
+            <div class="flex justify-between items-center mb-4 shrink-0">
                 <h3 class="font-bold text-gray-800">Edit Soal</h3>
-                <button onclick="closeEditSoal()" class="text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeEditSoal()" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 active:scale-95"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <input type="hidden" id="editSoalId">
-            
-            <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-4">
-                <label class="text-[10px] font-bold text-gray-500 uppercase ml-2">Tipe Soal:</label>
-                <select id="editSoalType" onchange="toggleEditType()" class="text-xs font-bold border-none bg-white rounded-lg px-2 py-1.5 outline-none shadow-sm flex-1 text-gray-700 focus:ring-2 focus:ring-blue-400">
-                    <option value="pilgan">Pilihan Ganda</option>
-                    <option value="tf">Benar / Salah</option>
-                    <option value="drag">Drag & Drop (Menghubungkan)</option>
-                </select>
-            </div>
-
-            <div id="editDragHint" class="drag-tools hidden mb-3 p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="flex items-start gap-2.5">
-                    <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                    </div>
-                    <p class="text-[10px] text-indigo-900 leading-relaxed font-medium">
-                        <b class="text-indigo-700">Mode Drag & Drop:</b><br>
-                        Klik tombol di samping untuk menyisipkan kolom kosong pada soal.
-                    </p>
-                </div>
-                <button type="button" onclick="insertBlank(this)" class="flex-shrink-0 w-full sm:w-auto text-[10px] font-bold bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Sisipkan [BLANK]
-                </button>
-            </div>
-
-            <div>
-                <label class="text-[10px] font-bold text-gray-400 uppercase">Pertanyaan</label>
-                <textarea id="editSoalQ" rows="3" class="q-input w-full mt-1 p-3 bg-gray-50 rounded-xl text-sm font-bold border-none focus:ring-2 focus:ring-blue-400" oninput="updateDragKeys(this)"></textarea>
-            </div>
-            
-            <div id="editOptionsWrapper" class="options-wrapper flex flex-col gap-2 mt-3"></div>
-            <button type="button" id="editBtnAddOption" class="btn-add-option text-[10px] font-bold text-blue-500 mt-2 hover:bg-blue-50 px-2 py-1 rounded transition-colors active:scale-95" onclick="addOptionRow(this)">+ Tambah Pilihan Jawaban</button>
-
-            <div id="editTfWrapper" class="hidden p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 mt-3">
-                <div class="w-8 h-8 rounded-full bg-blue-200 text-blue-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-toggle-on"></i></div>
-                <p class="text-[10px] font-bold text-blue-700 leading-relaxed">Mode Benar/Salah aktif. Opsi jawaban otomatis menjadi A (Benar) dan B (Salah).</p>
-            </div>
-
-            <div class="flex flex-col gap-3 mt-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <div class="key-standard flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-gray-400">KUNCI (PG/TF):</span>
-                    <select id="editSoalKey" class="key-input text-xs font-bold border-none bg-green-100 text-green-700 rounded-lg px-3 py-1.5 shadow-sm outline-none"></select>
-                </div>
+            <div class="flex-1 space-y-4">
+                <input type="hidden" id="editSoalId">
                 
-                <div id="editKeyDrag" class="key-drag hidden w-full">
-                    <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN DRAG & DROP:</span>
-                    <div class="drag-keys-container grid grid-cols-2 gap-2"></div>
-                </div>
-
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-                    <span class="text-[10px] font-bold text-gray-400">LEVEL KESULITAN:</span>
-                    <select id="editSoalLevel" class="level-input text-xs font-bold border-none bg-indigo-100 text-indigo-700 rounded-lg px-2 py-1.5 shadow-sm">
-                        <option value="mudah">Mudah</option>
-                        <option value="sedang">Sedang</option>
-                        <option value="sulit">Sulit</option>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 shrink-0">Tipe Soal:</label>
+                    <select id="editSoalType" onchange="toggleEditType()" class="type-input text-xs font-bold border border-gray-200 bg-white rounded-lg px-3 py-2.5 outline-none shadow-sm w-full sm:flex-1 text-gray-700 focus:ring-2 focus:ring-blue-400">
+                        <option value="pilgan">Pilihan Ganda</option>
+                        <option value="tf">Benar / Salah</option>
+                        <option value="drag">Drag & Drop (Menghubungkan)</option>
                     </select>
                 </div>
+
+                <div id="editDragHint" class="drag-tools hidden p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col gap-3">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        </div>
+                        <p class="text-[10px] text-indigo-900 leading-relaxed font-medium">
+                            <b class="text-indigo-700">Mode Drag & Drop:</b><br>
+                            Klik tombol di bawah untuk menyisipkan kolom kosong pada soal.
+                        </p>
+                    </div>
+                    <button type="button" onclick="insertBlank(this)" class="w-full text-[10px] font-bold bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Sisipkan [BLANK]
+                    </button>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Pertanyaan</label>
+                    <textarea id="editSoalQ" rows="3" class="q-input w-full mt-1 p-3 bg-gray-50 rounded-xl text-sm font-bold border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" oninput="updateDragKeys(this)"></textarea>
+                </div>
+                
+                <div id="editOptionsWrapper" class="options-wrapper flex flex-col gap-2 w-full"></div>
+                <button type="button" id="editBtnAddOption" class="btn-add-option text-[10px] font-bold text-blue-500 w-full p-3 border-2 border-dashed border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors active:scale-95 text-center mt-2" onclick="addOptionRow(this)">+ Tambah Pilihan Jawaban</button>
+
+                <div id="editTfWrapper" class="tf-wrapper hidden p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 mt-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-200 text-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-toggle-on"></i></div>
+                    <p class="text-[10px] font-bold text-blue-700 leading-relaxed">Mode Benar/Salah aktif. Opsi jawaban otomatis menjadi A (Benar) dan B (Salah).</p>
+                </div>
+
+                <div class="flex flex-col gap-4 mt-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    
+                    <div class="key-standard flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span class="text-[10px] font-bold text-gray-400 shrink-0">KUNCI JAWABAN:</span>
+                        <select id="editSoalKey" class="key-input text-xs font-bold border border-gray-200 bg-white text-green-700 rounded-lg px-3 py-2.5 shadow-sm outline-none w-full sm:flex-1"></select>
+                    </div>
+                    
+                    <div id="editKeyDrag" class="key-drag hidden w-full">
+                        <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN DRAG & DROP:</span>
+                        <div class="drag-keys-container grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200">
+                        <span class="text-[10px] font-bold text-gray-400 shrink-0">LEVEL KESULITAN:</span>
+                        <select id="editSoalLevel" class="level-input text-xs font-bold border border-gray-200 bg-white text-indigo-700 rounded-lg px-3 py-2.5 shadow-sm outline-none w-full sm:flex-1">
+                            <option value="mudah">Mudah</option>
+                            <option value="sedang">Sedang</option>
+                            <option value="sulit">Sulit</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <button onclick="submitEditSoal()" class="w-full py-3 mt-2 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
+            
+            <button onclick="submitEditSoal()" class="shrink-0 w-full py-4 mt-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
                 <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Perubahan
             </button>
         </div>
@@ -279,35 +275,28 @@ import ModalAlert from '../../components/ModalAlert.astro';
     let isSortAsc = true;
     let isSummaryCached = false; 
 
-    // STATE UNSAVED CHANGES
     let isDirty = false;
     let pendingCloseAction = null;
 
-    // Menandai perubahan saat ada input di dalam elemen .card-core-logic
     document.addEventListener('input', (e) => {
         if (e.target.closest('.card-core-logic')) isDirty = true;
     });
-
     window.markDirty = () => { isDirty = true; };
 
-    // Logika Mencegah Keluar Browser
     window.addEventListener('beforeunload', (e) => {
         if (isDirty) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    // Pengendali Modal Unsaved
     window.showConfirmBack = (action) => {
         pendingCloseAction = action;
         document.getElementById('modalConfirmBack').classList.replace('hidden', 'flex');
     };
-
     window.closeConfirmBack = () => {
         pendingCloseAction = null;
         document.getElementById('modalConfirmBack').classList.replace('flex', 'hidden');
     };
-
     window.forceCloseAction = () => {
-        isDirty = false; // Reset dirty
+        isDirty = false; 
         document.getElementById('modalConfirmBack').classList.replace('flex', 'hidden');
         if (pendingCloseAction) pendingCloseAction();
     };
@@ -316,27 +305,24 @@ import ModalAlert from '../../components/ModalAlert.astro';
     // CORE LOGIC (HELPER UNTUK BUILDER SOAL & MODAL EDIT)
     // ================================================================
     
+    // PERBAIKAN RESPONSIVE: Menggunakan w-full dan flex-col di container HP
     window.appendOptionRow = (wrapper, key, val) => {
         const row = document.createElement('div');
-        row.className = "opt-row flex items-center gap-2";
+        row.className = "opt-row flex items-center gap-2 w-full";
         row.dataset.key = key;
         row.innerHTML = `
-            <label class="text-[10px] text-gray-400 font-bold uppercase w-[40px] flex-shrink-0">Opsi ${key}</label>
-            <input type="text" class="opt-val flex-1 p-2 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-200 shadow-sm font-medium text-gray-700" placeholder="Jawaban ${key}" value="${val}">
-            <button type="button" onclick="removeOptionRow(this)" class="btn-remove-opt text-red-400 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors active:scale-95" title="Hapus Opsi"><i class="fa-solid fa-xmark"></i></button>
+            <label class="text-[10px] text-gray-400 font-bold uppercase w-[40px] shrink-0">Opsi ${key}</label>
+            <input type="text" class="opt-val flex-1 min-w-0 p-3 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-200 shadow-sm font-medium text-gray-700" placeholder="Jawaban ${key}" value="${val}">
+            <button type="button" onclick="removeOptionRow(this)" class="btn-remove-opt shrink-0 text-red-400 bg-red-50 hover:bg-red-100 w-10 h-10 rounded-lg flex items-center justify-center transition-colors active:scale-95" title="Hapus"><i class="fa-solid fa-xmark"></i></button>
         `;
         
-        // Refresh kunci Drag Drop saat ketikan opsi berubah
         row.querySelector('.opt-val').addEventListener('input', () => {
             const card = wrapper.closest('.card-core-logic');
             if (card?.querySelector('.type-input')?.value === 'drag') {
                 const textarea = card.querySelector('.q-input');
                 const selects = card.querySelectorAll('.drag-key-select');
                 const currentKeys = Array.from(selects).map(s => s.value);
-                
                 updateDragKeys(textarea);
-                
-                // Kembalikan pilihan dropdown setelah refresh
                 const newSelects = card.querySelectorAll('.drag-key-select');
                 newSelects.forEach((sel, i) => { if (currentKeys[i]) sel.value = currentKeys[i]; });
             }
@@ -346,6 +332,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     window.syncStandardKeys = (cardElement, presetKey = null) => {
         const keyInput = cardElement.querySelector('.key-input');
+        if (!keyInput) return;
         const rows = Array.from(cardElement.querySelectorAll('.opt-row'));
         keyInput.innerHTML = rows.map(r => `<option value="${r.dataset.key}">${r.dataset.key}</option>`).join('');
         if (presetKey && rows.find(r => r.dataset.key === presetKey)) {
@@ -371,12 +358,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     window.updateDragKeys = (textarea, presetKeys = null) => {
         const card = textarea.closest('.card-core-logic');
-        const type = card.querySelector('.type-input').value;
-        if (type !== 'drag') return;
+        if (!card) return;
+        const typeEl = card.querySelector('.type-input');
+        if (!typeEl || typeEl.value !== 'drag') return;
 
         const text = textarea.value;
         const blankCount = (text.match(/\[BLANK\]/g) || []).length;
         const keyContainer = card.querySelector('.drag-keys-container');
+        if (!keyContainer) return;
+
         const optRows = Array.from(card.querySelectorAll('.opt-row'));
         const visibleOptions = optRows.map(row => row.dataset.key);
 
@@ -393,10 +383,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 return `<option value="${key}">${key}: ${val || '(kosong)'}</option>`;
             }).join('');
             
+            // PERBAIKAN RESPONSIVE: min-w-0 agar tidak merusak Grid di HP
             html += `
-                <div class="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-indigo-400">
-                    <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">B${i+1}</span>
-                    <select class="drag-key-select text-[11px] font-bold border-none bg-transparent outline-none flex-1 text-gray-700 cursor-pointer">
+                <div class="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 w-full overflow-hidden">
+                    <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 shrink-0">B${i+1}</span>
+                    <select class="drag-key-select text-xs font-bold border-none bg-transparent outline-none flex-1 text-gray-700 cursor-pointer min-w-0 truncate">
                         ${optionsHtml}
                     </select>
                 </div>
@@ -418,12 +409,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const card = btn.closest('.card-core-logic');
         const wrapper = card.querySelector('.options-wrapper');
         const currentRows = wrapper.querySelectorAll('.opt-row');
-        const nextCharCode = 65 + currentRows.length; // 65 is 'A'
+        const nextCharCode = 65 + currentRows.length; 
         
-        if (nextCharCode > 72) { // Max H
-            window.showToast?.('warning', 'Maksimal', 'Maksimal 8 opsi jawaban (A-H).');
-            return;
-        }
+        if (nextCharCode > 72) { return window.showToast?.('warning', 'Maksimal', 'Maksimal 8 opsi jawaban (A-H).'); }
         
         const letter = String.fromCharCode(nextCharCode);
         appendOptionRow(wrapper, letter, "");
@@ -439,13 +427,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const wrapper = card.querySelector('.options-wrapper');
         
         if (wrapper.querySelectorAll('.opt-row').length <= 2) {
-            window.showToast?.('warning', 'Minimal', 'Minimal harus ada 2 opsi jawaban.');
-            return;
+            return window.showToast?.('warning', 'Minimal', 'Minimal harus ada 2 opsi jawaban.');
         }
 
         btn.closest('.opt-row').remove();
         
-        // Re-index
         const rows = wrapper.querySelectorAll('.opt-row');
         rows.forEach((r, idx) => {
             const letter = String.fromCharCode(65 + idx);
@@ -459,9 +445,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
         else if (type === 'pilgan') syncStandardKeys(card);
     };
 
-    // Master Switcher (Mengatur Tampilan saat Tipe Soal diubah)
+    // [PERBAIKAN BUG FATAL] Safe Null Checking di setiap elemen
     window.toggleCardType = (selectEl, presetKey = null) => {
         const card = selectEl.closest('.card-core-logic');
+        if (!card) return;
+
         const type = selectEl.value;
         
         const optWrapper = card.querySelector('.options-wrapper');
@@ -473,55 +461,58 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const keyInput = card.querySelector('.key-input');
         const textarea = card.querySelector('.q-input');
 
-        optWrapper.classList.add('hidden');
+        // Sembunyikan semua section dinamis dulu
+        if(optWrapper) optWrapper.classList.add('hidden');
         if(btnAddOpt) btnAddOpt.classList.add('hidden');
-        tfWrapper.classList.add('hidden');
-        dragTools.classList.add('hidden');
-        keyStandard.classList.add('hidden');
-        keyDrag.classList.add('hidden');
+        if(tfWrapper) tfWrapper.classList.add('hidden');
+        if(dragTools) dragTools.classList.add('hidden');
+        if(keyStandard) keyStandard.classList.add('hidden');
+        if(keyDrag) keyDrag.classList.add('hidden');
 
         if (type === 'tf') {
-            tfWrapper.classList.remove('hidden');
-            keyStandard.classList.remove('hidden');
+            if(tfWrapper) tfWrapper.classList.remove('hidden');
+            if(keyStandard) keyStandard.classList.remove('hidden');
             
-            Array.from(keyInput.options).forEach(o => {
-                if(o.value === 'C' || o.value === 'D' || o.value > 'B') o.style.display = 'none';
-                if(o.value === 'A') o.text = 'A (Benar)';
-                if(o.value === 'B') o.text = 'B (Salah)';
-            });
-            if(keyInput.value !== 'A' && keyInput.value !== 'B') keyInput.value = 'A';
-            if(presetKey === 'A' || presetKey === 'B') keyInput.value = presetKey;
+            if(keyInput) {
+                Array.from(keyInput.options).forEach(o => {
+                    if(o.value === 'C' || o.value === 'D' || o.value > 'B') o.style.display = 'none';
+                    if(o.value === 'A') o.text = 'A (Benar)';
+                    if(o.value === 'B') o.text = 'B (Salah)';
+                });
+                if(keyInput.value !== 'A' && keyInput.value !== 'B') keyInput.value = 'A';
+                if(presetKey === 'A' || presetKey === 'B') keyInput.value = presetKey;
+            }
             
         } else if (type === 'drag') {
-            optWrapper.classList.remove('hidden');
+            if(optWrapper) optWrapper.classList.remove('hidden');
             if(btnAddOpt) btnAddOpt.classList.remove('hidden');
-            dragTools.classList.remove('hidden');
-            keyDrag.classList.remove('hidden');
+            if(dragTools) dragTools.classList.remove('hidden');
+            if(keyDrag) keyDrag.classList.remove('hidden');
             
             card.querySelectorAll('.btn-remove-opt').forEach(btn => btn.style.display = 'flex');
-            updateDragKeys(textarea, presetKey);
+            if(textarea) updateDragKeys(textarea, presetKey);
 
         } else { // pilgan
-            optWrapper.classList.remove('hidden');
+            if(optWrapper) optWrapper.classList.remove('hidden');
             if(btnAddOpt) btnAddOpt.classList.remove('hidden');
-            keyStandard.classList.remove('hidden');
+            if(keyStandard) keyStandard.classList.remove('hidden');
             
             card.querySelectorAll('.btn-remove-opt').forEach(btn => btn.style.display = 'flex');
-            syncStandardKeys(card, presetKey);
+            if(keyInput) syncStandardKeys(card, presetKey);
         }
     };
 
     const extractCardData = (card) => {
-        const type = card.querySelector('.type-input').value;
-        const question = card.querySelector('.q-input').value.trim();
-        const level = card.querySelector('.level-input').value;
+        const type = card.querySelector('.type-input')?.value || 'pilgan';
+        const question = card.querySelector('.q-input')?.value.trim() || '';
+        const level = card.querySelector('.level-input')?.value || 'sedang';
         
         let finalOptions = {};
         let finalKey = "A";
 
         if (type === 'tf') {
             finalOptions = { A: "Benar", B: "Salah" };
-            finalKey = card.querySelector('.key-input').value;
+            finalKey = card.querySelector('.key-input')?.value || 'A';
         } else {
             const rows = card.querySelectorAll('.opt-row');
             rows.forEach(r => { finalOptions[r.dataset.key] = r.querySelector('.opt-val').value.trim(); });
@@ -530,16 +521,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 const selects = card.querySelectorAll('.drag-key-select');
                 finalKey = Array.from(selects).map(s => s.value).join(',');
             } else {
-                finalKey = card.querySelector('.key-input').value;
+                finalKey = card.querySelector('.key-input')?.value || 'A';
             }
         }
 
         return { type, question, options: finalOptions, correct_answer: finalKey, difficulty_level: level };
     };
 
-
     // ================================================================
-    // PREVIEW EDITOR & TIPE
+    // MODAL UPLOAD & RENDER PREVIEW
     // ================================================================
 
     document.getElementById('btnOpenUpload').onclick = async () => {
@@ -549,7 +539,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
     
     window.closeUpload  = () => document.getElementById('modalUpload').classList.add('hidden');
     
-    // CLOSE PREVIEW DENGAN KONFIRMASI
     window.closePreview = () => {
         if (isDirty) {
             showConfirmBack(() => document.getElementById('modalPreview').classList.add('hidden'));
@@ -622,12 +611,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
         reader.readAsText(file);
     };
 
-    // BUG 2 FIXED: FORM INPUT MANUAL TERBUKA KOSONG (Langsung tembak Soal 1)
     window.openManualFromModal = () => { 
         closeUpload(); 
         renderPreview([]); 
         addNewQuestionField(); 
-        isDirty = false; // Reset dirty karena baru buka kosong
+        isDirty = false; 
     };
 
     const parseTextToJSON = (text) => {
@@ -665,60 +653,64 @@ import ModalAlert from '../../components/ModalAlert.astro';
     const createSoalCard = (item, displayIndex) => {
         const type = item.type || 'pilgan';
         const div = document.createElement('div');
-        div.className = "soal-card card-core-logic bg-white p-5 rounded-3xl border border-gray-200 shadow-sm";
+        // PASTIKAN CLASS card-core-logic ADA DI SINI AGAR JS BISA MENEMUKANNYA
+        div.className = "soal-card card-core-logic bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-sm";
         
         div.innerHTML = `
-            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2 pb-3 border-b border-gray-100">
-                <div class="flex items-center gap-3">
-                    <span class="text-[10px] font-black text-white bg-gray-800 px-2 py-1 rounded shadow-sm">SOAL ${displayIndex || 'BARU'}</span>
-                    <select class="type-input text-[10px] font-bold border-none bg-gray-100 text-gray-600 rounded-lg px-2 py-1 outline-none cursor-pointer" onchange="toggleCardType(this)">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <span class="text-[10px] font-black text-white bg-gray-800 px-2 py-1 rounded shadow-sm self-start sm:self-auto shrink-0">SOAL ${displayIndex || 'BARU'}</span>
+                    <select class="type-input text-[10px] font-bold border border-gray-200 bg-gray-50 text-gray-600 rounded-lg px-3 py-2 outline-none cursor-pointer w-full sm:w-auto appearance-none" onchange="toggleCardType(this)">
                         <option value="pilgan" ${type==='pilgan'?'selected':''}>Pilihan Ganda</option>
                         <option value="tf" ${type==='tf'?'selected':''}>Benar / Salah</option>
                         <option value="drag" ${type==='drag'?'selected':''}>Drag & Drop</option>
                     </select>
                 </div>
-                <button onclick="this.closest('.soal-card').remove(); markDirty();" class="text-red-400 text-xs self-end sm:self-auto hover:bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
+                <button type="button" onclick="this.closest('.soal-card').remove(); markDirty();" class="text-red-500 font-bold text-[10px] self-end sm:self-auto hover:bg-red-50 p-2 rounded-lg transition-colors border border-red-100 sm:border-none flex items-center gap-1.5"><i class="fa-solid fa-trash"></i> Hapus</button>
             </div>
             
             <div class="drag-tools hidden mb-3 p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-start gap-2.5">
-                    <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
                         <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
                     </div>
                     <p class="text-[10px] text-indigo-900 leading-relaxed font-medium">
                         <b class="text-indigo-700">Mode Drag & Drop:</b><br>
-                        Klik tombol di samping untuk menyisipkan kolom kosong pada soal.
+                        Klik tombol di bawah untuk menyisipkan kolom kosong pada soal.
                     </p>
                 </div>
-                <button type="button" onclick="insertBlank(this)" class="flex-shrink-0 w-full sm:w-auto text-[10px] font-bold bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2">
+                <button type="button" onclick="insertBlank(this)" class="w-full sm:w-auto text-[10px] font-bold bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
                     <i class="fa-solid fa-plus"></i> Sisipkan [BLANK]
                 </button>
             </div>
 
-            <textarea class="q-input w-full text-sm font-bold text-gray-800 border border-gray-100 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-blue-400 outline-none" rows="2" placeholder="Tulis pertanyaan di sini..." oninput="updateDragKeys(this)">${item.q || ''}</textarea>
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase">Pertanyaan</label>
+                <textarea class="q-input w-full mt-1 p-3 bg-gray-50 rounded-xl text-sm font-bold border border-gray-200 focus:ring-2 focus:ring-blue-400 outline-none" rows="2" placeholder="Tulis pertanyaan di sini..." oninput="updateDragKeys(this)">${item.q || ''}</textarea>
+            </div>
             
-            <div class="options-wrapper flex flex-col gap-2 mt-3"></div>
-            <button type="button" class="btn-add-option hidden text-[10px] font-bold text-blue-500 mt-2 hover:bg-blue-50 px-2 py-1 rounded transition-colors active:scale-95" onclick="addOptionRow(this)">+ Tambah Pilihan Jawaban</button>
+            <div class="options-wrapper flex flex-col gap-2 mt-3 w-full"></div>
+            <button type="button" class="btn-add-option hidden text-[10px] font-bold text-blue-500 mt-2 w-full p-3 bg-blue-50 border-2 border-dashed border-blue-200 hover:bg-blue-100 rounded-xl transition-colors active:scale-95 text-center" onclick="addOptionRow(this)">+ Tambah Pilihan Jawaban</button>
 
             <div class="tf-wrapper hidden mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-200 text-blue-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-toggle-on"></i></div>
+                <div class="w-8 h-8 rounded-full bg-blue-200 text-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-toggle-on"></i></div>
                 <p class="text-[10px] font-bold text-blue-700 leading-relaxed">Mode Benar/Salah aktif. Opsi otomatis menjadi A (Benar) dan B (Salah).</p>
             </div>
 
-            <div class="flex flex-col gap-3 mt-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <div class="key-standard flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-gray-400">KUNCI (PG/TF):</span>
-                    <select class="key-input text-xs font-bold border-none bg-green-100 text-green-700 rounded-lg px-3 py-1.5 shadow-sm outline-none"></select>
+            <div class="flex flex-col gap-4 mt-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div class="key-standard flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span class="text-[10px] font-bold text-gray-400 shrink-0">KUNCI (PG/TF):</span>
+                    <select class="key-input text-xs font-bold border border-gray-200 bg-white text-green-700 rounded-lg px-3 py-2.5 shadow-sm outline-none w-full sm:flex-1 appearance-none"></select>
                 </div>
                 
                 <div class="key-drag hidden w-full">
                     <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN DRAG & DROP:</span>
-                    <div class="drag-keys-container grid grid-cols-2 gap-2"></div>
+                    <div class="drag-keys-container grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
 
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-                    <span class="text-[10px] font-bold text-gray-400">LEVEL KESULITAN:</span>
-                    <select class="level-input text-xs font-bold border-none bg-indigo-100 text-indigo-700 rounded-lg px-2 py-1.5 shadow-sm outline-none">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200">
+                    <span class="text-[10px] font-bold text-gray-400 shrink-0">LEVEL KESULITAN:</span>
+                    <select class="level-input text-xs font-bold border border-gray-200 bg-white text-indigo-700 rounded-lg px-3 py-2.5 shadow-sm outline-none w-full sm:flex-1 appearance-none">
                         <option value="mudah" ${item.level === 'mudah' ? 'selected' : ''}>Mudah</option>
                         <option value="sedang" ${(!item.level || item.level === 'sedang') ? 'selected' : ''}>Sedang</option>
                         <option value="sulit" ${item.level === 'sulit' ? 'selected' : ''}>Sulit</option>
@@ -773,7 +765,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
             if (res.ok) {
                 window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan.`);
                 isSummaryCached = false; 
-                isDirty = false; // Reset Dirty Setelah Simpan
+                isDirty = false; 
                 setTimeout(() => { document.getElementById('modalPreview').classList.add('hidden'); fetchAccordion(); }, 1200); 
             } else window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
         } catch (err) { console.error(err); window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
@@ -786,9 +778,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.openEditSoal = (q) => {
         const modal = document.getElementById('modalEditSoal');
         
-        // BUG 1 FIXED: MENGGUNAKAN GET ELEMENT BY ID 
         document.getElementById('editSoalId').value = q.id;
-        
         document.getElementById('editSoalType').value = q.type || 'pilgan';
         document.getElementById('editSoalQ').value = q.question;
         document.getElementById('editSoalLevel').value = q.difficulty_level || 'sedang';
@@ -801,7 +791,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         toggleEditType(q.correct_answer);
         
         modal.classList.replace('hidden', 'flex');
-        isDirty = false; // Buka modal di set awal belum diubah
+        isDirty = false; 
     };
 
     window.toggleEditType = (presetKey = null) => {
@@ -834,7 +824,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
             if (res.ok) {
                 window.showToast('success', 'Berhasil', 'Soal berhasil diperbarui.');
                 
-                isDirty = false; // Reset Dirty
+                isDirty = false; 
                 document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
                 
                 for (const week in allWeeksData) {
@@ -850,7 +840,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             } else window.showToast('danger', 'Error', (await res.json()).message || 'Gagal update.');
         } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
-
 
     // ================================================================
     // FETCH & RENDER ACCORDION SOAL
@@ -941,7 +930,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 subjHeader.className = `${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all`;
                 const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
                 
-                // TOMBOL PREVIEW DITAMBAHKAN DI SINI
                 subjHeader.innerHTML = `
                     <div class="flex items-center gap-3">
                         <span class="text-base">${icon}</span>
@@ -982,9 +970,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         return wrapper;
     };
 
-    // FUNGSI PREVIEW POV SISWA
     window.previewKuesioner = (e, subject, week) => {
-        e.stopPropagation(); // Mencegah accordion terbuka tertutup
+        e.stopPropagation();
         window.location.href = `/consultations/fill?preview=true&subject=${subject}&week=${week}`;
     };
 
@@ -1041,7 +1028,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             </div>`;
     };
 
-    // HAPUS SOAL 
     window.hapusSoal = async (id, subject) => {
         if (!confirm(`Hapus soal ini dari bank soal ${subject}? Tindakan tidak bisa dibatalkan.`)) return;
         try {

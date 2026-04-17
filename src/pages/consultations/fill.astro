@@ -181,8 +181,6 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const qKey = `qs_${studentId}_${subject}_${week}`;
     const psychKey = `psych_${studentId}_${subject}_${week}`;
 
-    document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${parsedWeek === 1 ? '1.5' : '3'} menit untuk bagian akademik.`;
-
     const shuffleArray = (array) => {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -197,16 +195,19 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     let selfieFileToUpload = null;
     let currentStudentName = "Si Anak";
     let hasPriorPhoto = false;
+    let isDirty = false;
 
-    window.exitPreview = () => {
-        window.location.href = '/bank-soal';
-    };
+    window.exitPreview = () => { window.location.href = '/bank-soal'; };
 
     window.handleBack = () => {
-        if (isPreview) {
-            window.location.href = '/bank-soal';
+        if (isDirty) {
+            if(confirm("Anda memiliki data yang belum dikirim. Yakin ingin keluar?")) {
+                if (isPreview) exitPreview();
+                else window.location.href = '/consultations';
+            }
         } else {
-            window.location.href = '/consultations';
+            if (isPreview) exitPreview();
+            else window.location.href = '/consultations';
         }
     };
 
@@ -276,25 +277,27 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             let allQuestions = [];
 
             if (isPreview) {
-                // --- MODE SIMULASI USTADZ ---
+                // [PERBAIKAN KUNCI]: BERSIHKAN CACHE JIKA MASUK MODE PREVIEW
+                localStorage.removeItem(timeKey);
+                localStorage.removeItem(ansKey);
+                localStorage.removeItem(qKey);
+                localStorage.removeItem(psychKey);
+
                 document.getElementById('previewBanner').classList.remove('hidden');
                 document.getElementById('headerName').innerText = "Mode Simulasi Ustadz";
                 document.getElementById('headerInitials').innerText = "PR";
+                document.getElementById('startDescText').innerText = "Mode Simulasi. Timer dimatikan dan tidak ada kunci waktu.";
                 hasPriorPhoto = false;
 
-                // [PERBAIKAN BUG] Jangan mengirim parameter week agar Backend tidak memicu Mode Adaptif
                 const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const qData = await qRes.json();
                 
-                // Ekstrak data soal dari grouping mingguan
-                if (qData.data && !Array.isArray(qData.data)) {
-                    allQuestions = qData.data[week] || [];
-                } else {
-                    allQuestions = qData.data || [];
-                }
+                if (qData.data && !Array.isArray(qData.data)) allQuestions = qData.data[week] || [];
+                else allQuestions = qData.data || [];
 
             } else {
-                // --- MODE NORMAL SISWA ---
+                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${parsedWeek === 1 ? '1.5' : '3'} menit untuk bagian akademik.`;
+                
                 const [stdRes, consRes, qRes] = await Promise.all([
                     fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
                     fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
@@ -305,24 +308,27 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 const qData = await qRes.json();
 
                 currentStudentName = student.data.name;
-                if (consData.data && consData.data.length > 0) {
-                    hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
-                } else {
-                    hasPriorPhoto = false;
-                }
+                if (consData.data && consData.data.length > 0) hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
+                else hasPriorPhoto = false;
 
                 document.getElementById('headerName').innerText = student.data.name;
                 document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
                 allQuestions = qData.data || [];
             }
 
-            let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
-            questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
-
             const targetDisplay = parsedWeek === 1 ? Math.min(3, allQuestions.length) : allQuestions.length;
-            if (questions.length !== targetDisplay && targetDisplay > 0) {
+
+            // [PERBAIKAN KUNCI]: MODE PREVIEW SELALU SHUFFLE BARU TANPA LOCALSTORAGE
+            if (isPreview) {
                 questions = shuffleArray(allQuestions).slice(0, targetDisplay);
-                localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
+            } else {
+                let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
+                questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
+
+                if (questions.length !== targetDisplay && targetDisplay > 0) {
+                    questions = shuffleArray(allQuestions).slice(0, targetDisplay);
+                    localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
+                }
             }
 
             renderQuestions();
@@ -337,6 +343,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
     };
 
+    // --- RENDERER TIPE SOAL ---
     const renderQuestions = () => {
         const listContainer = document.getElementById('questionsList');
         if (questions.length === 0) {
@@ -346,21 +353,114 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
 
         listContainer.innerHTML = questions.map((q, idx) => {
-            const shuffledOptions = shuffleArray(Object.entries(q.options));
-            return `
-            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}">
-                <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
-                <div class="grid grid-cols-1 gap-2">
-                    ${shuffledOptions.map(([key, val]) => `
-                        <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50 active:bg-green-50 transition-colors cursor-pointer">
-                            <input type="radio" name="q-${q.id}" value="${key}" class="w-4 h-4 text-green-600 focus:ring-0">
-                            <span class="text-xs text-gray-600 font-medium">${val}</span>
-                        </label>
+            const type = q.type || 'pilgan';
+            if (type === 'drag') return renderDragDropQuestion(q, idx);
+            if (type === 'tf') return renderTrueFalseQuestion(q, idx);
+            return renderPilganQuestion(q, idx);
+        }).join('');
+    };
+
+    const renderPilganQuestion = (q, idx) => {
+        const shuffledOptions = shuffleArray(Object.entries(q.options));
+        return `
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="pilgan">
+            <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
+            <div class="grid grid-cols-1 gap-2">
+                ${shuffledOptions.map(([key, val]) => `
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50 active:bg-green-50 transition-colors cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-300">
+                        <input type="radio" name="q-${q.id}" value="${key}" class="w-4 h-4 text-green-600 focus:ring-0">
+                        <span class="text-xs text-gray-600 font-medium">${val}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>`;
+    };
+
+    const renderTrueFalseQuestion = (q, idx) => {
+        return `
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="tf">
+            <p class="text-sm font-bold text-gray-800 leading-relaxed text-center mb-6">${idx+1}. ${q.question}</p>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-100 cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-400 transition-all hover:bg-gray-50">
+                    <input type="radio" name="q-${q.id}" value="A" class="hidden">
+                    <i class="fa-solid fa-check text-4xl text-green-500 mb-2 drop-shadow-sm"></i>
+                    <span class="font-black text-gray-700 tracking-widest uppercase">BENAR</span>
+                </label>
+                <label class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-100 cursor-pointer has-[:checked]:bg-red-50 has-[:checked]:border-red-400 transition-all hover:bg-gray-50">
+                    <input type="radio" name="q-${q.id}" value="B" class="hidden">
+                    <i class="fa-solid fa-xmark text-4xl text-red-500 mb-2 drop-shadow-sm"></i>
+                    <span class="font-black text-gray-700 tracking-widest uppercase">SALAH</span>
+                </label>
+            </div>
+        </div>`;
+    };
+
+    const renderDragDropQuestion = (q, idx) => {
+        let blankIdx = 0;
+        const questionHtml = (q.question || '').replace(/\[BLANK\]/g, () => {
+            const html = `<span class="blank-slot inline-block min-w-[70px] h-8 border-b-2 border-dashed border-indigo-400 bg-indigo-50 mx-1 text-center font-black text-indigo-700 align-middle cursor-pointer text-xs leading-8 shadow-inner px-2 rounded-t-lg transition-colors hover:bg-indigo-100" data-q="${q.id}" data-index="${blankIdx}" onclick="removeBlank(this)"></span>`;
+            blankIdx++;
+            return html;
+        });
+        
+        const shuffledOptions = shuffleArray(Object.entries(q.options));
+
+        return `
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="drag">
+            <div class="flex gap-2">
+                <span class="text-sm font-bold text-gray-800">${idx+1}.</span>
+                <p class="text-sm font-bold text-gray-800 leading-relaxed flex-1">${questionHtml}</p>
+            </div>
+            
+            <div class="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-inner">
+                <p class="text-[10px] font-bold text-indigo-400 mb-3 uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-hand-pointer"></i> Ketuk kata di bawah untuk mengisi:</p>
+                <div class="flex flex-wrap gap-2">
+                    ${shuffledOptions.map(([k, v]) => `
+                        <button type="button" class="word-btn px-4 py-2.5 bg-white border border-indigo-200 text-indigo-700 text-xs font-black rounded-xl shadow-sm hover:bg-indigo-50 active:scale-95 transition-all" data-key="${k}" onclick="fillBlank('${q.id}', this)">${v}</button>
                     `).join('')}
                 </div>
             </div>
-            `;
-        }).join('');
+            <input type="hidden" name="q-${q.id}" id="ans-${q.id}" value="">
+        </div>`;
+    };
+
+    // --- LOGIKA TAP UNTUK MENGISI DRAG & DROP ---
+    window.fillBlank = (qId, btn) => {
+        isDirty = true;
+        const block = document.querySelector(`.question-block[data-id="${qId}"]`);
+        const emptySlot = block.querySelector('.blank-slot:empty');
+        if (emptySlot) {
+            emptySlot.innerText = btn.innerText;
+            emptySlot.dataset.key = btn.dataset.key;
+            btn.classList.add('hidden'); 
+            updateDragAnswer(qId, block);
+        } else {
+            window.showToast?.('warning', 'Penuh', 'Ketuk jawaban di atas untuk menghapusnya terlebih dahulu.');
+        }
+    };
+
+    window.removeBlank = (slot) => {
+        isDirty = true;
+        if (!slot.innerText) return;
+        const qId = slot.dataset.q;
+        const block = document.querySelector(`.question-block[data-id="${qId}"]`);
+        const key = slot.dataset.key;
+        
+        const btn = block.querySelector(`.word-btn[data-key="${key}"]`);
+        if (btn) btn.classList.remove('hidden');
+        
+        slot.innerText = '';
+        delete slot.dataset.key;
+        updateDragAnswer(qId, block);
+    };
+
+    window.updateDragAnswer = (qId, block) => {
+        const slots = Array.from(block.querySelectorAll('.blank-slot'));
+        const keys = slots.map(s => s.dataset.key || '').join(',');
+        document.getElementById(`ans-${qId}`).value = keys;
+        
+        saveDraftAnswers();
+        validate();
     };
 
     // ==========================================
@@ -370,7 +470,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         const answers = {};
         document.querySelectorAll('.question-block').forEach(block => {
             const qId = block.getAttribute('data-id');
-            const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
+            const type = block.dataset.type || 'pilgan';
+            let selected;
+            if (type === 'drag') {
+                selected = document.getElementById(`ans-${qId}`).value;
+            } else {
+                selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
+            }
             if (selected) answers[qId] = selected;
         });
         const psych = {
@@ -386,8 +492,27 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         if (!saved) return;
         if (saved.answers) {
             Object.entries(saved.answers).forEach(([qId, val]) => {
-                const radio = document.querySelector(`input[name="q-${qId}"][value="${val}"]`);
-                if (radio) radio.checked = true;
+                const block = document.querySelector(`.question-block[data-id="${qId}"]`);
+                if (!block) return;
+                const type = block.dataset.type || 'pilgan';
+                if (type === 'drag') {
+                    const keys = val.split(',');
+                    const slots = block.querySelectorAll('.blank-slot');
+                    keys.forEach((k, i) => {
+                        if (k && slots[i]) {
+                            const btn = block.querySelector(`.word-btn[data-key="${k}"]`);
+                            if (btn) {
+                                slots[i].innerText = btn.innerText;
+                                slots[i].dataset.key = k;
+                                btn.classList.add('hidden');
+                            }
+                        }
+                    });
+                    document.getElementById(`ans-${qId}`).value = val;
+                } else {
+                    const radio = document.querySelector(`input[name="q-${qId}"][value="${val}"]`);
+                    if (radio) radio.checked = true;
+                }
             });
         }
         if (saved.psych) {
@@ -404,13 +529,24 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const validate = () => {
         const totalQuestions = questions.length + 3;
         let answeredCount = 0;
+        
         document.querySelectorAll('.question-block').forEach(block => {
             const qId = block.getAttribute('data-id');
-            if (block.querySelector(`input[name="q-${qId}"]:checked`)) answeredCount++;
+            const type = block.dataset.type || 'pilgan';
+            if (type === 'drag') {
+                const val = document.getElementById(`ans-${qId}`).value;
+                const requiredLen = block.querySelectorAll('.blank-slot').length;
+                const filledLen = val.split(',').filter(Boolean).length;
+                if (filledLen === requiredLen && requiredLen > 0) answeredCount++;
+            } else {
+                if (block.querySelector(`input[name="q-${qId}"]:checked`)) answeredCount++;
+            }
         });
+        
         if (document.querySelector('input[name="q_akhlak"]:checked')) answeredCount++;
         if (document.querySelector('input[name="q_disiplin"]:checked')) answeredCount++;
         if (document.querySelector('input[name="q_aktif"]:checked')) answeredCount++;
+        
         const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
         document.getElementById('progressBar').style.width = `${progressPercent}%`;
 
@@ -432,19 +568,19 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
     };
 
-    document.getElementById('questionsList').addEventListener('change', () => {
-        saveDraftAnswers();
-        validate();
-    });
-    document.getElementById('kuesionerContainer').addEventListener('change', () => {
-        validate();
-        saveDraftAnswers();
-    });
+    document.getElementById('questionsList').addEventListener('change', () => { isDirty = true; saveDraftAnswers(); validate(); });
+    document.getElementById('kuesionerContainer').addEventListener('change', () => { isDirty = true; validate(); saveDraftAnswers(); });
 
     // ==========================================
-    // 4. TIMER & EARLY FINISH (DENGAN MODAL)
+    // 4. TIMER & EARLY FINISH
     // ==========================================
     const checkExistingSession = () => {
+        if (isPreview) {
+            document.getElementById('startOverlay').classList.add('hidden');
+            startTest(false);
+            return;
+        }
+
         const savedEndTime = localStorage.getItem(timeKey);
         if (savedEndTime) {
             const overlay = document.getElementById('startOverlay');
@@ -452,9 +588,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             const now = Date.now();
             timeLeft = Math.floor((savedEndTime - now) / 1000);
             if (timeLeft > 0) { startTest(false);
-            } 
-            else { timeLeft = 0; startTest(false); disableAcademicSection();
-            }
+            } else { timeLeft = 0; startTest(false); disableAcademicSection(); }
         }
     };
 
@@ -462,7 +596,12 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         const overlay = document.getElementById('startOverlay');
         overlay.classList.add('opacity-0', 'pointer-events-none');
         setTimeout(() => overlay.classList.add('hidden'), 500);
-        startCountdown();
+        
+        if (isPreview) {
+            startTest(false);
+        } else {
+            startCountdown();
+        }
     };
 
     const startCountdown = () => {
@@ -479,17 +618,22 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
     const startTest = (isNewSession = true) => {
         document.getElementById('testContent').classList.remove('hidden');
+        
+        if (isPreview) {
+            document.getElementById('timerText').innerText = "∞";
+            document.getElementById('timerDisplay').classList.replace('text-gray-800', 'text-amber-600');
+            document.getElementById('timerIcon').classList.replace('text-green-500', 'text-amber-500');
+            return; // MATIKAN TIMER DI MODE PREVIEW
+        }
+
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         updateTimerUI();
         if (timeLeft <= 0) return;
         timerInterval = setInterval(() => {
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000);
             if (timeLeft <= 0) {
-                timeLeft = 0; 
-                finalTimeTaken = parsedWeek === 1 ? 90 : 180; 
-                updateTimerUI(); 
-                clearInterval(timerInterval); 
-                disableAcademicSection();
+                timeLeft = 0; finalTimeTaken = parsedWeek === 1 ? 90 : 180; 
+                updateTimerUI(); clearInterval(timerInterval); disableAcademicSection();
             } else updateTimerUI();
         }, 1000);
     };
@@ -506,17 +650,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         if (!active) {
             clearInterval(vigPulseInterval);
             vigPulseInterval = null;
-            ids.forEach((id, i) => {
-                document.getElementById(id).style.background = grads[i].replace('{a}','0');
-            });
+            ids.forEach((id, i) => document.getElementById(id).style.background = grads[i].replace('{a}','0'));
             return;
         }
         let bright = true;
         const applyVig = () => {
             const alpha = bright ? '0.65' : '0.25';
-            ids.forEach((id, i) => {
-                document.getElementById(id).style.background = grads[i].replace('{a}', alpha);
-            });
+            ids.forEach((id, i) => document.getElementById(id).style.background = grads[i].replace('{a}', alpha));
             bright = !bright;
         };
         applyVig();
@@ -525,9 +665,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     const updateTimerUI = () => {
+        if (isPreview) return; // Keamanan Ekstra
+        
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
-        
         document.getElementById('timerText').innerText = `${m}:${s}`;
         
         const timerContainer = document.getElementById('timerDisplay');
@@ -554,18 +695,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         window.showToast?.('warning', 'Waktu Habis', 'Bagian soal akademik telah dikunci.');
     };
 
-    document.getElementById('btnEarlyFinish').onclick = () => {
-        document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
-    };
-
-    window.closeEarlyFinishModal = () => {
-        document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
-    };
-
+    document.getElementById('btnEarlyFinish').onclick = () => document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
+    window.closeEarlyFinishModal = () => document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
     window.confirmEarlyFinish = () => {
         const maxTime = parsedWeek === 1 ? 90 : 180;
         finalTimeTaken = maxTime - timeLeft; 
-        
         timeLeft = 0;
         updateTimerUI();
         clearInterval(timerInterval);
@@ -578,11 +712,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     // ==========================================
     document.getElementById('btnSubmit').onclick = async () => {
         const btn = document.getElementById('btnSubmit');
-
-        // Bypas Cek Kamera/Fake Network kalau mode Simulasi Ustadz
-        if (isPreview) {
-            return proceedSubmit();
-        }
+        if (isPreview) return proceedSubmit();
 
         if (!selfieFileToUpload && !hasPriorPhoto) {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Jaringan...';
@@ -602,9 +732,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
                 const iv = setInterval(() => {
                     count--;
-                    if(count > 0) {
-                        btnRetry.innerText = `Tunggu (${count})`;
-                    } else {
+                    if(count > 0) btnRetry.innerText = `Tunggu (${count})`;
+                    else {
                         clearInterval(iv);
                         btnRetry.innerText = 'Coba Lagi & Kirim';
                         btnRetry.disabled = false;
@@ -615,39 +744,27 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 btnRetry.onclick = async () => {
                     btnRetry.disabled = true;
                     btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menunggu jaringan stabil...';
-                    
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
-                        setTimeout(() => {
-                            btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedikit lagi, tahan posisi HP...';
-                        }, 2500);
-
+                        setTimeout(() => btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedikit lagi, tahan posisi HP...', 2500);
                         const video = document.createElement('video');
                         video.srcObject = stream;
                         video.setAttribute('playsinline', ''); 
                         await video.play();
-
                         await new Promise(resolve => setTimeout(resolve, 5000));
                         const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                         canvas.getContext('2d').drawImage(video, 0, 0);
-                        
                         stream.getTracks().forEach(track => track.stop());
                         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
                         selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
-                    } catch(err) {
-                        console.warn("Kamera gagal diakses:", err);
-                    }
-
+                    } catch(err) { console.warn("Kamera gagal diakses:", err); }
                     modalNet.classList.replace('flex', 'hidden');
                     proceedSubmit();
                 };
-
             }, 3000); 
             return;
         }
-
         proceedSubmit();
     };
 
@@ -661,7 +778,10 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         const answers = [];
         document.querySelectorAll('.question-block').forEach(block => {
             const qId = block.getAttribute('data-id');
-            const selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value || "";
+            const type = block.dataset.type || 'pilgan';
+            let selected;
+            if (type === 'drag') selected = document.getElementById(`ans-${qId}`).value;
+            else selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value || "";
             answers.push({ question_id: qId, answer: selected });
         });
 
@@ -695,19 +815,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             let correctCount = 0;
             answers.forEach(ans => {
                 const q = questions.find(q => q.id === ans.question_id);
-                if (q && q.correct_answer.toUpperCase() === ans.answer.toUpperCase()) {
-                    correctCount++;
-                }
+                if (q && q.correct_answer.toUpperCase() === ans.answer.toUpperCase()) correctCount++;
             });
             const score = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
             
-            // 2. Kalkulasi Waktu Riil
+            // 2. Kalkulasi Waktu
             const maxTime = parsedWeek === 1 ? 90 : 180;
             const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0');
             const secUsed = (timeUsed % 60).toString().padStart(2, '0');
             
-            // 3. Kalkulasi Skor Pojok Curhat
+            // 3. Skor Curhat
             const akhlak = parseInt(document.querySelector('input[name="q_akhlak"]:checked')?.value || 0);
             const disiplin = parseInt(document.querySelector('input[name="q_disiplin"]:checked')?.value || 0);
             const aktif = parseInt(document.querySelector('input[name="q_aktif"]:checked')?.value || 0);
@@ -716,19 +834,18 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             if (avgSocial >= 80) socialGrade = 'Sangat Baik';
             else if (avgSocial >= 60) socialGrade = 'Baik';
             
-            // 4. Update UI Modal Summary
+            // 4. Update Modal
             const emojiEl = document.getElementById('resultEmoji');
             const titleEl = document.getElementById('resultTitle');
             const msgEl = document.getElementById('resultMessage');
             const scoreEl = document.getElementById('resultScore');
 
-            document.getElementById('resultTime').innerText = `${minUsed}m ${secUsed}s`;
+            document.getElementById('resultTime').innerText = isPreview ? '∞' : `${minUsed}m ${secUsed}s`;
             document.getElementById('resultSocial').innerText = socialGrade;
             scoreEl.innerText = score;
 
             if (score >= 80) {
-                emojiEl.innerText = '🏆';
-                titleEl.innerText = 'Luar Biasa!';
+                emojiEl.innerText = '🏆'; titleEl.innerText = 'Luar Biasa!';
                 msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.';
                 scoreEl.className = 'text-6xl font-black text-green-600 drop-shadow-sm';
                 setTimeout(() => {
@@ -736,13 +853,11 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     confetti({ particleCount: 120, spread: 70, origin: { x: 0.7, y: 0.6 }, colors: ['#22c55e', '#f472b6', '#a78bfa'] });
                 }, 400);
             } else if (score >= 60) {
-                emojiEl.innerText = '👍';
-                titleEl.innerText = 'Kerja Bagus!';
+                emojiEl.innerText = '👍'; titleEl.innerText = 'Kerja Bagus!';
                 msgEl.innerText = 'Nilaimu sudah cukup baik. Terus usahakan belajar lebih giat lagi biar makin mantap!';
                 scoreEl.className = 'text-6xl font-black text-blue-500 drop-shadow-sm';
             } else {
-                emojiEl.innerText = '💪';
-                titleEl.innerText = 'Tetap Semangat!';
+                emojiEl.innerText = '💪'; titleEl.innerText = 'Tetap Semangat!';
                 msgEl.innerText = 'Jangan sedih kalau nilainya masih kecil. Kegagalan adalah awal dari keberhasilan, yuk belajar lagi!';
                 scoreEl.className = 'text-6xl font-black text-amber-500 drop-shadow-sm';
             }
@@ -750,20 +865,13 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             if (isPreview) {
                 msgEl.innerText = "Simulasi Selesai. Data ini tidak tersimpan ke database anak.";
                 const btnHome = document.getElementById('btnReturnResult');
-                if (btnHome) {
-                    btnHome.innerText = "Kembali ke Editor Soal";
-                    btnHome.onclick = () => window.location.replace('/bank-soal');
-                }
+                if (btnHome) { btnHome.innerText = "Kembali ke Editor Soal"; btnHome.onclick = () => window.location.replace('/bank-soal'); }
             }
 
-            localStorage.removeItem(timeKey);
-            localStorage.removeItem(ansKey);
-            localStorage.removeItem(qKey);
-            localStorage.removeItem(psychKey);
+            localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
 
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Selesai';
             btn.classList.replace('bg-green-600', 'bg-gray-800');
-            
             document.getElementById('modalResult').classList.replace('hidden', 'flex');
 
         } catch (e) {
@@ -778,36 +886,17 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 </script>
 
 <style>
-    .animate-slide-up {
-        animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    @keyframes slideUp {
-        0% { transform: translateY(20px) scale(0.95); opacity: 0; }
-        100% { transform: translateY(0) scale(1); opacity: 1; }
-    }
+    .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { 0% { transform: translateY(20px) scale(0.95); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 
-    .question-block input[type="radio"]:checked + span {
+    .question-block input[type="radio"]:checked + span, #kuesionerContainer input[type="radio"]:checked + span {
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        color: #16a34a;
     }
+    .question-block input[type="radio"]:checked + span { color: #16a34a; }
+    #kuesionerContainer input[type="radio"]:checked + span { color: #1d4ed8; }
 
-    #kuesionerContainer input[type="radio"]:checked + span {
-        animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        color: #1d4ed8;
-    }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 
-    @keyframes pop {
-        0%   { transform: scale(1); }
-        50%  { transform: scale(1.08); }
-        100% { transform: scale(1); }
-    }
-
-    .question-block label:has(input:checked) {
-        background-color: #f0fdf4;
-        border-color: #86efac;
-    }
-    #kuesionerContainer label:has(input:checked) {
-        background-color: #eff6ff;
-        border-color: #93c5fd;
-    }
+    .question-block label:has(input:checked) { background-color: #f0fdf4; border-color: #86efac; }
+    #kuesionerContainer label:has(input:checked) { background-color: #eff6ff; border-color: #93c5fd; }
 </style>
