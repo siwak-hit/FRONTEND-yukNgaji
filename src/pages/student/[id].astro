@@ -405,6 +405,28 @@ import Toast from '../../components/Toast.astro';
             <button onclick="closeHafalanModal()" class="w-full py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl">Tutup</button>
         </div>
     </div>
+
+
+    <div id="modalReview" class="fixed inset-0 bg-black/60 z-[110] hidden items-end justify-center p-0 backdrop-blur-sm transition-all">
+        <div class="bg-gray-50 w-full max-w-md rounded-t-[2rem] shadow-2xl h-[95vh] flex flex-col animate-slide-up-drawer relative overflow-hidden">
+            
+            <div class="w-full flex justify-center pt-3 pb-1 absolute top-0 left-0 bg-white z-20 rounded-t-[2rem]">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+            
+            <div class="flex justify-between items-center px-6 pt-8 pb-4 bg-white shrink-0 border-b border-gray-100 z-10 shadow-sm">
+                <div>
+                    <h3 class="font-black text-gray-800 text-lg"><i class="fa-solid fa-magnifying-glass text-indigo-500 mr-2"></i> Review Jawaban</h3>
+                    <p class="text-[10px] text-gray-500 font-bold mt-1" id="reviewSubtitle">Memuat data...</p>
+                </div>
+                <button onclick="closeReviewModal()" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center active:scale-95 shrink-0"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="reviewContainer" class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4 pb-20">
+                <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-gray-300 text-2xl"></i></div>
+            </div>
+        </div>
+    </div>
 </Layout>
 
 <div id="modalSusulan" class="fixed inset-0 bg-black/70 z-[90] hidden items-center justify-center p-4 backdrop-blur-sm">
@@ -692,6 +714,190 @@ import Toast from '../../components/Toast.astro';
         });
     };
 
+    window.closeReviewModal = () => document.getElementById('modalReview').classList.replace('flex', 'hidden');
+
+    window.openReviewModal = async (subject, week) => {
+        const modal = document.getElementById('modalReview');
+        const container = document.getElementById('reviewContainer');
+        const subtitle = document.getElementById('reviewSubtitle');
+        
+        modal.classList.replace('hidden', 'flex');
+        container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>';
+        subtitle.innerText = `${subject.toUpperCase()} - MINGGU ${week}`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/review/${subject}/${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (!res.ok) throw new Error('Gagal mengambil data review');
+            const result = await res.json();
+            const reviewData = result.data;
+
+            if (!reviewData.questions || reviewData.questions.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-8">Soal asli sudah dihapus atau tidak ditemukan.</p>';
+                return;
+            }
+
+            // Parsing JSON dengan aman
+            let studentAnswers = reviewData.result.student_answers;
+            if (typeof studentAnswers === 'string') {
+                try { studentAnswers = JSON.parse(studentAnswers); } catch(e) { studentAnswers = []; }
+            }
+            if (!Array.isArray(studentAnswers)) studentAnswers = [];
+
+            // [KUNCI UX]: Cek apakah ini ujian versi lama (belum ada fitur simpan jawaban)
+            const isLegacyData = studentAnswers.length === 0;
+
+            container.innerHTML = reviewData.questions.map((q, idx) => {
+                const type = q.type || 'pilgan';
+                
+                // Cari jawaban murid
+                const ansObj = studentAnswers.find(a => String(a.question_id).trim() === String(q.id).trim());
+                const studentAns = ansObj ? ansObj.answer : null;
+
+                // Normalisasi string untuk komparasi aman
+                const safeStudentAns = studentAns ? String(studentAns).trim().toUpperCase() : '';
+                const safeCorrectAns = q.correct_answer ? String(q.correct_answer).trim().toUpperCase() : '';
+
+                // Cek benar/salah
+                let isCorrect = false;
+                if (safeStudentAns && safeCorrectAns) {
+                    isCorrect = safeStudentAns === safeCorrectAns;
+                }
+
+                // Jangan tampilkan label jika ini ujian versi lama
+                let statusBadge = '';
+                if (!isLegacyData) {
+                    statusBadge = isCorrect 
+                        ? `<span class="text-[9px] font-black bg-green-100 text-green-700 px-2 py-1 rounded shadow-sm border border-green-200"><i class="fa-solid fa-check mr-1"></i> BENAR</span>`
+                        : `<span class="text-[9px] font-black bg-red-100 text-red-600 px-2 py-1 rounded shadow-sm border border-red-200"><i class="fa-solid fa-xmark mr-1"></i> SALAH</span>`;
+                }
+
+                let optionsHtml = '';
+
+                if (type === 'tf' || type === 'pilgan') {
+                    const opts = Object.entries(q.options || {});
+                    optionsHtml = `<div class="grid grid-cols-1 gap-2 mt-3">` + opts.map(([k, v]) => {
+                        const safeK = String(k).trim().toUpperCase();
+                        const isStudentChoice = safeStudentAns === safeK;
+                        const isTheCorrectKey = safeCorrectAns === safeK;
+
+                        let optClass = "p-3 rounded-xl border flex items-center justify-between text-xs font-medium transition-all ";
+                        let iconHtml = "";
+
+                        // Jika ujian versi lama, render biasa tanpa warna-warni jawaban
+                        if (isLegacyData) {
+                            optClass += "bg-white border-gray-100 text-gray-600";
+                        } else {
+                            if (isStudentChoice && isTheCorrectKey) {
+                                optClass += "bg-green-50 border-green-300 text-green-800 shadow-sm";
+                                iconHtml = `<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>`;
+                            } else if (isStudentChoice && !isTheCorrectKey) {
+                                optClass += "bg-red-50 border-red-300 text-red-800 shadow-sm opacity-90";
+                                iconHtml = `<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>`;
+                            } else if (!isStudentChoice && isTheCorrectKey) {
+                                optClass += "bg-green-50/30 border-green-200 text-green-700 border-dashed";
+                                iconHtml = `<i class="fa-solid fa-check text-green-400 text-lg"></i>`;
+                            } else {
+                                optClass += "bg-white border-gray-100 text-gray-400 opacity-60";
+                            }
+                        }
+
+                        const keyLabel = type === 'tf' ? (safeK === 'A' ? 'BENAR' : 'SALAH') : safeK;
+                        const badgeColor = isLegacyData ? 'bg-gray-100 text-gray-400' : (isTheCorrectKey ? 'bg-green-200 text-green-700' : isStudentChoice ? 'bg-red-200 text-red-700' : 'bg-gray-100 text-gray-400');
+
+                        return `<div class="${optClass}"><div class="flex items-center gap-3"><span class="w-6 h-6 rounded-full flex items-center justify-center font-black ${badgeColor} shrink-0">${keyLabel}</span><span>${v}</span></div>${iconHtml}</div>`;
+                    }).join('') + `</div>`;
+                } else if (type === 'drag') {
+                    const expectedKeys = safeCorrectAns.split(',');
+                    const answeredKeys = safeStudentAns.split(',');
+                    let blankIdx = 0;
+                    
+                    const questionWithAnswers = (q.question || '').replace(/\[BLANK\]/g, () => {
+                        const correctKey = expectedKeys[blankIdx] ? expectedKeys[blankIdx].trim() : null;
+                        const studentKey = answeredKeys[blankIdx] ? answeredKeys[blankIdx].trim() : null;
+
+                        let correctVal = '(kosong)';
+                        let studentVal = '(kosong)';
+
+                        if (q.options) {
+                            const originalCorrectKey = Object.keys(q.options).find(k => k.toUpperCase() === correctKey);
+                            if (originalCorrectKey) correctVal = q.options[originalCorrectKey];
+
+                            const originalStudentKey = Object.keys(q.options).find(k => k.toUpperCase() === studentKey);
+                            if (originalStudentKey) studentVal = q.options[originalStudentKey];
+                        }
+
+                        const isSlotCorrect = correctKey === studentKey;
+                        
+                        let html = '';
+                        if (isLegacyData) {
+                            // UI Kosong untuk Ujian Lama
+                            html = `<span class="inline-block px-2 py-1 mx-1 bg-gray-100 text-gray-400 border border-gray-200 rounded shadow-sm text-[10px] font-black">[ KOLOM JAWABAN ]</span>`;
+                        } else {
+                            if (!studentKey) {
+                            html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold opacity-80">(Kosong)</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
+                            } else if (isSlotCorrect) {
+                                html = `<span class="inline-block px-2 py-1 mx-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black"><i class="fa-solid fa-check mr-1"></i>${correctVal}</span>`;
+                            } else {
+                                html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold line-through opacity-80">${studentVal}</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
+                            }
+                        }
+                        blankIdx++;
+                        return html;
+                    });
+
+                    optionsHtml = `<div class="mt-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-inner"><p class="text-xs font-bold text-gray-800 leading-loose">${questionWithAnswers}</p></div>`;
+                    
+                    // Tampilkan kotak pilihan kata khusus untuk legacy agar tidak terlalu kosong
+                    if (isLegacyData) {
+                        const dragOpts = `<div class="flex flex-wrap gap-2 mt-3">` + Object.entries(q.options || {}).map(([k, v]) => `<span class="px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 text-[10px] font-bold rounded-lg shadow-sm">${v}</span>`).join('') + `</div>`;
+                        optionsHtml += dragOpts;
+                    }
+                }
+
+                // INSIGHT / CATATAN JAWABAN (Disesuaikan untuk Legacy Data)
+                let insightHtml = '';
+                if (isLegacyData) {
+                    insightHtml = `<div class="mt-3 bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-start gap-2"><i class="fa-solid fa-clock-rotate-left text-gray-400 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-gray-600 leading-relaxed mb-0.5">Menampilkan soal yang diujikan di pertemuan ini.</p><p class="text-[9px] text-gray-400 font-medium">Fitur perekaman riwayat jawaban (Benar/Salah) belum tersedia saat anak mengerjakan ujian ini.</p></div></div>`;
+                } else if (!studentAns) {
+                    insightHtml = `<div class="mt-3 bg-red-50 p-3 rounded-xl border border-red-100 flex items-start gap-2"><i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-red-800 leading-relaxed">Anak tidak menjawab soal ini (Dikosongkan).</p></div></div>`;
+                } else if (isCorrect) {
+                    insightHtml = `<div class="mt-3 bg-green-50 p-3 rounded-xl border border-green-100 flex items-start gap-2"><i class="fa-solid fa-lightbulb text-green-500 mt-0.5"></i><p class="text-[10px] font-bold text-green-800 leading-relaxed">Hebat! Jawaban anak sudah tepat.</p></div>`;
+                } else {
+                    let correctAnswerText = '';
+                    if (type === 'drag') {
+                        correctAnswerText = 'Perhatikan urutan kata yang benar pada panah hijau di atas.';
+                    } else if (type === 'tf') {
+                        correctAnswerText = safeCorrectAns === 'A' ? 'BENAR' : 'SALAH';
+                    } else {
+                        const origKey = Object.keys(q.options || {}).find(k => k.toUpperCase() === safeCorrectAns);
+                        correctAnswerText = origKey ? q.options[origKey] : q.correct_answer;
+                    }
+                    
+                    insightHtml = `<div class="mt-3 bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-amber-800 leading-relaxed mb-1">Kurang tepat. Coba lebih teliti lagi ya.</p><p class="text-[10px] text-amber-700 font-medium">Kunci Jawaban: <b class="font-black text-amber-900">${correctAnswerText}</b></p></div></div>`;
+                }
+
+                const badgeTipe = type === 'tf' ? '(Benar/Salah)' : type === 'drag' ? '(Drag & Drop)' : '(Pilihan Ganda)';
+                const sideBorder = isLegacyData ? 'bg-gray-300' : (!isCorrect ? 'bg-red-400' : 'bg-green-400');
+
+                return `
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${sideBorder}"></div>
+                    <div class="flex justify-between items-start mb-2 pl-2">
+                        <span class="text-[10px] font-bold text-gray-400">SOAL ${idx + 1} <span class="text-gray-300 ml-1">${badgeTipe}</span></span>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-sm font-bold text-gray-800 leading-relaxed pl-2">${type === 'drag' ? 'Lengkapi kalimat rumpang di bawah:' : q.question}</p>
+                    ${optionsHtml}
+                    ${insightHtml}
+                </div>`;
+            }).join('');
+
+        } catch (error) {
+            container.innerHTML = `<div class="text-center py-8"><p class="text-xs text-red-500 font-bold">${error.message}</p></div>`;
+        }
+    };
+
+
     const initAttChart = (stats) => {
         const canvas = document.getElementById('attendanceChart');
         if (!canvas) return;
@@ -841,6 +1047,8 @@ import Toast from '../../components/Toast.astro';
                         <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Keaktifan</p><p class="text-sm font-black text-purple-600">${item.aktif_score}</p></div>
                     </div>
                     ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
+                    
+                    ${item.week ? `<button onclick="openReviewModal('${item.subject}', ${item.week})" class="mt-2 w-full py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-bold transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> Lihat Jawaban Anak</button>` : ''}
                 </div>
             `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat kuesioner.</p>';
 
@@ -1848,3 +2056,14 @@ doc.setFontSize(10);
 
     fetchData(); // Pastikan ini tetap ada di paling bawah
 </script>
+
+<style>
+    /* Animasi untuk Drawer (laci iOS) */
+    @keyframes slideUpDrawer {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+    .animate-slide-up-drawer {
+        animation: slideUpDrawer 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>
