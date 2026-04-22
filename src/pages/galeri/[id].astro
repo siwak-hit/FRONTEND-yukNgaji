@@ -1,0 +1,263 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PhotoBooth from '../../components/PhotoBooth.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Galeri Anak - yukNgaji">
+    <div class="px-4 sm:px-6 py-8 pb-32 min-h-screen bg-gray-50 flex flex-col">
+        
+        <header class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+                <a href="/galeri" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600 active:scale-95 transition-all shrink-0">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                <div class="min-w-0">
+                    <h1 class="text-lg sm:text-xl font-bold text-gray-800 tracking-tight truncate capitalize" id="studentName">Memuat...</h1>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Galeri Raport</p>
+                </div>
+            </div>
+            <button onclick="openCamera()" class="w-10 h-10 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-600/30 flex items-center justify-center active:scale-95 transition-all shrink-0">
+                <i class="fa-solid fa-camera"></i>
+            </button>
+        </header>
+
+        <div class="bg-purple-50 border border-purple-100 p-4 rounded-2xl mb-6 flex items-start gap-3">
+            <i class="fa-solid fa-circle-info text-purple-500 mt-0.5"></i>
+            <p class="text-[10px] font-bold text-purple-800 leading-relaxed">Semua foto yang diambil saat kuesioner, ujian, dan foto bebas akan terkumpul di sini untuk dipilih saat mencetak raport.</p>
+        </div>
+
+        <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 auto-rows-max">
+            <div class="col-span-full text-center py-20">
+                <i class="fa-solid fa-spinner fa-spin text-purple-400 text-3xl"></i>
+                <p class="text-xs font-bold text-gray-400 mt-3 uppercase tracking-widest">Memuat Foto...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modalPreviewFoto" class="fixed inset-0 bg-black/90 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-md opacity-0 transition-opacity duration-300">
+        <div class="absolute top-6 right-6 flex items-center gap-3">
+            <button onclick="openDeleteModal()" class="w-10 h-10 bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center backdrop-blur-sm active:scale-95 transition-colors border border-red-500/50" title="Hapus Foto"><i class="fa-solid fa-trash-can"></i></button>
+            <button onclick="closePreviewFoto()" class="w-10 h-10 bg-white/10 text-white rounded-full flex items-center justify-center backdrop-blur-sm active:scale-95"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <img id="imgPreviewFull" src="" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl scale-95 transition-transform duration-300">
+        <p id="labelPreviewFull" class="mt-4 bg-black/50 text-white px-4 py-2 rounded-xl text-xs font-bold backdrop-blur-sm"></p>
+    </div>
+
+    <div id="modalDeleteFoto" class="fixed inset-0 bg-black/60 z-[120] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative animate-slide-up text-center border border-red-100">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-2">Hapus Foto Permanen?</h3>
+            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-4">
+                Foto ini akan dimusnahkan dari Database dan Storage. Tindakan ini tidak bisa dibatalkan.
+            </p>
+            <div class="mb-6 text-left">
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password Admin</label>
+                <input type="password" id="deletePassword" placeholder="Masukkan password..." class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 transition-all">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl active:scale-95 transition-all">Batal</button>
+                <button onclick="executeDeleteFoto()" id="btnConfirmDelete" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md shadow-red-600/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <PhotoBooth />
+    <Toast />
+</Layout>
+
+<script>
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    const studentId = window.location.pathname.split('/').pop();
+    let currentStudentName = "Anak";
+    let allPhotos = [];
+    let currentActivePhoto = null; // Menyimpan data foto yang sedang dilihat
+
+    const fetchGalleryData = async () => {
+        try {
+            const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (stdRes.ok) {
+                currentStudentName = (await stdRes.json()).data.name;
+                document.getElementById('studentName').innerText = currentStudentName;
+            }
+
+            const [consRes, examRes, galleryRes] = await Promise.all([
+                fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                fetch(`${API_URL}/api/exams/student/${studentId}/results`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                fetch(`${API_URL}/api/students/${studentId}/gallery`, { headers: { 'Authorization': `Bearer ${token}` }}) 
+            ]);
+
+            const consData = consRes.ok ? await consRes.json() : { data: [] };
+            const examData = examRes.ok ? await examRes.json() : { data: [] };
+            const galleryData = galleryRes.ok ? await galleryRes.json() : { data: [] };
+
+            allPhotos = [];
+
+            // Ekstrak data dan sisipkan ID serta Tipe Sumbernya agar bisa dihapus
+            (consData.data || []).forEach(c => {
+                if (c.image_url) allPhotos.push({ id: c.id, type: 'consultation', url: c.image_url, source: `Kuesioner ${c.subject}`, date: c.created_at });
+            });
+            (examData.data || []).forEach(e => {
+                if (e.capture_url) allPhotos.push({ id: e.id, type: 'exam', url: e.capture_url, source: `Ujian Akademik`, date: e.created_at });
+            });
+            (galleryData.data || []).forEach(g => {
+                if (g.image_url) allPhotos.push({ id: g.id, type: 'gallery', url: g.image_url, source: `Foto Bebas`, date: g.created_at });
+            });
+
+            allPhotos.sort((a, b) => new Date(b.date) - new Date(a.date));
+            renderGallery();
+
+        } catch (e) {
+            document.getElementById('galleryGrid').innerHTML = '<div class="col-span-full text-center py-10"><p class="text-xs font-bold text-red-500">Gagal memuat galeri.</p></div>';
+        }
+    };
+
+    const renderGallery = () => {
+        const grid = document.getElementById('galleryGrid');
+        if (allPhotos.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-white border border-dashed border-gray-200 rounded-3xl">
+                    <div class="w-16 h-16 bg-purple-50 text-purple-300 rounded-full flex items-center justify-center text-3xl mx-auto mb-3"><i class="fa-regular fa-image"></i></div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Belum ada foto</p>
+                </div>`;
+            return;
+        }
+
+        // Panggil previewFoto dengan melempar index
+        grid.innerHTML = allPhotos.map((photo, idx) => `
+            <div onclick="previewFoto(${idx})" class="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer group bg-gray-200 active:scale-95 transition-transform">
+                <img src="${photo.url}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                <div class="absolute bottom-2 left-2 right-2">
+                    <p class="text-[8px] font-black text-white/90 uppercase tracking-wider truncate mb-0.5"><i class="fa-solid fa-tag text-purple-400 mr-1"></i>${photo.source}</p>
+                    <p class="text-[7px] font-bold text-white/60">${new Date(photo.date).toLocaleDateString('id-ID', { day:'numeric', month:'short' })}</p>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    // Upload via Base64 agar lebih mudah tanpa multer
+    window.openCamera = () => {
+        window.openPhotoBooth(currentStudentName, 'Galeri', (file) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64Data = reader.result;
+                try {
+                    window.showToast?.('info', 'Mengunggah...', 'Menyimpan foto ke database...');
+                    const res = await fetch(`${API_URL}/api/students/${studentId}/upload-photo`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image_base64: base64Data })
+                    });
+                    if (res.ok) {
+                        window.showToast?.('success', 'Berhasil', 'Foto berhasil masuk galeri!');
+                        fetchGalleryData();
+                    } else throw new Error();
+                } catch (err) {
+                    window.showToast?.('danger', 'Error', 'Gagal menyimpan foto.');
+                }
+            };
+        });
+    };
+
+    window.previewFoto = (index) => {
+        currentActivePhoto = allPhotos[index];
+        const modal = document.getElementById('modalPreviewFoto');
+        const img = document.getElementById('imgPreviewFull');
+        const label = document.getElementById('labelPreviewFull');
+        
+        img.src = currentActivePhoto.url;
+        const dateStr = new Date(currentActivePhoto.date).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+        label.innerHTML = `${currentActivePhoto.source} &bull; ${dateStr}`;
+
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => {
+            modal.classList.replace('opacity-0', 'opacity-100');
+            img.classList.replace('scale-95', 'scale-100');
+        }, 10);
+    };
+
+    window.closePreviewFoto = () => {
+        const modal = document.getElementById('modalPreviewFoto');
+        const img = document.getElementById('imgPreviewFull');
+        
+        modal.classList.replace('opacity-100', 'opacity-0');
+        img.classList.replace('scale-100', 'scale-95');
+        setTimeout(() => { modal.classList.replace('flex', 'hidden'); img.src = ''; currentActivePhoto = null; }, 300);
+    };
+
+// --- FITUR SAKTI: HAPUS FOTO (CUSTOM MODAL) ---
+    
+    // 1. Buka Modal
+    window.openDeleteModal = () => {
+        if (!currentActivePhoto) return;
+        document.getElementById('deletePassword').value = ''; // Kosongkan input password
+        document.getElementById('modalDeleteFoto').classList.replace('hidden', 'flex');
+        setTimeout(() => document.getElementById('deletePassword').focus(), 100);
+    };
+
+    // 2. Tutup Modal
+    window.closeDeleteModal = () => {
+        document.getElementById('modalDeleteFoto').classList.replace('flex', 'hidden');
+    };
+
+    // 3. Eksekusi Hapus (Nembak API)
+    window.executeDeleteFoto = async () => {
+        if (!currentActivePhoto) return;
+
+        const passwordInput = document.getElementById('deletePassword');
+        const password = passwordInput.value;
+
+        if (!password) {
+            window.showToast?.('warning', 'Perhatian', 'Password tidak boleh kosong!');
+            passwordInput.focus();
+            return;
+        }
+
+        const btn = document.getElementById('btnConfirmDelete');
+        const oriContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/gallery/delete-photo`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: currentActivePhoto.id,
+                    type: currentActivePhoto.type,
+                    url: currentActivePhoto.url,
+                    password: password
+                })
+            });
+
+            const result = await res.json();
+            if (res.ok) {
+                window.showToast?.('success', 'Dihapus', 'Foto berhasil dimusnahkan dari database.');
+                closeDeleteModal();
+                closePreviewFoto();
+                fetchGalleryData(); // Refresh Grid agar foto hilang dari layar
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            window.showToast?.('danger', 'Akses Ditolak', error.message || 'Gagal menghapus foto.');
+            passwordInput.value = ''; // Kosongkan lagi jika salah
+            passwordInput.focus();
+        } finally {
+            btn.innerHTML = oriContent;
+            btn.disabled = false;
+        }
+    };
+
+    fetchGalleryData();
+</script>

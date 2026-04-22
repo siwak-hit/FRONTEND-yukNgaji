@@ -33,24 +33,20 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     </div>
                 </div>
                 
-                <div class="bg-orange-50 rounded-2xl p-4 flex flex-col justify-between">
-                    <div class="w-8 h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-clipboard-list text-xs"></i>
+                <div class="bg-amber-50 p-4 rounded-2xl flex flex-col justify-center text-center border border-amber-100 shadow-sm">
+                    <div class="w-8 h-8 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <i class="fa-solid fa-jar"></i>
                     </div>
-                    <div>
-                        <h3 class="text-2xl font-bold text-orange-700" id="statTasks">-</h3>
-                        <p class="text-[10px] text-orange-500 font-semibold mt-0.5 uppercase tracking-wide">Tugas Pending</p>
-                    </div>
+                    <h3 class="text-xl font-black text-amber-600 mb-0.5" id="statInfaq">0</h3>
+                    <p class="text-[9px] text-amber-700 font-bold uppercase tracking-widest">Celengan Beredar</p>
                 </div>
-
-                <div class="bg-sky-50 rounded-2xl p-4 flex flex-col justify-between">
-                    <div class="w-8 h-8 bg-sky-100 text-sky-500 rounded-full flex items-center justify-center mb-3">
-                        <i class="fa-solid fa-envelope text-xs"></i>
+                
+                <div class="bg-indigo-50 p-4 rounded-2xl flex flex-col justify-center text-center border border-indigo-100 shadow-sm">
+                    <div class="w-8 h-8 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <i class="fa-solid fa-file-contract"></i>
                     </div>
-                    <div>
-                        <h3 class="text-2xl font-bold text-sky-700" id="statMessages">-</h3>
-                        <p class="text-[10px] text-sky-500 font-semibold mt-0.5 uppercase tracking-wide">Konsul Baru</p>
-                    </div>
+                    <h3 class="text-xl font-black text-indigo-600 mb-0.5" id="statExams">0</h3>
+                    <p class="text-[9px] text-indigo-700 font-bold uppercase tracking-widest">Total Ujian</p>
                 </div>
             </div>
         </section>
@@ -74,34 +70,44 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
             </a>
 
-            <div class="grid grid-cols-3 gap-2 sm:gap-3">
-                <a href="/timer" class="relative bg-yellow-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+            <div class="grid grid-cols-4 gap-2 sm:gap-3">
+                <a href="/timer" class="relative bg-yellow-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-yellow-100">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-stopwatch text-base sm:text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-yellow-800 text-xs sm:text-sm mb-0.5 leading-tight">Timer</h3>
-                        <p class="text-[8px] sm:text-[10px] text-yellow-500 font-bold uppercase tracking-wider truncate">Durasi Kelas</p>
+                        <h3 class="font-bold text-yellow-800 text-[10px] sm:text-sm leading-tight">Timer</h3>
+                        <p class="text-[7px] sm:text-[9px] text-yellow-500 font-bold uppercase tracking-wider truncate">Durasi</p>
                     </div>
                 </a>
 
-                <a href="/seats" class="relative bg-green-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+                <a href="/seats" class="relative bg-green-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-green-100">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-chair text-base sm:text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-green-800 text-xs sm:text-sm mb-0.5 leading-tight">Denah</h3>
-                        <p class="text-[8px] sm:text-[10px] text-green-500 font-bold uppercase tracking-wider truncate">Atur Posisi</p>
+                        <h3 class="font-bold text-green-800 text-[10px] sm:text-sm leading-tight">Denah</h3>
+                        <p class="text-[7px] sm:text-[9px] text-green-500 font-bold uppercase tracking-wider truncate">Posisi</p>
                     </div>
                 </a>
 
-                <a href="/hafalan" class="relative bg-emerald-50 p-3 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col gap-2">
+                <a href="/hafalan" class="relative bg-emerald-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-emerald-100">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-book-quran text-base sm:text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-emerald-800 text-xs sm:text-sm mb-0.5 leading-tight">Hafalan</h3>
-                        <p class="text-[8px] sm:text-[10px] text-emerald-500 font-bold uppercase tracking-wider truncate">Juz Amma</p>
+                        <h3 class="font-bold text-emerald-800 text-[10px] sm:text-sm leading-tight">Hafalan</h3>
+                        <p class="text-[7px] sm:text-[9px] text-emerald-500 font-bold uppercase tracking-wider truncate">Juz Amma</p>
+                    </div>
+                </a>
+
+                <a href="/galeri" class="relative bg-purple-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-purple-100 shadow-sm">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-images text-base sm:text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-purple-800 text-[10px] sm:text-sm leading-tight">Galeri</h3>
+                        <p class="text-[7px] sm:text-[9px] text-purple-500 font-bold uppercase tracking-wider truncate">Foto Raport</p>
                     </div>
                 </a>
             </div>
@@ -254,8 +260,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     };
 
 
-    // 3. Data Fetching & Enrichment (Menghitung Peringkat)
-    const fetchDashboardData = async () => {
+// 3. Data Fetching & Enrichment (Menghitung Peringkat)
+const fetchDashboardData = async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
             const [dashRes, studentRes] = await Promise.all([
@@ -269,17 +275,21 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const studentData = await studentRes.json();
             const students = studentData.data || [];
 
-            // Render General Stats
-            document.getElementById('statStudents').innerText = dashData.data.total_students || 0;
-            document.getElementById('statTasks').innerText = dashData.data.pending_tasks || 0;
-            document.getElementById('statMessages').innerText = dashData.data.unread_messages || 0;
+            // [PERBAIKAN WIDGET]: Sesuaikan ID dengan HTML Celengan & Ujian Baru
+            const statStudentsEl = document.getElementById('statStudents') || document.getElementById('statTotalStudents');
+            if (statStudentsEl) statStudentsEl.innerText = dashData.data.total_students || students.length || 0;
+            
+            const statInfaqEl = document.getElementById('statInfaq');
+            if (statInfaqEl) statInfaqEl.innerText = dashData.data.active_infaq || 0;
+            
+            const statExamsEl = document.getElementById('statExams');
+            if (statExamsEl) statExamsEl.innerText = dashData.data.total_exams || 0;
 
             // ==============================================================
             // ENRICHMENT: Ambil nilai progress, absensi & FOTO untuk SEMUA anak
             // ==============================================================
             const enrichPromises = students.map(async (s) => {
                 try {
-                    // [UPDATE] Tambahkan fetch ke endpoint consultations untuk mengambil foto
                     const [progRes, attRes, consRes] = await Promise.all([
                         fetch(`${API_URL}/api/students/${s.id}/progress`, { headers }),
                         fetch(`${API_URL}/api/students/${s.id}/attendance`, { headers }),
@@ -318,8 +328,10 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         } catch (error) {
             console.error(error);
             if (window.showToast) window.showToast('danger', 'Error', 'Gagal memuat data dashboard.');
-            document.getElementById('studentList').innerHTML = '<div class="text-center py-6 text-red-500 text-xs font-bold">Gagal memuat.</div>';
-            document.getElementById('podiumContainer').innerHTML = '<div class="text-center w-full text-red-500 text-xs font-bold">Gagal memuat.</div>';
+            const stdList = document.getElementById('studentList');
+            if (stdList) stdList.innerHTML = '<div class="text-center py-6 text-red-500 text-xs font-bold">Gagal memuat.</div>';
+            const podium = document.getElementById('podiumContainer');
+            if (podium) podium.innerHTML = '<div class="text-center w-full text-red-500 text-xs font-bold">Gagal memuat.</div>';
         }
     };
 

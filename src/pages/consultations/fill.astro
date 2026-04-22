@@ -173,7 +173,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     const isPreview = urlParams.get('preview') === 'true'; 
 
     const parsedWeek = parseInt(week) || 1;
-    let timeLeft = parsedWeek === 1 ? 90 : 180;
+    // Ubah menjadi 105 detik (1 menit 45 detik) untuk semua sesi
+    let timeLeft = 105; 
     let finalTimeTaken = 0;
     
     const timeKey = `timer_${studentId}_${subject}_${week}`;
@@ -296,7 +297,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 else allQuestions = qData.data || [];
 
             } else {
-                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${parsedWeek === 1 ? '1.5' : '3'} menit untuk bagian akademik.`;
+                // Update teks instruksi agar sesuai dengan durasi baru
+                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu 1 menit 45 detik untuk mengerjakan 6 soal pilihan.`;
                 
                 const [stdRes, consRes, qRes] = await Promise.all([
                     fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
@@ -316,17 +318,20 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 allQuestions = qData.data || [];
             }
 
-            const targetDisplay = parsedWeek === 1 ? Math.min(3, allQuestions.length) : allQuestions.length;
+            // [STRATEGI ANTI-CONTEK]: Hanya ambil 6 soal secara acak dari total soal yang ada
+            const targetDisplay = 6; 
 
-            // [PERBAIKAN KUNCI]: MODE PREVIEW SELALU SHUFFLE BARU TANPA LOCALSTORAGE
             if (isPreview) {
-                questions = shuffleArray(allQuestions).slice(0, targetDisplay);
+                // Mode preview selalu acak murni tanpa simpan cache
+                questions = shuffleArray(allQuestions).slice(0, Math.min(targetDisplay, allQuestions.length));
             } else {
+                // Mode siswa: cek apakah urutan soal sudah tersimpan di browser (Anti-Refresh)
                 let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
                 questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
 
-                if (questions.length !== targetDisplay && targetDisplay > 0) {
-                    questions = shuffleArray(allQuestions).slice(0, targetDisplay);
+                // Jika belum ada cache atau jumlah soal berubah, lakukan pengacakan baru
+                if (questions.length === 0 && allQuestions.length > 0) {
+                    questions = shuffleArray(allQuestions).slice(0, Math.min(targetDisplay, allQuestions.length));
                     localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
                 }
             }
@@ -362,9 +367,23 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
 
     const renderPilganQuestion = (q, idx) => {
         const shuffledOptions = shuffleArray(Object.entries(q.options));
+        const mediaHtml = q.image_url ? `
+            <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
+                <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+                    <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
+                </div>
+                <img src="${q.image_url.trim()}"
+                     class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300"
+                     alt="Visual Soal"
+                     onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
+                     onerror="this.closest('.relative').style.display='none'">
+            </div>
+        ` : '';
+
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="pilgan">
             <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
+            ${mediaHtml}
             <div class="grid grid-cols-1 gap-2">
                 ${shuffledOptions.map(([key, val]) => `
                     <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50 active:bg-green-50 transition-colors cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-300">
@@ -377,9 +396,23 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     };
 
     const renderTrueFalseQuestion = (q, idx) => {
+        const mediaHtml = q.image_url ? `
+            <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
+                <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+                    <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
+                </div>
+                <img src="${q.image_url.trim()}"
+                     class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300"
+                     alt="Visual Soal"
+                     onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
+                     onerror="this.closest('.relative').style.display='none'">
+            </div>
+        ` : '';
+
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="tf">
-            <p class="text-sm font-bold text-gray-800 leading-relaxed text-center mb-6">${idx+1}. ${q.question}</p>
+            <p class="text-sm font-bold text-gray-800 leading-relaxed text-center mb-2">${idx+1}. ${q.question}</p>
+            ${mediaHtml}
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-100 cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-400 transition-all hover:bg-gray-50">
                     <input type="radio" name="q-${q.id}" value="A" class="hidden">
@@ -404,6 +437,18 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         });
         
         const shuffledOptions = shuffleArray(Object.entries(q.options));
+        const mediaHtml = q.image_url ? `
+            <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
+                <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+                    <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
+                </div>
+                <img src="${q.image_url.trim()}"
+                     class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300"
+                     alt="Visual Soal"
+                     onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
+                     onerror="this.closest('.relative').style.display='none'">
+            </div>
+        ` : '';
 
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="drag">
@@ -411,6 +456,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                 <span class="text-sm font-bold text-gray-800">${idx+1}.</span>
                 <p class="text-sm font-bold text-gray-800 leading-relaxed flex-1">${questionHtml}</p>
             </div>
+            ${mediaHtml}
             
             <div class="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-inner">
                 <p class="text-[10px] font-bold text-indigo-400 mb-3 uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-hand-pointer"></i> Ketuk kata di bawah untuk mengisi:</p>
@@ -698,7 +744,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
     document.getElementById('btnEarlyFinish').onclick = () => document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
     window.closeEarlyFinishModal = () => document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
     window.confirmEarlyFinish = () => {
-        const maxTime = parsedWeek === 1 ? 90 : 180;
+        const maxTime = 105;
         finalTimeTaken = maxTime - timeLeft; 
         timeLeft = 0;
         updateTimerUI();
@@ -820,7 +866,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
             const score = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
             
             // 2. Kalkulasi Waktu
-            const maxTime = parsedWeek === 1 ? 90 : 180;
+            const maxTime = 105;
             const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0');
             const secUsed = (timeUsed % 60).toString().padStart(2, '0');

@@ -716,187 +716,258 @@ import Toast from '../../components/Toast.astro';
 
     window.closeReviewModal = () => document.getElementById('modalReview').classList.replace('flex', 'hidden');
 
-    window.openReviewModal = async (subject, week) => {
-        const modal = document.getElementById('modalReview');
-        const container = document.getElementById('reviewContainer');
-        const subtitle = document.getElementById('reviewSubtitle');
-        
-        modal.classList.replace('hidden', 'flex');
-        container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>';
-        subtitle.innerText = `${subject.toUpperCase()} - MINGGU ${week}`;
+window.openReviewModal = async (subject, week) => {
+    const modal = document.getElementById('modalReview');
+    const container = document.getElementById('reviewContainer');
+    const subtitle = document.getElementById('reviewSubtitle');
+    
+    modal.classList.replace('hidden', 'flex');
+    container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>';
+    subtitle.innerText = `${subject.toUpperCase()} - MINGGU ${week}`;
 
-        try {
-            const res = await fetch(`${API_URL}/api/students/${studentId}/review/${subject}/${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
-            if (!res.ok) throw new Error('Gagal mengambil data review');
-            const result = await res.json();
-            const reviewData = result.data;
+    try {
+        const res = await fetch(`${API_URL}/api/students/${studentId}/review/${subject}/${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+        if (!res.ok) throw new Error('Gagal mengambil data review');
+        const result = await res.json();
+        const reviewData = result.data;
 
-            if (!reviewData.questions || reviewData.questions.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-8">Soal asli sudah dihapus atau tidak ditemukan.</p>';
-                return;
+        if (!reviewData.questions || reviewData.questions.length === 0) {
+            container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-8">Soal asli sudah dihapus atau tidak ditemukan.</p>';
+            return;
+        }
+
+        // Parsing JSON dengan aman
+        let studentAnswers = reviewData.result.student_answers;
+        if (typeof studentAnswers === 'string') {
+            try { studentAnswers = JSON.parse(studentAnswers); } catch(e) { studentAnswers = []; }
+        }
+        if (!Array.isArray(studentAnswers)) studentAnswers = [];
+
+        const isLegacyData = studentAnswers.length === 0;
+
+        // VARIABEL UNTUK MENGHITUNG STATISTIK
+        let correctCount = 0;
+        let wrongCount = 0;
+        let emptyCount = 0;
+
+        // 1. RENDER LIST SOAL SEKALIGUS MENGHITUNG STATISTIK
+        const questionsHtml = reviewData.questions.map((q, idx) => {
+            const type = q.type || 'pilgan';
+            
+            const ansObj = studentAnswers.find(a => String(a.question_id).trim() === String(q.id).trim());
+            const studentAns = ansObj ? ansObj.answer : null;
+
+            const safeStudentAns = studentAns ? String(studentAns).trim().toUpperCase() : '';
+            const safeCorrectAns = q.correct_answer ? String(q.correct_answer).trim().toUpperCase() : '';
+
+            let isCorrect = false;
+            if (safeStudentAns && safeCorrectAns) {
+                isCorrect = safeStudentAns === safeCorrectAns;
             }
 
-            // Parsing JSON dengan aman
-            let studentAnswers = reviewData.result.student_answers;
-            if (typeof studentAnswers === 'string') {
-                try { studentAnswers = JSON.parse(studentAnswers); } catch(e) { studentAnswers = []; }
+            // Hitung Statistik jika bukan data legacy
+            if (!isLegacyData) {
+                if (!safeStudentAns) emptyCount++;
+                else if (isCorrect) correctCount++;
+                else wrongCount++;
             }
-            if (!Array.isArray(studentAnswers)) studentAnswers = [];
 
-            // [KUNCI UX]: Cek apakah ini ujian versi lama (belum ada fitur simpan jawaban)
-            const isLegacyData = studentAnswers.length === 0;
+            let statusBadge = '';
+            if (!isLegacyData) {
+                statusBadge = isCorrect 
+                    ? `<span class="text-[9px] font-black bg-green-100 text-green-700 px-2 py-1 rounded shadow-sm border border-green-200"><i class="fa-solid fa-check mr-1"></i> BENAR</span>`
+                    : `<span class="text-[9px] font-black bg-red-100 text-red-600 px-2 py-1 rounded shadow-sm border border-red-200"><i class="fa-solid fa-xmark mr-1"></i> SALAH</span>`;
+            }
 
-            container.innerHTML = reviewData.questions.map((q, idx) => {
-                const type = q.type || 'pilgan';
-                
-                // Cari jawaban murid
-                const ansObj = studentAnswers.find(a => String(a.question_id).trim() === String(q.id).trim());
-                const studentAns = ansObj ? ansObj.answer : null;
+            let optionsHtml = '';
+            if (type === 'tf' || type === 'pilgan') {
+                const opts = Object.entries(q.options || {});
+                optionsHtml = `<div class="grid grid-cols-1 gap-2 mt-3">` + opts.map(([k, v]) => {
+                    const safeK = String(k).trim().toUpperCase();
+                    const isStudentChoice = safeStudentAns === safeK;
+                    const isTheCorrectKey = safeCorrectAns === safeK;
 
-                // Normalisasi string untuk komparasi aman
-                const safeStudentAns = studentAns ? String(studentAns).trim().toUpperCase() : '';
-                const safeCorrectAns = q.correct_answer ? String(q.correct_answer).trim().toUpperCase() : '';
+                    let optClass = "p-3 rounded-xl border flex items-center justify-between text-xs font-medium transition-all ";
+                    let iconHtml = "";
 
-                // Cek benar/salah
-                let isCorrect = false;
-                if (safeStudentAns && safeCorrectAns) {
-                    isCorrect = safeStudentAns === safeCorrectAns;
-                }
-
-                // Jangan tampilkan label jika ini ujian versi lama
-                let statusBadge = '';
-                if (!isLegacyData) {
-                    statusBadge = isCorrect 
-                        ? `<span class="text-[9px] font-black bg-green-100 text-green-700 px-2 py-1 rounded shadow-sm border border-green-200"><i class="fa-solid fa-check mr-1"></i> BENAR</span>`
-                        : `<span class="text-[9px] font-black bg-red-100 text-red-600 px-2 py-1 rounded shadow-sm border border-red-200"><i class="fa-solid fa-xmark mr-1"></i> SALAH</span>`;
-                }
-
-                let optionsHtml = '';
-
-                if (type === 'tf' || type === 'pilgan') {
-                    const opts = Object.entries(q.options || {});
-                    optionsHtml = `<div class="grid grid-cols-1 gap-2 mt-3">` + opts.map(([k, v]) => {
-                        const safeK = String(k).trim().toUpperCase();
-                        const isStudentChoice = safeStudentAns === safeK;
-                        const isTheCorrectKey = safeCorrectAns === safeK;
-
-                        let optClass = "p-3 rounded-xl border flex items-center justify-between text-xs font-medium transition-all ";
-                        let iconHtml = "";
-
-                        // Jika ujian versi lama, render biasa tanpa warna-warni jawaban
-                        if (isLegacyData) {
-                            optClass += "bg-white border-gray-100 text-gray-600";
-                        } else {
-                            if (isStudentChoice && isTheCorrectKey) {
-                                optClass += "bg-green-50 border-green-300 text-green-800 shadow-sm";
-                                iconHtml = `<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>`;
-                            } else if (isStudentChoice && !isTheCorrectKey) {
-                                optClass += "bg-red-50 border-red-300 text-red-800 shadow-sm opacity-90";
-                                iconHtml = `<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>`;
-                            } else if (!isStudentChoice && isTheCorrectKey) {
-                                optClass += "bg-green-50/30 border-green-200 text-green-700 border-dashed";
-                                iconHtml = `<i class="fa-solid fa-check text-green-400 text-lg"></i>`;
-                            } else {
-                                optClass += "bg-white border-gray-100 text-gray-400 opacity-60";
-                            }
-                        }
-
-                        const keyLabel = type === 'tf' ? (safeK === 'A' ? 'BENAR' : 'SALAH') : safeK;
-                        const badgeColor = isLegacyData ? 'bg-gray-100 text-gray-400' : (isTheCorrectKey ? 'bg-green-200 text-green-700' : isStudentChoice ? 'bg-red-200 text-red-700' : 'bg-gray-100 text-gray-400');
-
-                        return `<div class="${optClass}"><div class="flex items-center gap-3"><span class="w-6 h-6 rounded-full flex items-center justify-center font-black ${badgeColor} shrink-0">${keyLabel}</span><span>${v}</span></div>${iconHtml}</div>`;
-                    }).join('') + `</div>`;
-                } else if (type === 'drag') {
-                    const expectedKeys = safeCorrectAns.split(',');
-                    const answeredKeys = safeStudentAns.split(',');
-                    let blankIdx = 0;
-                    
-                    const questionWithAnswers = (q.question || '').replace(/\[BLANK\]/g, () => {
-                        const correctKey = expectedKeys[blankIdx] ? expectedKeys[blankIdx].trim() : null;
-                        const studentKey = answeredKeys[blankIdx] ? answeredKeys[blankIdx].trim() : null;
-
-                        let correctVal = '(kosong)';
-                        let studentVal = '(kosong)';
-
-                        if (q.options) {
-                            const originalCorrectKey = Object.keys(q.options).find(k => k.toUpperCase() === correctKey);
-                            if (originalCorrectKey) correctVal = q.options[originalCorrectKey];
-
-                            const originalStudentKey = Object.keys(q.options).find(k => k.toUpperCase() === studentKey);
-                            if (originalStudentKey) studentVal = q.options[originalStudentKey];
-                        }
-
-                        const isSlotCorrect = correctKey === studentKey;
-                        
-                        let html = '';
-                        if (isLegacyData) {
-                            // UI Kosong untuk Ujian Lama
-                            html = `<span class="inline-block px-2 py-1 mx-1 bg-gray-100 text-gray-400 border border-gray-200 rounded shadow-sm text-[10px] font-black">[ KOLOM JAWABAN ]</span>`;
-                        } else {
-                            if (!studentKey) {
-                            html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold opacity-80">(Kosong)</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
-                            } else if (isSlotCorrect) {
-                                html = `<span class="inline-block px-2 py-1 mx-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black"><i class="fa-solid fa-check mr-1"></i>${correctVal}</span>`;
-                            } else {
-                                html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold line-through opacity-80">${studentVal}</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
-                            }
-                        }
-                        blankIdx++;
-                        return html;
-                    });
-
-                    optionsHtml = `<div class="mt-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-inner"><p class="text-xs font-bold text-gray-800 leading-loose">${questionWithAnswers}</p></div>`;
-                    
-                    // Tampilkan kotak pilihan kata khusus untuk legacy agar tidak terlalu kosong
                     if (isLegacyData) {
-                        const dragOpts = `<div class="flex flex-wrap gap-2 mt-3">` + Object.entries(q.options || {}).map(([k, v]) => `<span class="px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 text-[10px] font-bold rounded-lg shadow-sm">${v}</span>`).join('') + `</div>`;
-                        optionsHtml += dragOpts;
-                    }
-                }
-
-                // INSIGHT / CATATAN JAWABAN (Disesuaikan untuk Legacy Data)
-                let insightHtml = '';
-                if (isLegacyData) {
-                    insightHtml = `<div class="mt-3 bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-start gap-2"><i class="fa-solid fa-clock-rotate-left text-gray-400 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-gray-600 leading-relaxed mb-0.5">Menampilkan soal yang diujikan di pertemuan ini.</p><p class="text-[9px] text-gray-400 font-medium">Fitur perekaman riwayat jawaban (Benar/Salah) belum tersedia saat anak mengerjakan ujian ini.</p></div></div>`;
-                } else if (!studentAns) {
-                    insightHtml = `<div class="mt-3 bg-red-50 p-3 rounded-xl border border-red-100 flex items-start gap-2"><i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-red-800 leading-relaxed">Anak tidak menjawab soal ini (Dikosongkan).</p></div></div>`;
-                } else if (isCorrect) {
-                    insightHtml = `<div class="mt-3 bg-green-50 p-3 rounded-xl border border-green-100 flex items-start gap-2"><i class="fa-solid fa-lightbulb text-green-500 mt-0.5"></i><p class="text-[10px] font-bold text-green-800 leading-relaxed">Hebat! Jawaban anak sudah tepat.</p></div>`;
-                } else {
-                    let correctAnswerText = '';
-                    if (type === 'drag') {
-                        correctAnswerText = 'Perhatikan urutan kata yang benar pada panah hijau di atas.';
-                    } else if (type === 'tf') {
-                        correctAnswerText = safeCorrectAns === 'A' ? 'BENAR' : 'SALAH';
+                        optClass += "bg-white border-gray-100 text-gray-600";
                     } else {
-                        const origKey = Object.keys(q.options || {}).find(k => k.toUpperCase() === safeCorrectAns);
-                        correctAnswerText = origKey ? q.options[origKey] : q.correct_answer;
+                        if (isStudentChoice && isTheCorrectKey) {
+                            optClass += "bg-green-50 border-green-300 text-green-800 shadow-sm";
+                            iconHtml = `<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>`;
+                        } else if (isStudentChoice && !isTheCorrectKey) {
+                            optClass += "bg-red-50 border-red-300 text-red-800 shadow-sm opacity-90";
+                            iconHtml = `<i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>`;
+                        } else if (!isStudentChoice && isTheCorrectKey) {
+                            optClass += "bg-green-50/30 border-green-200 text-green-700 border-dashed";
+                            iconHtml = `<i class="fa-solid fa-check text-green-400 text-lg"></i>`;
+                        } else {
+                            optClass += "bg-white border-gray-100 text-gray-400 opacity-60";
+                        }
                     }
+
+                    const keyLabel = type === 'tf' ? (safeK === 'A' ? 'BENAR' : 'SALAH') : safeK;
+                    const badgeColor = isLegacyData ? 'bg-gray-100 text-gray-400' : (isTheCorrectKey ? 'bg-green-200 text-green-700' : isStudentChoice ? 'bg-red-200 text-red-700' : 'bg-gray-100 text-gray-400');
+
+                    return `<div class="${optClass}"><div class="flex items-center gap-3"><span class="w-6 h-6 rounded-full flex items-center justify-center font-black ${badgeColor} shrink-0">${keyLabel}</span><span>${v}</span></div>${iconHtml}</div>`;
+                }).join('') + `</div>`;
+            } else if (type === 'drag') {
+                const expectedKeys = safeCorrectAns.split(',');
+                const answeredKeys = safeStudentAns.split(',');
+                let blankIdx = 0;
+                
+                const questionWithAnswers = (q.question || '').replace(/\[BLANK\]/g, () => {
+                    const correctKey = expectedKeys[blankIdx] ? expectedKeys[blankIdx].trim() : null;
+                    const studentKey = answeredKeys[blankIdx] ? answeredKeys[blankIdx].trim() : null;
+
+                    let correctVal = '(kosong)';
+                    let studentVal = '(kosong)';
+
+                    if (q.options) {
+                        const originalCorrectKey = Object.keys(q.options).find(k => k.toUpperCase() === correctKey);
+                        if (originalCorrectKey) correctVal = q.options[originalCorrectKey];
+
+                        const originalStudentKey = Object.keys(q.options).find(k => k.toUpperCase() === studentKey);
+                        if (originalStudentKey) studentVal = q.options[originalStudentKey];
+                    }
+
+                    const isSlotCorrect = correctKey === studentKey;
                     
-                    insightHtml = `<div class="mt-3 bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-amber-800 leading-relaxed mb-1">Kurang tepat. Coba lebih teliti lagi ya.</p><p class="text-[10px] text-amber-700 font-medium">Kunci Jawaban: <b class="font-black text-amber-900">${correctAnswerText}</b></p></div></div>`;
+                    let html = '';
+                    if (isLegacyData) {
+                        html = `<span class="inline-block px-2 py-1 mx-1 bg-gray-100 text-gray-400 border border-gray-200 rounded shadow-sm text-[10px] font-black">[ KOLOM JAWABAN ]</span>`;
+                    } else {
+                        if (!studentKey) {
+                           html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold opacity-80">(Kosong)</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
+                        } else if (isSlotCorrect) {
+                            html = `<span class="inline-block px-2 py-1 mx-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black"><i class="fa-solid fa-check mr-1"></i>${correctVal}</span>`;
+                        } else {
+                            html = `<span class="inline-flex items-center gap-1 mx-1 align-middle"><span class="inline-block px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded shadow-sm text-[10px] font-bold line-through opacity-80">${studentVal}</span><i class="fa-solid fa-arrow-right text-gray-300 text-[8px]"></i><span class="inline-block px-2 py-1 bg-green-100 text-green-700 border border-green-300 rounded shadow-sm text-[10px] font-black">${correctVal}</span></span>`;
+                        }
+                    }
+                    blankIdx++;
+                    return html;
+                });
+
+                optionsHtml = `<div class="mt-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-inner"><p class="text-xs font-bold text-gray-800 leading-loose">${questionWithAnswers}</p></div>`;
+                
+                if (isLegacyData) {
+                    const dragOpts = `<div class="flex flex-wrap gap-2 mt-3">` + Object.entries(q.options || {}).map(([k, v]) => `<span class="px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 text-[10px] font-bold rounded-lg shadow-sm">${v}</span>`).join('') + `</div>`;
+                    optionsHtml += dragOpts;
                 }
+            }
 
-                const badgeTipe = type === 'tf' ? '(Benar/Salah)' : type === 'drag' ? '(Drag & Drop)' : '(Pilihan Ganda)';
-                const sideBorder = isLegacyData ? 'bg-gray-300' : (!isCorrect ? 'bg-red-400' : 'bg-green-400');
+            let insightHtml = '';
+            if (isLegacyData) {
+                insightHtml = `<div class="mt-3 bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-start gap-2"><i class="fa-solid fa-clock-rotate-left text-gray-400 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-gray-600 leading-relaxed mb-0.5">Menampilkan soal yang diujikan di pertemuan ini.</p><p class="text-[9px] text-gray-400 font-medium">Fitur perekaman riwayat jawaban (Benar/Salah) belum tersedia saat anak mengerjakan ujian ini.</p></div></div>`;
+            } else if (!studentAns) {
+                insightHtml = `<div class="mt-3 bg-red-50 p-3 rounded-xl border border-red-100 flex items-start gap-2"><i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-red-800 leading-relaxed">Anak tidak menjawab soal ini (Dikosongkan).</p></div></div>`;
+            } else if (isCorrect) {
+                insightHtml = `<div class="mt-3 bg-green-50 p-3 rounded-xl border border-green-100 flex items-start gap-2"><i class="fa-solid fa-lightbulb text-green-500 mt-0.5"></i><p class="text-[10px] font-bold text-green-800 leading-relaxed">Hebat! Jawaban anak sudah tepat.</p></div>`;
+            } else {
+                let correctAnswerText = '';
+                if (type === 'drag') {
+                    correctAnswerText = 'Perhatikan urutan kata yang benar pada panah hijau di atas.';
+                } else if (type === 'tf') {
+                    correctAnswerText = safeCorrectAns === 'A' ? 'BENAR' : 'SALAH';
+                } else {
+                    const origKey = Object.keys(q.options || {}).find(k => k.toUpperCase() === safeCorrectAns);
+                    correctAnswerText = origKey ? q.options[origKey] : q.correct_answer;
+                }
+                
+                insightHtml = `<div class="mt-3 bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i><div class="flex-1"><p class="text-[10px] font-bold text-amber-800 leading-relaxed mb-1">Kurang tepat. Coba lebih teliti lagi ya.</p><p class="text-[10px] text-amber-700 font-medium">Kunci Jawaban: <b class="font-black text-amber-900">${correctAnswerText}</b></p></div></div>`;
+            }
 
-                return `
-                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 ${sideBorder}"></div>
-                    <div class="flex justify-between items-start mb-2 pl-2">
-                        <span class="text-[10px] font-bold text-gray-400">SOAL ${idx + 1} <span class="text-gray-300 ml-1">${badgeTipe}</span></span>
-                        ${statusBadge}
+            const badgeTipe = type === 'tf' ? '(Benar/Salah)' : type === 'drag' ? '(Drag & Drop)' : '(Pilihan Ganda)';
+            const sideBorder = isLegacyData ? 'bg-gray-300' : (!isCorrect ? 'bg-red-400' : 'bg-green-400');
+
+            return `
+            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1 ${sideBorder}"></div>
+                <div class="flex justify-between items-start mb-2 pl-2">
+                    <span class="text-[10px] font-bold text-gray-400">SOAL ${idx + 1} <span class="text-gray-300 ml-1">${badgeTipe}</span></span>
+                    ${statusBadge}
+                </div>
+                <p class="text-sm font-bold text-gray-800 leading-relaxed pl-2">${type === 'drag' ? 'Lengkapi kalimat rumpang di bawah:' : q.question}</p>
+                ${optionsHtml}
+                ${insightHtml}
+            </div>`;
+        }).join('');
+
+        // 2. BUILD SUMMARY CARD DENGAN PESAN MOTIVASI
+        const score = reviewData.result.score || 0;
+        const timeTaken = reviewData.result.time_taken ? `${reviewData.result.time_taken} dtk` : '-';
+        
+        let msgText = ""; let msgColor = ""; let msgIcon = "";
+        if (score >= 90) {
+            msgText = "Masya Allah, sempurna! Kemampuan anak ini sangat luar biasa. Pertahankan ya!";
+            msgColor = "green"; msgIcon = "fa-star";
+        } else if (score >= 70) {
+            msgText = "Alhamdulillah, nilai yang bagus! Tinggal sedikit lagi dorongan agar bisa maksimal.";
+            msgColor = "blue"; msgIcon = "fa-thumbs-up";
+        } else {
+            msgText = "Tetap semangat! Jadikan ini pelajaran berharga agar anak lebih teliti lagi ke depannya.";
+            msgColor = "amber"; msgIcon = "fa-hand-holding-heart";
+        }
+
+        const summaryHtml = `
+            <div class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm mb-2">
+                <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+                    <div class="bg-${msgColor}-50 p-2 rounded-2xl border border-${msgColor}-100 flex flex-col justify-center">
+                        <p class="text-[9px] text-${msgColor}-600 font-bold uppercase tracking-widest mb-1">Skor Akhir</p>
+                        <p class="text-2xl font-black text-${msgColor}-700">${score}</p>
                     </div>
-                    <p class="text-sm font-bold text-gray-800 leading-relaxed pl-2">${type === 'drag' ? 'Lengkapi kalimat rumpang di bawah:' : q.question}</p>
-                    ${optionsHtml}
-                    ${insightHtml}
-                </div>`;
-            }).join('');
+                    <div class="bg-gray-50 p-2 rounded-2xl border border-gray-200 flex flex-col justify-center">
+                        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Statistik</p>
+                        <p class="text-xs font-black text-gray-800 mt-1 leading-tight">
+                            ${isLegacyData ? '-' : `<span class="text-green-600">${correctCount} B</span> / <span class="text-red-500">${wrongCount} S</span><br><span class="text-gray-400 text-[10px]">${emptyCount} Kosong</span>`}
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-2 rounded-2xl border border-gray-200 flex flex-col justify-center">
+                        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Waktu</p>
+                        <p class="text-sm font-black text-gray-800 mt-1">${timeTaken}</p>
+                    </div>
+                </div>
+                <div class="bg-${msgColor}-50/50 p-3 rounded-xl border border-${msgColor}-100 flex gap-3 items-center">
+                    <div class="w-8 h-8 rounded-full bg-${msgColor}-100 text-${msgColor}-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${msgIcon}"></i>
+                    </div>
+                    <p class="text-[10px] font-bold text-${msgColor}-800 leading-relaxed">${msgText}</p>
+                </div>
+            </div>
+        `;
 
+        // 3. GABUNGKAN SUMMARY CARD + LIST SOAL KE DALAM CONTAINER
+        container.innerHTML = summaryHtml + questionsHtml;
+
+    } catch (error) {
+        container.innerHTML = `<div class="text-center py-8"><p class="text-xs text-red-500 font-bold">${error.message}</p></div>`;
+    }
+};
+
+
+// ==========================================
+    // RADAR FOTO RAPORT TERBARU
+    // ==========================================
+    window.getLatestRaportPhoto = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/latest-photo`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!res.ok) throw new Error('Gagal fetch foto');
+            
+            const result = await res.json();
+            
+            // result.data akan berisi URL string foto terbarunya (atau null jika belum pernah difoto)
+            return result.data; 
+            
         } catch (error) {
-            container.innerHTML = `<div class="text-center py-8"><p class="text-xs text-red-500 font-bold">${error.message}</p></div>`;
+            console.error("Gagal mengambil foto raport:", error);
+            return null; // Kembalikan null jika gagal agar raport tidak crash
         }
     };
-
 
     const initAttChart = (stats) => {
         const canvas = document.getElementById('attendanceChart');
@@ -1030,12 +1101,17 @@ import Toast from '../../components/Toast.astro';
             }
 
             const todoContainer = document.getElementById('todoContainer');
-            todoContainer.innerHTML = todos.data.length ? todos.data.map(item => `
-                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-                    <button onclick="toggleTodo('${item.id}', '${item.status}')" class="mt-1 w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-colors ${item.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent'}"><i class="fa-solid fa-check text-[10px]"></i></button>
-                    <div><h4 class="font-bold text-gray-800 text-sm ${item.status === 'done' ? 'line-through opacity-50' : ''}">${item.title}</h4><p class="text-xs text-gray-500 mt-1">${item.description}</p></div>
-                </div>
-            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada tugas.</p>';
+            
+            // Filter: Hanya ambil tugas yang statusnya belum 'done'
+            const isLaggingOverall = lagStatus.data && Object.values(lagStatus.data).some(v => v.isLagging);
+            
+            if (!isLaggingOverall) {
+                // Jika tidak ada yang tertinggal, tampilkan teks kosong
+                todoContainer.innerHTML = '<div class="text-center py-8"><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Alhamdulillah, Tidak ada tanggungan susulan.</p></div>';
+            } else {
+                // Jika ada yang tertinggal, kosongkan kontainer ini karena Banner Merah/Orange sudah mengambil alih di atasnya
+                todoContainer.innerHTML = ''; 
+            }
 
             const consContainer = document.getElementById('consContainer');
             consContainer.innerHTML = globalConsultations.data.length ? globalConsultations.data.map(item => `
@@ -1055,7 +1131,7 @@ import Toast from '../../components/Toast.astro';
         } catch (error) { console.error('fetchData Error:', error); }
     };
 
-    window.toggleTodo = async (id, status) => { /* logic update todo... */ await fetchData(); };
+    // window.toggleTodo = async (id, status) => { /* logic update todo... */ await fetchData(); };
 
     // --- SWITCHERS ---
     const setupTabs = (btn1, btn2, cnt1, cnt2) => {
@@ -1161,7 +1237,7 @@ import Toast from '../../components/Toast.astro';
     });
 
 // ================================================================
-    // AKSI FOTO MODAL (Update: Gabungan Konsultasi + Ujian)
+    // AKSI FOTO MODAL (Update: Konsultasi + Ujian + Galeri Bebas)
     // ================================================================
     window.acakFotoRaport = async () => {
         const btn         = document.getElementById('btnAcakFoto');
@@ -1169,39 +1245,57 @@ import Toast from '../../components/Toast.astro';
         const previewImg  = document.getElementById('fotoPreviewImg');
         const placeholder = document.getElementById('fotoPlaceholder');
 
-        // 1. Kumpulkan URL foto dari sesi Konsultasi
-        const fotoKonsul = (globalConsultations?.data || [])
-            .filter(c => c.image_url)
-            .map(c => c.image_url);
-
-        // 2. Kumpulkan URL foto dari jepretan Ujian (Anti-Cheat)
-        const fotoUjian = (studentExamResults || [])
-            .filter(e => e.capture_url)
-            .map(e => e.capture_url);
-
-        // 3. Gabungkan semua foto menjadi satu array
-        const semuaFotoUrl = [...fotoKonsul, ...fotoUjian];
-
-        if (semuaFotoUrl.length === 0) {
-            statusText.innerText = 'Belum ada foto dari kuesioner maupun ujian anak ini.';
-            return;
-        }
-
-        // 4. Pilih 1 URL secara acak dari total gabungan
-        selectedFotoUrl = semuaFotoUrl[Math.floor(Math.random() * semuaFotoUrl.length)];
-        
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
 
         try {
+            // 1. Kumpulkan URL foto dari sesi Konsultasi
+            const fotoKonsul = (globalConsultations?.data || [])
+                .filter(c => c.image_url)
+                .map(c => c.image_url);
+
+            // 2. Kumpulkan URL foto dari jepretan Ujian (Anti-Cheat)
+            // Asumsi studentExamResults sudah dideklarasikan sebelumnya
+            const fotoUjian = (typeof studentExamResults !== 'undefined' ? studentExamResults : [])
+                .filter(e => e.capture_url)
+                .map(e => e.capture_url);
+
+            // 3. Kumpulkan URL foto dari Galeri Gaya Bebas (Fetch langsung)
+            let fotoGaleri = [];
+            try {
+                const resGaleri = await fetch(`${API_URL}/api/students/${studentId}/gallery`, { 
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resGaleri.ok) {
+                    const galData = await resGaleri.json();
+                    fotoGaleri = (galData.data || []).map(g => g.image_url);
+                }
+            } catch (err) {
+                console.log("Gagal mengambil galeri untuk diacak", err);
+            }
+
+            // 4. Gabungkan ketiga sumber foto menjadi satu array
+            const semuaFotoUrl = [...fotoKonsul, ...fotoUjian, ...fotoGaleri];
+
+            if (semuaFotoUrl.length === 0) {
+                statusText.innerText = 'Belum ada foto dari kuesioner, ujian, maupun galeri.';
+                btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Acak Foto';
+                btn.disabled = false;
+                return;
+            }
+
+            // 5. Pilih 1 URL secara acak dari total gabungan
+            selectedFotoUrl = semuaFotoUrl[Math.floor(Math.random() * semuaFotoUrl.length)];
+            
             selectedFotoBase64 = await urlToBase64(selectedFotoUrl);
             previewImg.src = selectedFotoBase64;
             previewImg.classList.remove('hidden');
             placeholder.classList.add('hidden');
-            document.getElementById('btnHapusFoto').classList.remove('hidden');
             
-            // Ubah teks status agar Ustadz tahu fotonya berhasil dimuat
-            statusText.innerText = 'Foto berhasil dipilih!';
+            const btnHapus = document.getElementById('btnHapusFoto');
+            if(btnHapus) btnHapus.classList.remove('hidden');
+            
+            statusText.innerText = 'Foto berhasil diacak & dipilih!';
         } catch (e) {
             console.error('Foto gagal diload:', e);
             statusText.innerText = 'Gagal memuat foto. Coba lagi.';

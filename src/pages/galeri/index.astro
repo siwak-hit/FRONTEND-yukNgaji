@@ -1,0 +1,80 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+---
+
+<Layout title="Pilih Siswa - Galeri yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50 flex flex-col">
+        
+        <header class="flex items-center gap-4 mb-8">
+            <a href="/dashboard" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-gray-600 active:scale-95 transition-all">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 tracking-tight">Galeri Foto</h1>
+                <p class="text-xs text-gray-400 mt-0.5 font-medium uppercase tracking-widest">Pilih Siswa</p>
+            </div>
+        </header>
+
+        <div class="relative mb-6">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="searchInput" placeholder="Cari nama siswa..." class="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-purple-500 outline-none shadow-sm">
+        </div>
+
+        <div id="studentList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-purple-500 text-2xl"></i></div>
+        </div>
+
+    </div>
+    
+    <NavbarGuru activeMenu="dashboard" />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+
+    let allStudents = [];
+
+    const fetchStudents = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!res.ok) throw new Error('Gagal memuat');
+            const result = await res.json();
+            allStudents = result.data || [];
+            renderStudents(allStudents);
+        } catch (e) {
+            document.getElementById('studentList').innerHTML = '<p class="col-span-full text-center text-xs font-bold text-red-500">Gagal memuat data siswa.</p>';
+        }
+    };
+
+    const renderStudents = (data) => {
+        const container = document.getElementById('studentList');
+        if (data.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center text-xs font-bold text-gray-400 py-8">Tidak ada siswa ditemukan.</p>';
+            return;
+        }
+
+        container.innerHTML = data.map(s => `
+            <a href="/galeri/${s.id}" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-purple-200 hover:bg-purple-50 transition-all active:scale-95">
+                <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 font-black flex items-center justify-center text-lg shrink-0">
+                    ${s.name.substring(0,2).toUpperCase()}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-gray-800 text-sm truncate">${s.name}</h3>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 truncate">${s.grade}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+            </a>
+        `).join('');
+    };
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(query));
+        renderStudents(filtered);
+    });
+
+    fetchStudents();
+</script>
