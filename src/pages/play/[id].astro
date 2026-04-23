@@ -22,6 +22,7 @@ import Toast from '../../components/Toast.astro';
         <div class="rule-item"><div class="rule-dot"></div><span>Kerjakan ujian ini dengan <strong>jujur</strong> dan mandiri.</span></div>
         <div class="rule-item"><div class="rule-dot"></div><span class="text-red-500">Selama ujian, Anda <strong>DILARANG KELUAR</strong> atau memuat ulang halaman.</span></div>
         <div class="rule-item"><div class="rule-dot"></div><span>Tarik napas, <strong>relax</strong>, dan jangan panik!</span></div>
+        <div class="rule-item"><div class="rule-dot"></div><span>Oh ya, jangan lupa ajak <strong>MIAW</strong>, bermain agar dia tidak rewel!</span></div>
       </div>
       
       <button onclick="triggerCountdown(this)" class="btn-3d btn-indigo w-full py-4 text-lg">
@@ -51,6 +52,22 @@ import Toast from '../../components/Toast.astro';
         <video id="hiddenVideo" autoplay playsinline class="hidden"></video>
         <canvas id="hiddenCanvas" class="hidden"></canvas>
     </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js" is:inline></script>
+  
+  <button id="btnToggleCat" onclick="toggleMascot()" class="fixed bottom-[110px] left-6 w-12 h-12 bg-white/80 backdrop-blur-md border-2 border-indigo-100 text-indigo-400 rounded-2xl shadow-lg z-[90] flex items-center justify-center text-2xl hover:text-indigo-600 hover:border-indigo-400 hover:scale-110 hover:-translate-y-1 transition-all opacity-50 hover:opacity-100" title="Usir / Panggil Miaw">
+    <i id="toggleCatIcon" class="fa-solid fa-cat"></i>
+  </button>
+
+  <div id="mascot-container">
+    <div id="mascot-chat" class="mascot-bubble hidden">
+      <strong>MIAWW!</strong> <br/>
+      <span id="mascot-chat-text" class="italic text-xs text-gray-500"></span>
+    </div>
+    
+    <div id="mascot-lottie-hidden" style="position: absolute; opacity: 0; pointer-events: none; width: 180px; height: 180px;"></div>
+    
+    <canvas id="mascot-lottie" width="180" height="180" class="cursor-pointer drop-shadow-xl" onclick="handleCatClick()"></canvas>
   </div>
 
   <div class="exam-shell">
@@ -157,6 +174,21 @@ import Toast from '../../components/Toast.astro';
     </div>
   </div>
 
+  <div id="modalMiawLetter" class="modal-backdrop hidden z-[260]">
+    <div class="modal-box animate-slide-up border-2 border-amber-500">
+      <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5 border border-amber-100 shadow-inner">
+          <i class="fa-solid fa-envelope-open-text animate-bounce"></i>
+      </div>
+      <h3 class="text-2xl font-black text-gray-800 mb-2">Surat dari Miaw!</h3>
+      <p class="text-xs font-bold text-gray-500 mb-8 leading-relaxed">
+          "Ups! Maaf ya udah ngambil 1 menit berhargamu, dan bikin waktunya jadi cepet! Mwehehehe~"
+      </p>
+      <button onclick="document.getElementById('modalMiawLetter').classList.replace('flex', 'hidden')" class="btn-3d btn-indigo w-full py-4 text-lg">
+          Tutup Surat
+      </button>
+    </div>
+  </div>
+
   <div id="modalFinish" class="modal-backdrop hidden">
     <div class="finish-box animate-slide-up relative overflow-hidden">
       <div id="resultEmoji" class="text-7xl mb-2 animate-bounce drop-shadow-md">🏆</div>
@@ -225,6 +257,16 @@ import Toast from '../../components/Toast.astro';
     let cameraStream = null;
     let hasCapturedPhoto = false;
     let capturedBase64 = null;
+    let isCatDismissed = false;
+
+    let miawIdleTimer = null;
+    let miawPrankTimer = null;
+    let isQuestionHidden = false;
+
+    let miawComebackTimer = null; 
+    let isCatReturnedAutonomously = false; 
+    let isTimeStolen = false;
+    let miawToastTimer = null;
 
     // POOL KATA MOTIVASI
     const relaxQuotes = [
@@ -256,6 +298,7 @@ import Toast from '../../components/Toast.astro';
 
     const init = async () => {
         try {
+            preloadCatAnimations();
             if (isPreview) {
                 document.getElementById('previewBanner').classList.remove('hidden');
                 document.getElementById('studentNameDisplay').innerText = "Mode Ustadz";
@@ -434,6 +477,11 @@ import Toast from '../../components/Toast.astro';
     // LOGIKA PERPINDAHAN SOAL & TRIGGER KAMERA DI PERTENGAHAN
     // =======================================================================
     window.navigate = (dir) => {
+        
+        if (isQuestionHidden) {
+            window.showToast?.('danger', 'Ups!', 'Jawabannya dibawa kabur Miaw! Panggil dia dulu gih.');
+            return;
+        }
         if (dir === 1 && currentIndex === questions.length - 1) { 
             submitExam(); return; 
         }
@@ -501,22 +549,38 @@ import Toast from '../../components/Toast.astro';
         window.history.pushState(null, null, window.location.href);
 
         updateTimerUI();
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) { 
-                timeLeft = 0; 
-                clearInterval(timerInterval); 
-                window.showToast?.('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.'); 
-                submitExam(); 
-            } else {
-                updateTimerUI();
-                
-                const elapsed = totalDurationSeconds - timeLeft;
-                if (elapsed > 0 && elapsed % 60 === 0 && timeLeft > 0) {
-                    showTimeReminder(Math.floor(elapsed / 60));
-                }
-            }
-        }, 1000);
+        runExamTimer(1000);
+
+    };
+
+    // Kucing balik sendiri karena bosen di luar
+    const autonomousReturn = () => {
+        // Jangan balik kalau dia lagi nyembunyiin soal, atau nyolong waktu, atau user udah manggil duluan
+        if (!isCatDismissed || isQuestionHidden || isTimeStolen) return;
+        
+        isCatDismissed = false;
+        isCatReturnedAutonomously = true; // Tandai bahwa dia balik sendiri (bukan dipanggil)
+
+        catState = "ENTERING";
+        applyCatState("ENTERING");
+
+        const mascotContainer = document.getElementById('mascot-container');
+        mascotContainer.style.transition = 'right 2s ease-out, transform 2s ease-out';
+        mascotContainer.style.right = '20px';
+        mascotContainer.style.transform = 'translateX(0) scale(1)';
+
+        const icon = document.getElementById('toggleCatIcon');
+        icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+        setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
+
+        setCatChat('small', "Bosan ih sendirian di luar... Aku ikut nongkrong sini lagi ya! Miaw~");
+
+        setTimeout(() => {
+            catState = "IDLE_EDGE";
+            applyCatState("IDLE_EDGE");
+            resetMiawTimer();
+            startRandomChats();
+        }, CAT_CONFIG.ENTERING.lottieDuration);
     };
 
     window.showTimeReminder = (minutesPassed) => {
@@ -563,6 +627,7 @@ import Toast from '../../components/Toast.astro';
     const submitExam = async () => {
         clearInterval(timerInterval);
         isExamActive = false;
+        localStorage.removeItem('cat_help_used');
 
         let correct = 0, skipped = 0;
         questions.forEach(q => {
@@ -624,6 +689,667 @@ import Toast from '../../components/Toast.astro';
             } catch(e) { console.error(e); }
         }
     };
+
+// =======================================================================
+    // 🐈 SISTEM KUCING MASKOT V4 (CUSTOM ENGINE & DUAL CANVAS)
+    // =======================================================================
+
+    // -----------------------------------------------------------------------
+    // ⚙️ PENGATURAN UTAMA (OTAK-ATIK DI SINI SAJA)
+    // -----------------------------------------------------------------------
+    
+    // PENGATURAN PENGHAPUS BACKGROUND (GREEN SCREEN)
+    const CHROMA_KEY = {
+        r: 202, g: 169, b: 0, // Warna target (#caa900)
+        tolerance: 40         // Naikkan jika sisa kuning masih ada, turunkan jika kucing ikut bolong
+    };
+
+    // PENGATURAN STATE ANIMASI KUCING
+    const CAT_CONFIG = {
+        ENTERING: { 
+            path: '/CAT LOTTIE/WALK TO SIT.json', 
+            loop: false, speed: 1.0, lottieDuration: 8000, 
+            data: null // <-- Tambahkan ini
+        },
+        IDLE_EDGE: { 
+            path: '/CAT LOTTIE/SIT IDDLE.json', 
+            loop: true, speed: 1.0, lottieDuration: 7000, 
+            data: null // <-- Tambahkan ini
+        },
+        TOWARD: { 
+            path: '/CAT LOTTIE/WALK FORWARD.json', 
+            loop: false, speed: 1.0, lottieDuration: 5000, 
+            data: null // <-- Tambahkan ini
+        },
+        CLOSEUP: { 
+            path: '/CAT LOTTIE/IDDLE CLOSE UP.json', 
+            loop: true, speed: 1.0, lottieDuration: 8000, 
+            data: null // <-- Tambahkan ini
+        },
+        RETREATING: { 
+            path: '/CAT LOTTIE/WALK TO BACK.json', 
+            loop: false, speed: 1.0, lottieDuration: 8000, 
+            data: null // <-- Tambahkan ini
+        },
+        LEAVING: { 
+            path: '/CAT LOTTIE/SIT TO WALK.json', // Sesuaikan nama file JSON kamu
+            loop: false, speed: 1.0, lottieDuration: 8000, 
+            data: null 
+        }
+    };
+
+    const preloadCatAnimations = async () => {
+        const keys = Object.keys(CAT_CONFIG);
+        const promises = keys.map(async (key) => {
+            try {
+                const response = await fetch(CAT_CONFIG[key].path);
+                CAT_CONFIG[key].data = await response.json();
+            } catch (err) {
+                console.error(`Gagal memuat animasi kucing: ${key}`, err);
+            }
+        });
+        await Promise.all(promises);
+    };
+
+    // -----------------------------------------------------------------------
+    // 🐈 LOGIKA USIR / PANGGIL KUCING (TOGGLE)
+    // -----------------------------------------------------------------------
+    window.toggleMascot = () => {
+        resetMiawTimer(); 
+        const mascotContainer = document.getElementById('mascot-container');
+        const icon = document.getElementById('toggleCatIcon');
+
+        // ==========================================
+        // JIKA KUCING ADA (Mau Diusir)
+        // ==========================================
+        if (!isCatDismissed) {
+            if (catState === "ENTERING" || catState === "TOWARD" || catState === "LEAVING" || catState === "HIDDEN") return;
+            
+            // CEK: APAKAH DIA BALIK SENDIRI KEMUDIAN DIUSIR LAGI?
+            if (isCatReturnedAutonomously) {
+                // INI ADALAH PENGUSIRAN KEDUA
+                setCatChat('large', "Miaw!! Yakin nih mau ngusir aku lagi?", 'ASK_THREAT');
+                return; // Berhenti di sini, tunggu user klik tombol Ya/Tidak di bubble
+            }
+
+            // PENGUSIRAN NORMAL (PERTAMA KALI ATAU DIPANGGIL MANUAL)
+            isCatDismissed = true;
+            isCatReturnedAutonomously = false; // Reset tanda
+            clearInterval(chatTimer); 
+            clearTimeout(miawIdleTimer); 
+            clearTimeout(miawPrankTimer);
+            clearTimeout(miawComebackTimer); 
+            
+            catState = "LEAVING";
+            applyCatState("LEAVING");
+
+            // Pergi tanpa ngancam waktu
+            setCatChat('large', "Dih ngusir... Yaudah kerjain aja sendiri!");
+            icon.className = "fa-solid fa-cat text-gray-300 opacity-50"; 
+
+            setTimeout(() => {
+                mascotContainer.style.transition = 'right 3s linear, transform 3s linear';
+                mascotContainer.style.right = '-250px';
+                mascotContainer.style.transform = 'translateX(0) scale(1)';
+            }, 3000); 
+
+            // Atur waktu acak 20-30 detik untuk Miaw balik sendiri
+            miawComebackTimer = setTimeout(() => {
+                autonomousReturn();
+            }, Math.floor(Math.random() * 10000) + 20000); 
+        } 
+        
+        // ==========================================
+        // JIKA KUCING DI LUAR (Mau Dipanggil Masuk)
+        // ==========================================
+        else {
+            clearTimeout(miawComebackTimer); // Batalkan niat balik sendiri
+            clearTimeout(miawToastTimer);    // Batalkan toast hint jika user inisiatif manggil duluan
+            
+            isCatDismissed = false;
+            catState = "ENTERING";
+            applyCatState("ENTERING");
+
+            mascotContainer.style.transition = 'right 2s ease-out, transform 2s ease-out';
+            mascotContainer.style.right = '20px';
+            mascotContainer.style.transform = 'translateX(0) scale(1)';
+
+            icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+            setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
+
+            // SKENARIO 1: Miaw abis nyembunyiin soal
+            if (isQuestionHidden) {
+                setCatChat('large', "Giliran sekarang kamu mau ngajak main aku kan miaw miaw...");
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatChat('large', "Apa? Soalnya hilang? Yaudah maap aku balikin deh miaw miaw..");
+                    setTimeout(() => {
+                        const qCard = document.getElementById('questionCard');
+                        const qOptions = document.getElementById('optionsGrid');
+                        qCard.style.opacity = '1'; qOptions.style.opacity = '1';
+                        qCard.style.pointerEvents = 'auto'; qOptions.style.pointerEvents = 'auto';
+                        isQuestionHidden = false; 
+                        resetMiawTimer(); startRandomChats();
+                    }, 3000);
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+            } 
+            // SKENARIO 2: Miaw abis nyuri waktu
+            else if (isTimeStolen) {
+                isTimeStolen = false;
+                // INSTAN: Kembalikan kecepatan timer ke 1 detik tanpa nambah 60 detik
+                runExamTimer(1000); 
+                
+                setCatChat('large', "Nah gitu dong manggil... Maap deh, Waktu udah aku normalin lagi miaw!");
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    resetMiawTimer(); // Mulai lagi timer kebosanan dari 0
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+            }
+            // SKENARIO 3: Panggilan biasa
+            else {
+                setCatChat('small', "Ciee manggil lagi... Butuh bantuan kan?");
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatChat('small', "Yaudah, aku temenin lagi. Jangan cuekin aku ya!");
+                    resetMiawTimer();
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+            }
+        }
+    };
+
+    // =======================================================================
+    // LOGIKA TIMER DINAMIS (BISA DIPERCEPAT MIAW)
+    // =======================================================================
+    const runExamTimer = (speed = 1000) => {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (window.isTimeStoppedByCat) return;
+            timeLeft--;
+            if (timeLeft <= 0) { 
+                timeLeft = 0; 
+                clearInterval(timerInterval); 
+                window.showToast?.('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.'); 
+                submitExam(); 
+            } else {
+                updateTimerUI();
+                const elapsed = totalDurationSeconds - timeLeft;
+                // Reminder 1 menit hanya jalan saat kecepatan timer normal
+                if (elapsed > 0 && elapsed % 60 === 0 && timeLeft > 0 && speed === 1000) {
+                    showTimeReminder(Math.floor(elapsed / 60));
+                }
+            }
+        }, speed);
+    };
+
+    // -----------------------------------------------------------------------
+    // 😾 LOGIKA KUCING NGAMBEK & ISENG
+    // -----------------------------------------------------------------------
+    const resetMiawTimer = () => {
+        clearTimeout(miawIdleTimer);
+        clearTimeout(miawPrankTimer);
+
+        // Jangan hitung waktu kalau kucing lagi diusir, belum masuk, soal disembunyikan, 
+        // ATAU saat Miaw sedang menghukum timer (isTimeStolen)
+        if (isCatDismissed || isQuestionHidden || catState === "HIDDEN" || catState === "RETREATING" || isTimeStolen) return;
+
+        miawIdleTimer = setTimeout(() => {
+            triggerMiawWarning();
+        }, 60000); 
+    };
+
+    const triggerMiawWarning = () => {
+        if (catState !== "IDLE_EDGE") return;
+        
+        const warnings = [
+            "Miaw... kok kamu gak mau main sama aku?",
+            "Dicuekin terus nih... Aku bosan! Miaw...",
+            "Kamu asyik sendiri ya? Liatin aku dong sesekali!"
+        ];
+        setCatChat('large', warnings[Math.floor(Math.random() * warnings.length)]);
+
+        // Kasih waktu 15 detik setelah peringatan. Kalau tetap dicuekin, dia iseng!
+        miawPrankTimer = setTimeout(() => {
+            triggerMiawPrank();
+        }, 15000); 
+    };
+
+    const triggerMiawPrank = () => {
+        if (isCatDismissed) return;
+
+        isQuestionHidden = true;
+        isCatDismissed = true; // Anggap dia kabur
+        clearInterval(chatTimer); // Hentikan ocehan random
+
+        // Teks jahil
+        setCatChat('large', "Ok! Kalo kamu gak mau main sama aku, aku yang bakal mainin kamu! Mwehehehe~");
+
+        // FADE OUT SOAL & JAWABAN
+        const qCard = document.getElementById('questionCard');
+        const qOptions = document.getElementById('optionsGrid');
+        qCard.style.transition = 'opacity 1.5s ease, filter 1.5s ease';
+        qOptions.style.transition = 'opacity 1.5s ease, filter 1.5s ease';
+        
+        qCard.style.opacity = '0';
+        qOptions.style.opacity = '0';
+        qCard.style.pointerEvents = 'none'; // Bikin ga bisa diklik
+        qOptions.style.pointerEvents = 'none';
+
+        // Miaw ketawa dan pergi
+        catState = "LEAVING";
+        applyCatState("LEAVING");
+
+        const mascotContainer = document.getElementById('mascot-container');
+        const icon = document.getElementById('toggleCatIcon');
+
+        setTimeout(() => {
+            mascotContainer.style.transition = 'right 3s linear, transform 3s linear';
+            mascotContainer.style.right = '-250px';
+            mascotContainer.style.transform = 'translateX(0) scale(1)';
+            icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200"; // Ganti warna icon jadi merah minta dipanggil
+        }, 3000);
+    };
+
+    // -----------------------------------------------------------------------
+    // 🧠 LOGIKA SYSTEM (JANGAN DIUBAH KECUALI MAU NAMBAH FITUR)
+    // -----------------------------------------------------------------------
+    let catState = "HIDDEN"; 
+    let catAnim = null;
+    let chatTimer = null;
+    let collisionRadar = null; 
+    window.isTimeStoppedByCat = false;
+
+    // FUNGSI LOAD LOTTIE & DUAL CANVAS
+    const applyCatState = (stateName) => {
+      const config = CAT_CONFIG[stateName];
+        
+        // Cek kalau datanya belum siap, jangan dilanjutin
+        if (!config || !config.data) return;
+
+        // 1. LOAD LOTTIE & LANGSUNG AUTOPLAY (INSTAN)
+        if (catAnim) catAnim.destroy();
+        
+        catAnim = lottie.loadAnimation({
+            container: document.getElementById('mascot-lottie-hidden'),
+            renderer: 'canvas',
+            loop: config.loop,
+            autoplay: true,
+            animationData: config.data // <-- INI KUNCINYA (Pakai data yang sudah di-preload, BUKAN path)
+        });
+        
+        catAnim.setSpeed(config.speed);
+
+        // 2. PROSES CHROMA KEY (HAPUS BACKGROUND HIJAU)
+        const visibleCanvas = document.getElementById('mascot-lottie');
+        const vCtx = visibleCanvas.getContext('2d', { willReadFrequently: true });
+
+        catAnim.addEventListener('enterFrame', () => {
+            const hiddenCanvas = document.querySelector('#mascot-lottie-hidden canvas');
+            if (!hiddenCanvas) return;
+
+            if (visibleCanvas.width !== hiddenCanvas.width) {
+                visibleCanvas.width = hiddenCanvas.width;
+                visibleCanvas.height = hiddenCanvas.height;
+            }
+
+            vCtx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+            vCtx.drawImage(hiddenCanvas, 0, 0);
+
+            const imageData = vCtx.getImageData(0, 0, visibleCanvas.width, visibleCanvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (Math.abs(data[i] - CHROMA_KEY.r) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i+1] - CHROMA_KEY.g) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i+2] - CHROMA_KEY.b) <= CHROMA_KEY.tolerance) {
+                    data[i + 3] = 0; 
+                }
+            }
+            vCtx.putImageData(imageData, 0, 0);
+        });
+    };
+
+    // -----------------------------------------------------------------------
+    // 💬 LOGIKA BUBBLE CHAT & PILIHAN
+    // -----------------------------------------------------------------------
+    const setCatChat = (type, text, actionType = null) => {
+        const bubble = document.getElementById('mascot-chat');
+        bubble.className = `mascot-bubble ${type === 'small' ? 'bubble-small' : 'bubble-large'}`;
+        
+        let htmlContent = `<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">"${text}"</span>`;
+        
+        // Jika ada actionType, munculkan tombol pilihan
+        if (actionType) {
+            htmlContent += `
+                <div class="chat-choices mt-2">
+                    <button class="btn-choice btn-yes" onclick="handleCatChoice('${actionType}', true)">Ya</button>
+                    <button class="btn-choice btn-no" onclick="handleCatChoice('${actionType}', false)">Tidak</button>
+                </div>
+            `;
+        }
+
+        bubble.innerHTML = htmlContent;
+        bubble.style.opacity = "1";
+        bubble.style.transform = type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)";
+
+        // Hilangkan otomatis dalam 4 detik JIKA tidak ada tombol pilihan
+        if (!actionType) {
+            setTimeout(() => { 
+                // Cek apakah teksnya masih sama (mencegah chat baru ketutup)
+                if(bubble.innerHTML.includes(text)){
+                    bubble.style.opacity = "0"; 
+                    bubble.style.transform = "scale(0)"; 
+                }
+            }, 4000);
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // 🕹️ LOGIKA JAWABAN DARI USER
+    // -----------------------------------------------------------------------
+    window.handleCatChoice = (actionType, isYes) => {
+        const bubble = document.getElementById('mascot-chat');
+        
+        if (actionType === 'ASK_THREAT') {
+            bubble.style.opacity = "0";
+
+            if (isYes) {
+                // User nekat ngusir -> HUKUMAN JALAN
+                isCatReturnedAutonomously = false; 
+                isCatDismissed = true;
+                isTimeStolen = true; // Kunci agar idle timer ga jalan
+                
+                clearInterval(chatTimer); 
+                clearTimeout(miawIdleTimer);
+                clearTimeout(miawPrankTimer);
+                clearTimeout(miawComebackTimer); 
+
+                catState = "LEAVING";
+                applyCatState("LEAVING");
+
+                setCatChat('large', "Yaudah aku pergi, tapi keknya waktu berjalan cepet deh. Coba cek timer kamu sekarang deh!");
+                
+                // Ambil 1 menit secara permanen
+                timeLeft = Math.max(0, timeLeft - 60);
+                updateTimerUI();
+                
+                // Percepat timer jadi setengah detik
+                runExamTimer(500); 
+
+                // Tampilkan Modal Surat Miaw 1.5 detik setelah dia ngancam
+                setTimeout(() => {
+                    document.getElementById('modalMiawLetter').classList.replace('hidden', 'flex');
+                }, 1500);
+
+                const mascotContainer = document.getElementById('mascot-container');
+                const icon = document.getElementById('toggleCatIcon');
+                icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200"; 
+
+                setTimeout(() => {
+                    mascotContainer.style.transition = 'right 3s linear, transform 3s linear';
+                    mascotContainer.style.right = '-250px';
+                    mascotContainer.style.transform = 'translateX(0) scale(1)';
+                }, 3000);
+
+                // Toast Hint Kepanikan
+                miawToastTimer = setTimeout(() => {
+                    if (isTimeStolen) {
+                        window.showToast?.('warning', 'Ups!', 'Waktu kamu terasa lebih cepet? Ini pasti ulah Miaw, cepat panggil dia!');
+                    }
+                }, 8000);
+
+            } else {
+                isCatReturnedAutonomously = false;
+                setCatChat('small', "Nah gitu dong, aku anteng aja kok di sini...");
+            }
+            return; 
+        }
+
+        // --- LOGIKA PERTANYAAN AWAL ---
+        if (actionType === 'ASK_DIFFICULTY') {
+            if (isYes) {
+                // Jika "Iya", cek apakah bantuan sudah pernah dipakai
+                const isHelpUsed = localStorage.getItem('cat_help_used') === 'true';
+                
+                if (!isHelpUsed) {
+                    // Miaw menawarkan berhenti waktu
+                    setCatChat('large', "Miaw miaw... Mau aku bantu berhentiin waktunya sebentar?", 'FREEZE');
+                } else {
+                    // Kalau bantuan sudah habis tapi dia ngeluh susah
+                    setCatChat('large', "Yah, bantuan aku udah abis hari ini. Semangat ya, kamu pasti bisa!", null);
+                    setTimeout(() => { 
+                        bubble.style.opacity = "0";
+                        retreatCat(); 
+                    }, 2500);
+                }
+            } else {
+                // Jika "Tidak" mengalami kesusahan (Langsung Balik)
+                setCatChat('small', "Wih sombong... Yaudah kerjain sendiri sana!", null);
+                setTimeout(() => { 
+                    bubble.style.opacity = "0";
+                    retreatCat(); 
+                }, 1500);
+            }
+            return; // Keluar dari fungsi agar tidak menjalankan logika di bawahnya
+        }
+
+        // --- LOGIKA FREEZE WAKTU (Lanjutan dari pilihan "Iya") ---
+        bubble.style.opacity = "0"; // Sembunyikan bubble segera setelah pilihan diklik
+
+        if (actionType === 'FREEZE' && isYes) {
+            localStorage.setItem('cat_help_used', 'true');
+            triggerTimeFreeze();
+            setCatChat('large', "Ok, aku tahan waktunya... Cepetan kerjain!");
+        } else if (actionType === 'FREEZE' && !isYes) {
+            setCatChat('small', "Cih, ditawarin bantuan malah nolak. Bye!", null);
+        }
+
+        // Apapun pilihannya di tahap kedua, kucing akan mundur
+        setTimeout(() => {
+            retreatCat();
+        }, 1500);
+    };
+
+    
+    const retreatCat = () => {
+        catState = "RETREATING";
+        applyCatState("RETREATING");
+        
+        const mascotContainer = document.getElementById('mascot-container');
+        mascotContainer.style.transition = 'right 2s ease-in-out, transform 2s ease-in-out';
+        
+        // Reset posisi kembali ke pojok, ukuran normal, dan tidak melayang
+        mascotContainer.style.right = '20px';
+        mascotContainer.style.transform = 'translateX(0) translateY(0) scale(1)';
+
+        setTimeout(() => {
+            catState = "IDLE_EDGE";
+            applyCatState("IDLE_EDGE");
+            startRandomChats(); 
+        }, CAT_CONFIG.RETREATING.lottieDuration);
+    };
+
+    // -----------------------------------------------------------------------
+    // 🧊 EFEK WAKTU BEKU
+    // -----------------------------------------------------------------------
+    const triggerTimeFreeze = () => {
+        window.isTimeStoppedByCat = true;
+        const timerCont = document.getElementById('timerContainer');
+        
+        if (timerCont) {
+            timerCont.style.background = "#3b82f6"; // Warna biru es
+            timerCont.style.color = "white";
+            timerCont.style.borderColor = "#2563eb";
+            document.getElementById('timerText').innerText = "BEKU!";
+        }
+
+        // Waktu beku selama 7 detik
+        setTimeout(() => {
+            window.isTimeStoppedByCat = false;
+            
+            if (timerCont) {
+                timerCont.style.background = "";
+                timerCont.style.color = "";
+                timerCont.style.borderColor = "";
+                updateTimerUI(); // Paksa render ulang timer yang asli
+            }
+
+            // Setelah waktu beku selesai, kucing minta maaf dari posisinya di pojok
+            if (catState === "IDLE_EDGE") {
+                setCatChat('small', "Maaf ya, aku hanya bisa membantu itu saja... Lanjutkan!");
+            }
+        }, 7000);
+    };
+
+// 🧪 LOGIKA RADAR TABRAKAN (Efek Kesenggol)
+    const checkCollision = () => {
+        if (catState !== "TOWARD") return; 
+        const catEl = document.getElementById('mascot-lottie');
+        const catRect = catEl.getBoundingClientRect();
+        
+        // Target elemen yang bisa kena senggol (tombol jawaban & card soal)
+        const targets = document.querySelectorAll('.opt-btn, .question-card'); 
+        
+        targets.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (!(catRect.right < rect.left || catRect.left > rect.right || catRect.bottom < rect.top || catRect.top > rect.bottom)) {
+                if (!el.classList.contains('bumped-element')) {
+                    el.classList.add('bumped-element');
+                    // Reset animasi agar bisa kena senggol lagi nanti
+                    setTimeout(() => el.classList.remove('bumped-element'), 500); 
+                }
+            }
+        });
+    };
+
+    // 🕒 LOGIKA KONFIRMASI WAKTU BEKU
+    window.confirmTimeStop = (choice) => {
+        const bubble = document.getElementById('mascot-chat');
+        bubble.style.opacity = "0";
+
+        if (choice) {
+            window.isTimeStoppedByCat = true;
+            timeStopUsed = true; // Kunci agar tidak muncul lagi
+            
+            const timerCont = document.getElementById('timerContainer');
+            if (timerCont) {
+                timerCont.style.background = "#6366f1";
+                timerCont.style.color = "white";
+                document.getElementById('timerText').innerText = "BEKU!";
+            }
+
+            setCatChat('large', "Ok, aku tahan waktunya... Cepetan kerjain!");
+
+            setTimeout(() => {
+                window.isTimeStoppedByCat = false;
+                if (timerCont) {
+                    timerCont.style.background = "";
+                    timerCont.style.color = "";
+                }
+                setCatChat('large', "Dah ya, aku balik dulu!");
+                // Langsung mundur setelah waktu habis
+                setTimeout(() => { handleCatClick(); }, 1500);
+            }, 5000);
+        } else {
+            // Jika pilih "Gak", langsung mundur
+            handleCatClick();
+        }
+    };
+
+    // TRIGGER MUNCUL AWAL
+    const checkCatTrigger = () => {
+        // Cegah kucing nongol sendiri kalau statusnya lagi diusir
+        if (isCatDismissed) return; 
+
+        if (catState === "HIDDEN" && currentIndex === 1) {
+            catState = "ENTERING";
+            applyCatState("ENTERING");
+            
+            const mascotContainer = document.getElementById('mascot-container');
+            
+            // Kucing ngomong di awal saat jalan
+            setCatChat('small', "Miaw... miaw... miaw...");
+            
+            // Langsung geser masuk (tidak ada delay)
+            mascotContainer.style.transition = 'right 2s ease-out, transform 2s ease-out';
+            mascotContainer.style.right = '20px';
+            mascotContainer.style.transform = 'translateX(0) scale(1)';
+            
+            // Tunggu sampai Lottie beres
+            setTimeout(() => {
+                catState = "IDLE_EDGE";
+                applyCatState("IDLE_EDGE");
+                
+                setCatChat('small', "Miaw miaw... (kelihatannya ada yang lagi serius nih)");
+
+                setTimeout(() => {
+                    startRandomChats();
+                    resetMiawTimer();
+                }, 5000);
+
+            }, CAT_CONFIG.ENTERING.lottieDuration); 
+        }
+    };
+
+// -----------------------------------------------------------------------
+    // ⏱️ LOGIKA CHAT RANDOM (IDLE) - 10 s/d 15 DETIK
+    // -----------------------------------------------------------------------
+    const startRandomChats = () => {
+        clearInterval(chatTimer);
+        const randomInterval = Math.floor(Math.random() * 5000) + 10000; // 10.000ms - 15.000ms
+
+        chatTimer = setInterval(() => {
+            if (catState === "IDLE_EDGE") {
+                // Kalimat diobrolin kucing secara acak, dibuat lebih natural dan ngawasin
+                const idlePhrases = [
+                    "Jangan tegang, pelan-pelan aja bacanya... miaw",
+                    "Miaw... Kalau ragu, coba ditandai dulu aja soalnya.",
+                    "Semangat! Aku perhatiin dari sini ya 👀",
+                    "Hoaaam... Aku agak ngantuk nungguin kamu kelar.",
+                    "Tarik napas perlahan... Jangan lupa berkedip! miaw",
+                    "Soalnya lumayan menjebak ya? Hihi... miaw.",
+                    "Fokus, fokus... Waktu terus berjalan lho."
+                ];
+                
+                setCatChat('small', idlePhrases[Math.floor(Math.random() * idlePhrases.length)]);
+            }
+        }, randomInterval);
+    };
+
+// -----------------------------------------------------------------------
+    // 🐾 INTERAKSI KLIK KUCING
+    // -----------------------------------------------------------------------
+    window.handleCatClick = () => {
+        resetMiawTimer();
+        if (catState !== "IDLE_EDGE") return;
+        catState = "TOWARD";
+        clearInterval(chatTimer);
+        applyCatState("TOWARD");
+
+        const mascotContainer = document.getElementById('mascot-container');
+        mascotContainer.style.transition = 'right 1.8s ease-in-out, transform 1.8s ease-in-out';
+        mascotContainer.style.right = '50%';
+        mascotContainer.style.transform = 'translateX(50%) translateY(-40px) scale(2)';
+
+        setTimeout(() => {
+            catState = "CLOSEUP";
+            applyCatState("CLOSEUP");
+            
+            // Pertanyaan pembuka
+            setCatChat('large', "Miaw... Apakah kamu mengalami kesusahan?", 'ASK_DIFFICULTY');
+        }, CAT_CONFIG.TOWARD.lottieDuration);
+    };
+    if (typeof window.navigate === 'function') {
+        const originalNavigate = window.navigate;
+        window.navigate = (dir) => {
+            originalNavigate(dir);
+            checkCatTrigger();
+        };
+    }
 
     init();
 </script>
@@ -734,16 +1460,16 @@ import Toast from '../../components/Toast.astro';
   .btn-red:hover:not(:disabled) { background: #dc2626; }
   .btn-red:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 0 0 transparent; }
 
-  .hint-fab { position: fixed; bottom: 130px; right: 24px; width: 56px; height: 56px; background: #f59e0b; border: none; border-radius: 18px; color: #fff; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 40; box-shadow: 0 6px 0 #b45309; transition: all 0.15s; outline: none;}
+  .hint-fab { position: fixed; bottom: 130px; right: 24px; width: 56px; height: 56px; background: #f59e0b; border: none; border-radius: 18px; color: #fff; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 40; box-shadow: 0 6px 0 #b45309; transition: all 0.15s; outline: none; z-index:102}
   .hint-fab:hover { background: #d97706; transform: translateY(-2px); box-shadow: 0 8px 0 #b45309; }
   .hint-fab:active { transform: translateY(6px); box-shadow: 0 0 0 transparent; }
 
-  .exam-footer { background: var(--surf); border-top: 1px solid var(--border); padding: 12px 20px 20px; display: flex; justify-content: space-between; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; }
+  .exam-footer { background: var(--surf); border-top: 1px solid var(--border); padding: 12px 20px 20px; display: flex; justify-content: space-between; position: fixed; bottom: 0; left: 0; right: 0;z-index:105 }
   .save-indicator { font-size: 0.75rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.2s; }
   .save-pop { opacity: 1 !important; }
 
   /* MODALS HAPUS DISPLAY FLEX */
-  .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
+  .modal-backdrop { position: fixed; inset: 0; z-index: 250; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
   
   .modal-box { background: var(--surf); border-radius: 2rem; padding: 32px; width: 100%; max-width: 360px; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
   .modal-close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; background: var(--bg); border-radius: 12px; color: var(--muted); cursor: pointer; font-size: 1rem; border: none; transition: all 0.15s; }
@@ -755,4 +1481,104 @@ import Toast from '../../components/Toast.astro';
   @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
   .animate-wiggle { animation: wiggle 1s ease-in-out infinite; }
   @keyframes wiggle { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+
+/* PENGATURAN POSISI KUCING */
+#mascot-container {
+    position: fixed;
+    bottom: 60px;
+    right: -250px; /* Mulai dari luar frame kanan */
+    z-index: 100;
+    pointer-events: none;
+    /* transition: right 2s ease-out; */
+  }
+
+  /* TRIK MENGHILANGKAN BG HITAM & HIJAU (CHROMAKEY) */
+  #mascot-lottie {
+    pointer-events: auto;
+    width: 180px;
+    height: 180px;
+  }
+
+  /* BUBBLE CHAT INTERAKTIF */
+  .mascot-bubble {
+    position: absolute;
+    background: white;
+    border: 2px solid #6366f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    z-index: 110;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: auto;
+  }
+
+  /* Bubble Kecil saat Iddle (Dibuat Persegi Panjang) */
+  .bubble-small {
+    top: -50px;
+    left: -20px;
+    width: max-content; /* Lebar menyesuaikan teks */
+    max-width: 160px;   /* Maksimal lebar agar teks turun ke bawah (wrap) */
+    height: auto;
+    border-radius: 1rem; /* Sudut melengkung, bukan bulat sempurna */
+    padding: 8px 14px;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Bubble Besar saat Close Up (Diberi Jarak Tepi) */
+  .bubble-large {
+    top: -95px;
+    left: 50%;
+    transform: translateX(-50%) scale(1);
+    width: max-content;
+    max-width: 150px; /* Membatasi lebar maksimum agar tidak mentok frame */
+    padding: 12px 20px;
+    border-radius: 1.5rem;
+    opacity: 1;
+  }
+
+  .mascot-bubble strong { font-size: 10px; display: block; }
+  .mascot-bubble span { font-size: 9px; line-height: 1.2; }
+
+  /* ANIMASI KESENGGOL (BUMPED) */
+  .bumped-element {
+    animation: shakeHit 0.4s ease-in-out;
+    filter: brightness(1.1);
+  }
+
+  @keyframes shakeHit {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(5px) rotate(2deg); }
+    50% { transform: translateX(-5px) rotate(-2deg); }
+    75% { transform: translateX(3px) rotate(1deg); }
+    100% { transform: translateX(0); }
+  }
+
+  /* TOMBOL PILIHAN DI BUBBLE CHAT */
+  .chat-choices {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: center;
+  }
+
+  .btn-choice {
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border: 2px solid #6366f1;
+  }
+
+  .btn-yes { background: #6366f1; color: white; }
+  .btn-no { background: white; color: #6366f1; }
+  .btn-choice:active { scale: 0.9; }
 </style>
