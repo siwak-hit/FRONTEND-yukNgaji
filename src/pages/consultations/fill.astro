@@ -162,9 +162,10 @@ import Mascot from '../../components/Mascot.astro';
     <Toast />
 </Layout>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js" is:inline></script>
 
 <script>
-    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
     if (!token) window.location.replace('/');
 
@@ -175,8 +176,7 @@ import Mascot from '../../components/Mascot.astro';
     const isPreview = urlParams.get('preview') === 'true'; 
 
     const parsedWeek = parseInt(week) || 1;
-    // Ubah menjadi 105 detik (1 menit 45 detik) untuk semua sesi
-    let timeLeft = 105; 
+    let timeLeft = 105;
     let finalTimeTaken = 0;
     
     const timeKey = `timer_${studentId}_${subject}_${week}`;
@@ -201,7 +201,6 @@ import Mascot from '../../components/Mascot.astro';
     let isDirty = false;
 
     window.exitPreview = () => { window.location.href = '/bank-soal'; };
-
     window.handleBack = () => {
         if (isDirty) {
             if(confirm("Anda memiliki data yang belum dikirim. Yakin ingin keluar?")) {
@@ -280,7 +279,6 @@ import Mascot from '../../components/Mascot.astro';
             let allQuestions = [];
 
             if (isPreview) {
-                // [PERBAIKAN KUNCI]: BERSIHKAN CACHE JIKA MASUK MODE PREVIEW
                 localStorage.removeItem(timeKey);
                 localStorage.removeItem(ansKey);
                 localStorage.removeItem(qKey);
@@ -294,14 +292,11 @@ import Mascot from '../../components/Mascot.astro';
 
                 const qRes = await fetch(`${API_URL}/api/onboarding/questions/${subject}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const qData = await qRes.json();
-                
                 if (qData.data && !Array.isArray(qData.data)) allQuestions = qData.data[week] || [];
                 else allQuestions = qData.data || [];
 
             } else {
-                // Update teks instruksi agar sesuai dengan durasi baru
                 document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu 1 menit 45 detik untuk mengerjakan 6 soal pilihan.`;
-                
                 const [stdRes, consRes, qRes] = await Promise.all([
                     fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
                     fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
@@ -320,59 +315,49 @@ import Mascot from '../../components/Mascot.astro';
                 allQuestions = qData.data || [];
             }
 
-            // [STRATEGI ANTI-CONTEK]: Hanya ambil 6 soal secara acak dari total soal yang ada
-            const targetDisplay = 6; 
-
+            const targetDisplay = 6;
             if (isPreview) {
-                // Mode preview selalu acak murni tanpa simpan cache
                 questions = shuffleArray(allQuestions).slice(0, Math.min(targetDisplay, allQuestions.length));
             } else {
-                // Mode siswa: cek apakah urutan soal sudah tersimpan di browser (Anti-Refresh)
                 let savedQsIds = JSON.parse(localStorage.getItem(qKey)) || [];
                 questions = savedQsIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
-
-                // Jika belum ada cache atau jumlah soal berubah, lakukan pengacakan baru
                 if (questions.length === 0 && allQuestions.length > 0) {
                     questions = shuffleArray(allQuestions).slice(0, Math.min(targetDisplay, allQuestions.length));
                     localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
                 }
             }
 
-            // SUNTIKKAN KONFIGURASI MASKOT KHUSUS FORM (MODE PEEK)
-         if (window.MiawMascot) {
-             await window.MiawMascot.init({
-                 mode: 'peek',
-                 animations: {
-                     PEEK_IN: { path: '/CAT LOTTIE/SHOWING CAT.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null },
-                     PEEK_IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0, lottieDuration: 5000, data: null },
-                     PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null }
-                 },
-                 texts: {
-                     entering: "Haloo! Aku temenin ngisi ya miaw~",
-                     idleArrive: "Semangat ngerjainnya, jangan buru-buru!",
-                     idlePhrases: [
-                         "Udah sampai mana nih ngisinya? miaw~", 
-                         "Miaw... pelan-pelan aja isinya biar teliti.", 
-                         "Jangan lupa kejujurannya ya, aku awasin lho 👀",
-                         "Kalau bingung, baca pelan-pelan lagi aja.",
-                         "Miaw... cuacanya enak ya buat rebahan."
-                     ],
-                     warnings: [
-                         "Miaw... kok aku dicuekin terus sih?",
-                         "Kamu asik ngisi sendiri ya... liatin aku dong!"
-                     ],
-                     dismissNormal: "Yaudah deh, aku sembunyi dulu di bawah meja. Miaw~",
-                     callNormalArrive: "Bosan di bawah... aku temenin lagi ya! Miaw~"
-                 }
-             });
-
-             // Munculkan maskot otomatis setelah 2 detik halaman terbuka
-             setTimeout(() => { window.MiawMascot.show(); }, 2000);
-         }
+            if (window.MiawMascot) {
+                await window.MiawMascot.init({
+                    mode: 'peek',
+                    animations: {
+                        PEEK_IN: { path: '/CAT LOTTIE/SHOWING CAT.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null },
+                        PEEK_IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0, lottieDuration: 5000, data: null },
+                        PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null }
+                    },
+                    texts: {
+                        entering: "Haloo! Aku temenin ngisi ya miaw~",
+                        idleArrive: "Semangat ngerjainnya, jangan buru-buru!",
+                        idlePhrases: [
+                            "Udah sampai mana nih ngisinya? miaw~", 
+                            "Miaw... pelan-pelan aja isinya biar teliti.", 
+                            "Jangan lupa kejujurannya ya, aku awasin lho 👀",
+                            "Kalau bingung, baca pelan-pelan lagi aja.",
+                            "Miaw... cuacanya enak ya buat rebahan."
+                        ],
+                        warnings: [
+                            "Miaw... kok aku dicuekin terus sih?",
+                            "Kamu asik ngisi sendiri ya... liatin aku dong!"
+                        ],
+                        dismissNormal: "Yaudah deh, aku sembunyi dulu di bawah meja. Miaw~",
+                        callNormalArrive: "Bosan di bawah... aku temenin lagi ya! Miaw~"
+                    }
+                });
+                setTimeout(() => { window.MiawMascot.show(); }, 2000);
+            }
 
             renderQuestions();
             restoreDraftAnswers();
-            
             updateTimerUI();
             checkExistingSession();
 
@@ -395,13 +380,17 @@ import Mascot from '../../components/Mascot.astro';
             const type = q.type || 'pilgan';
             if (type === 'drag') return renderDragDropQuestion(q, idx);
             if (type === 'tf') return renderTrueFalseQuestion(q, idx);
+            if (type === 'urutan') return renderUrutanQuestion(q, idx); // [BARU]
             return renderPilganQuestion(q, idx);
         }).join('');
+
+        // [BARU] Inisialisasi SortableJS setelah elemen di-render ke DOM
+        initSortables();
     };
 
-    const renderPilganQuestion = (q, idx) => {
-        const shuffledOptions = shuffleArray(Object.entries(q.options));
-        const mediaHtml = q.image_url ? `
+    const generateMediaHtml = (q) => {
+        if (!q.image_url) return '';
+        return `
             <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
                 <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
                     <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
@@ -412,12 +401,15 @@ import Mascot from '../../components/Mascot.astro';
                      onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
                      onerror="this.closest('.relative').style.display='none'">
             </div>
-        ` : '';
+        `;
+    };
 
+    const renderPilganQuestion = (q, idx) => {
+        const shuffledOptions = shuffleArray(Object.entries(q.options));
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="pilgan">
             <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
-            ${mediaHtml}
+            ${generateMediaHtml(q)}
             <div class="grid grid-cols-1 gap-2">
                 ${shuffledOptions.map(([key, val]) => `
                     <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50 active:bg-green-50 transition-colors cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-300">
@@ -430,23 +422,10 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const renderTrueFalseQuestion = (q, idx) => {
-        const mediaHtml = q.image_url ? `
-            <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
-                <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
-                    <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
-                </div>
-                <img src="${q.image_url.trim()}"
-                     class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300"
-                     alt="Visual Soal"
-                     onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
-                     onerror="this.closest('.relative').style.display='none'">
-            </div>
-        ` : '';
-
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="tf">
             <p class="text-sm font-bold text-gray-800 leading-relaxed text-center mb-2">${idx+1}. ${q.question}</p>
-            ${mediaHtml}
+            ${generateMediaHtml(q)}
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-100 cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-400 transition-all hover:bg-gray-50">
                     <input type="radio" name="q-${q.id}" value="A" class="hidden">
@@ -469,29 +448,15 @@ import Mascot from '../../components/Mascot.astro';
             blankIdx++;
             return html;
         });
-        
         const shuffledOptions = shuffleArray(Object.entries(q.options));
-        const mediaHtml = q.image_url ? `
-            <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
-                <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
-                    <i class="fa-solid fa-image text-gray-300 text-2xl"></i>
-                </div>
-                <img src="${q.image_url.trim()}"
-                     class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300"
-                     alt="Visual Soal"
-                     onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';"
-                     onerror="this.closest('.relative').style.display='none'">
-            </div>
-        ` : '';
-
+        
         return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="drag">
             <div class="flex gap-2">
                 <span class="text-sm font-bold text-gray-800">${idx+1}.</span>
                 <p class="text-sm font-bold text-gray-800 leading-relaxed flex-1">${questionHtml}</p>
             </div>
-            ${mediaHtml}
-            
+            ${generateMediaHtml(q)}
             <div class="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-inner">
                 <p class="text-[10px] font-bold text-indigo-400 mb-3 uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-hand-pointer"></i> Ketuk kata di bawah untuk mengisi:</p>
                 <div class="flex flex-wrap gap-2">
@@ -502,6 +467,119 @@ import Mascot from '../../components/Mascot.astro';
             </div>
             <input type="hidden" name="q-${q.id}" id="ans-${q.id}" value="">
         </div>`;
+    };
+
+
+    const renderUrutanQuestion = (q, idx) => {
+        const URUTAN_COLORS = [
+            { bg: '#fef9c3', text: '#854d0e', border: '#fde68a' }, // kuning
+            { bg: '#dbeafe', text: '#1e3a8a', border: '#93c5fd' }, // biru
+            { bg: '#dcfce7', text: '#14532d', border: '#86efac' }, // hijau
+            { bg: '#ffedd5', text: '#7c2d12', border: '#fdba74' }, // orange
+        ];
+
+        const arrUrutan = Array.isArray(q.options) ? [...q.options] : Object.values(q.options);
+        const itemsWithId = arrUrutan.map((text, i) => ({ text, num: i + 1 }));
+        const shuffled = shuffleArray([...itemsWithId]);
+
+        const numberCardsHtml = shuffled.map((item) => {
+            const color = URUTAN_COLORS[(item.num - 1) % URUTAN_COLORS.length];
+            return `
+                <div class="flex-1 max-w-[56px] min-w-[38px] h-14 rounded-xl flex items-center justify-center text-xl font-black cursor-grab select-none transition-all duration-200 active:cursor-grabbing border-2 border-b-[6px] active:border-b-2 active:translate-y-1 touch-none urutan-card" 
+                     style="background-color: ${color.bg}; color: ${color.text}; border-color: ${color.border}; border-bottom-color: rgba(0,0,0,0.15);"
+                     data-val="${item.text.replace(/"/g, '&quot;')}">
+                    ${item.num}
+                </div>`;
+        }).join('');
+
+        const keteranganHtml = arrUrutan.map((text, i) => {
+            const color = URUTAN_COLORS[i % URUTAN_COLORS.length];
+            return `
+                <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors group">
+                    <input type="checkbox" class="peer w-5 h-5 rounded-md border-gray-200 text-teal-600 focus:ring-teal-500 cursor-pointer">
+                    
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-black shrink-0 text-xs peer-checked:opacity-30 transition-opacity" 
+                          style="background-color: ${color.bg}; color: ${color.text}; border: 1px solid ${color.border};">
+                        ${i + 1}
+                    </span>
+                    
+                    <span class="flex-1 text-xs font-semibold text-gray-700 leading-relaxed peer-checked:text-gray-400 peer-checked:line-through transition-all uppercase tracking-tight">
+                        ${text}
+                    </span>
+
+                    <i class="fa-solid fa-check text-teal-500 opacity-0 peer-checked:opacity-100 transition-opacity text-xs"></i>
+                </label>
+            `;
+        }).join('');
+
+        return `
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="urutan">
+            <div class="flex justify-between items-start gap-4">
+                <p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p>
+                <span class="px-2 py-1 bg-teal-50 text-teal-600 text-[9px] font-black rounded-lg border border-teal-100 uppercase tracking-tighter shrink-0">Puzzle</span>
+            </div>
+            
+            ${generateMediaHtml(q)}
+
+            <div class="p-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-4">
+                <div class="w-full flex justify-between items-center px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest select-none">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-play text-[8px]"></i> Mulai</span>
+                    <div class="flex-1 border-t-2 border-dotted border-gray-200 mx-4 relative">
+                        <i class="fa-solid fa-chevron-right absolute right-[-2px] top-[-5px] text-[10px]"></i>
+                    </div>
+                    <span>Selesai</span>
+                </div>
+
+                <div id="sortable-${q.id}" class="sortable-list flex flex-nowrap justify-center items-center gap-2 sm:gap-3 w-full min-h-[70px]">
+                    ${numberCardsHtml}
+                </div>
+            </div>
+
+            <div class="border border-gray-100 rounded-2xl overflow-hidden bg-gray-50/50">
+                <button type="button" 
+                        onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow').classList.toggle('rotate-180');"
+                        class="w-full flex items-center justify-between p-4 text-left outline-none">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-teal-500 text-xs"></i>
+                        <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Keterangan Angka</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-gray-300 text-[10px] transition-transform arrow"></i>
+                </button>
+                <div class="px-4 pb-4 space-y-2 hidden">
+                    <p class="text-[9px] text-gray-400 italic mb-2">*Klik kotak untuk mencoret jawaban yang sudah yakin.</p>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${keteranganHtml}
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="q-${q.id}" id="ans-${q.id}" value='${JSON.stringify(shuffled.map(s => s.text)).replace(/"/g, '&quot;')}'>
+        </div>`;
+    };
+
+    // [BARU] Inisialisasi SortableJS
+    const initSortables = () => {
+        if (typeof Sortable === 'undefined') return;
+        document.querySelectorAll('.sortable-list').forEach(list => {
+            const block = list.closest('.question-block');
+            const qId = block.dataset.id;
+
+            new Sortable(list, {
+                animation: 350,
+                direction: 'horizontal',
+                easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', // Efek bouncing sedikit
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                swapThreshold: 0.7, // Sensitivitas saat bertukar posisi
+                onEnd: () => {
+                    isDirty = true;
+                    const items = Array.from(list.children).map(li => li.dataset.val);
+                    document.getElementById(`ans-${qId}`).value = JSON.stringify(items);
+                    saveDraftAnswers();
+                    validate();
+                }
+            });
+        });
     };
 
     // --- LOGIKA TAP UNTUK MENGISI DRAG & DROP ---
@@ -552,13 +630,17 @@ import Mascot from '../../components/Mascot.astro';
             const qId = block.getAttribute('data-id');
             const type = block.dataset.type || 'pilgan';
             let selected;
+            
             if (type === 'drag') {
                 selected = document.getElementById(`ans-${qId}`).value;
+            } else if (type === 'urutan') { // [BARU]
+                selected = JSON.parse(document.getElementById(`ans-${qId}`).value || '[]');
             } else {
                 selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value;
             }
             if (selected) answers[qId] = selected;
         });
+
         const psych = {
             akhlak: document.querySelector('input[name="q_akhlak"]:checked')?.value,
             disiplin: document.querySelector('input[name="q_disiplin"]:checked')?.value,
@@ -570,11 +652,13 @@ import Mascot from '../../components/Mascot.astro';
     const restoreDraftAnswers = () => {
         const saved = JSON.parse(localStorage.getItem(ansKey));
         if (!saved) return;
+        
         if (saved.answers) {
             Object.entries(saved.answers).forEach(([qId, val]) => {
                 const block = document.querySelector(`.question-block[data-id="${qId}"]`);
                 if (!block) return;
                 const type = block.dataset.type || 'pilgan';
+                
                 if (type === 'drag') {
                     const keys = val.split(',');
                     const slots = block.querySelectorAll('.blank-slot');
@@ -589,6 +673,16 @@ import Mascot from '../../components/Mascot.astro';
                         }
                     });
                     document.getElementById(`ans-${qId}`).value = val;
+                } else if (type === 'urutan') { // [BARU]
+                    const list = document.getElementById(`sortable-${qId}`);
+                    if (list && Array.isArray(val)) {
+                        // Tata ulang urutan <li> di DOM berdasarkan array yang tersimpan
+                        val.forEach(text => {
+                            const li = Array.from(list.children).find(el => el.dataset.val === text);
+                            if (li) list.appendChild(li); // append akan memindahkan node ke posisi terakhir
+                        });
+                        document.getElementById(`ans-${qId}`).value = JSON.stringify(val);
+                    }
                 } else {
                     const radio = document.querySelector(`input[name="q-${qId}"][value="${val}"]`);
                     if (radio) radio.checked = true;
@@ -596,12 +690,9 @@ import Mascot from '../../components/Mascot.astro';
             });
         }
         if (saved.psych) {
-            if (saved.psych.akhlak) { const r = document.querySelector(`input[name="q_akhlak"][value="${saved.psych.akhlak}"]`);
-            if (r) r.checked = true; }
-            if (saved.psych.disiplin) { const r = document.querySelector(`input[name="q_disiplin"][value="${saved.psych.disiplin}"]`);
-            if (r) r.checked = true; }
-            if (saved.psych.aktif) { const r = document.querySelector(`input[name="q_aktif"][value="${saved.psych.aktif}"]`);
-            if (r) r.checked = true; }
+            if (saved.psych.akhlak) { const r = document.querySelector(`input[name="q_akhlak"][value="${saved.psych.akhlak}"]`); if (r) r.checked = true; }
+            if (saved.psych.disiplin) { const r = document.querySelector(`input[name="q_disiplin"][value="${saved.psych.disiplin}"]`); if (r) r.checked = true; }
+            if (saved.psych.aktif) { const r = document.querySelector(`input[name="q_aktif"][value="${saved.psych.aktif}"]`); if (r) r.checked = true; }
             validate();
         }
     };
@@ -618,11 +709,15 @@ import Mascot from '../../components/Mascot.astro';
                 const requiredLen = block.querySelectorAll('.blank-slot').length;
                 const filledLen = val.split(',').filter(Boolean).length;
                 if (filledLen === requiredLen && requiredLen > 0) answeredCount++;
+            } else if (type === 'urutan') { // [BARU]
+                // Karena UI Urutan secara default sudah menampilkan seluruh opsi (hanya perlu digeser), 
+                // kita asumsikan soal urutan sudah terisi secara teknis.
+                answeredCount++;
             } else {
                 if (block.querySelector(`input[name="q-${qId}"]:checked`)) answeredCount++;
             }
         });
-        
+
         if (document.querySelector('input[name="q_akhlak"]:checked')) answeredCount++;
         if (document.querySelector('input[name="q_disiplin"]:checked')) answeredCount++;
         if (document.querySelector('input[name="q_aktif"]:checked')) answeredCount++;
@@ -635,6 +730,7 @@ import Mascot from '../../components/Mascot.astro';
         const ansDisiplin = document.querySelector('input[name="q_disiplin"]:checked');
         const ansAktif = document.querySelector('input[name="q_aktif"]:checked');
 
+        // Pastikan kuesioner sosial diisi agar bisa submit
         if (ansAkhlak && ansDisiplin && ansAktif) {
             btn.disabled = false;
             btn.classList.replace('bg-gray-200', 'bg-green-600');
@@ -652,7 +748,7 @@ import Mascot from '../../components/Mascot.astro';
     document.getElementById('kuesionerContainer').addEventListener('change', () => { isDirty = true; validate(); saveDraftAnswers(); window.MiawMascot?.resetTimer(); });
 
     // ==========================================
-    // 4. TIMER & EARLY FINISH
+    // 4. TIMER & EARLY FINISH (Tidak berubah)
     // ==========================================
     const checkExistingSession = () => {
         if (isPreview) {
@@ -667,8 +763,8 @@ import Mascot from '../../components/Mascot.astro';
             overlay.classList.add('hidden');
             const now = Date.now();
             timeLeft = Math.floor((savedEndTime - now) / 1000);
-            if (timeLeft > 0) { startTest(false);
-            } else { timeLeft = 0; startTest(false); disableAcademicSection(); }
+            if (timeLeft > 0) { startTest(false); } 
+            else { timeLeft = 0; startTest(false); disableAcademicSection(); }
         }
     };
 
@@ -677,11 +773,8 @@ import Mascot from '../../components/Mascot.astro';
         overlay.classList.add('opacity-0', 'pointer-events-none');
         setTimeout(() => overlay.classList.add('hidden'), 500);
         
-        if (isPreview) {
-            startTest(false);
-        } else {
-            startCountdown();
-        }
+        if (isPreview) { startTest(false); } 
+        else { startCountdown(); }
     };
 
     const startCountdown = () => {
@@ -698,12 +791,11 @@ import Mascot from '../../components/Mascot.astro';
 
     const startTest = (isNewSession = true) => {
         document.getElementById('testContent').classList.remove('hidden');
-        
         if (isPreview) {
             document.getElementById('timerText').innerText = "∞";
             document.getElementById('timerDisplay').classList.replace('text-gray-800', 'text-amber-600');
             document.getElementById('timerIcon').classList.replace('text-green-500', 'text-amber-500');
-            return; // MATIKAN TIMER DI MODE PREVIEW
+            return; 
         }
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
@@ -745,7 +837,7 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const updateTimerUI = () => {
-        if (isPreview) return; // Keamanan Ekstra
+        if (isPreview) return;
         
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
@@ -753,6 +845,7 @@ import Mascot from '../../components/Mascot.astro';
         
         const timerContainer = document.getElementById('timerDisplay');
         const icon = document.getElementById('timerIcon');
+        
         if (timeLeft <= 10 && timeLeft > 0) {
             timerContainer.className = 'absolute left-1/2 -translate-x-1/2 px-6 py-2 bg-red-600 text-white rounded-full font-mono font-black text-xl border-2 border-red-700 shadow-md animate-pulse';
             icon.className = 'fa-solid fa-stopwatch text-white mr-1';
@@ -833,7 +926,8 @@ import Mascot from '../../components/Mascot.astro';
                         await video.play();
                         await new Promise(resolve => setTimeout(resolve, 5000));
                         const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
                         canvas.getContext('2d').drawImage(video, 0, 0);
                         stream.getTracks().forEach(track => track.stop());
                         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
@@ -860,8 +954,12 @@ import Mascot from '../../components/Mascot.astro';
             const qId = block.getAttribute('data-id');
             const type = block.dataset.type || 'pilgan';
             let selected;
+            
+            // [PERBAIKAN EKSTRAKSI] Kirim dalam bentuk Array untuk soal urutan
             if (type === 'drag') selected = document.getElementById(`ans-${qId}`).value;
+            else if (type === 'urutan') selected = JSON.parse(document.getElementById(`ans-${qId}`).value || '[]');
             else selected = block.querySelector(`input[name="q-${qId}"]:checked`)?.value || "";
+            
             answers.push({ question_id: qId, answer: selected });
         });
 
@@ -891,14 +989,24 @@ import Mascot from '../../components/Mascot.astro';
                 ]);
             }
             
-            // 1. Kalkulasi Skor Akademik
+            // 1. Kalkulasi Skor Akademik LOKAL untuk Preview/Result Modal
             let correctCount = 0;
             answers.forEach(ans => {
                 const q = questions.find(q => q.id === ans.question_id);
-                if (q && q.correct_answer.toUpperCase() === ans.answer.toUpperCase()) correctCount++;
+                if (q) {
+                    if (q.type === 'urutan') {
+                        // [PERBAIKAN GRADING] Bandingkan string array untuk soal urutan
+                        const ansStr = Array.isArray(ans.answer) ? JSON.stringify(ans.answer) : ans.answer;
+                        const correctStr = Array.isArray(q.correct_answer) ? JSON.stringify(q.correct_answer) : q.correct_answer;
+                        if (ansStr === correctStr) correctCount++;
+                    } else {
+                        if (q.correct_answer.toUpperCase() === String(ans.answer).toUpperCase()) correctCount++;
+                    }
+                }
             });
+
             const score = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
-            
+
             // 2. Kalkulasi Waktu
             const maxTime = 105;
             const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
@@ -911,9 +1019,10 @@ import Mascot from '../../components/Mascot.astro';
             const aktif = parseInt(document.querySelector('input[name="q_aktif"]:checked')?.value || 0);
             const avgSocial = (akhlak + disiplin + aktif) / 3;
             let socialGrade = 'Cukup';
+            
             if (avgSocial >= 80) socialGrade = 'Sangat Baik';
             else if (avgSocial >= 60) socialGrade = 'Baik';
-            
+
             // 4. Update Modal
             const emojiEl = document.getElementById('resultEmoji');
             const titleEl = document.getElementById('resultTitle');
@@ -925,7 +1034,8 @@ import Mascot from '../../components/Mascot.astro';
             scoreEl.innerText = score;
 
             if (score >= 80) {
-                emojiEl.innerText = '🏆'; titleEl.innerText = 'Luar Biasa!';
+                emojiEl.innerText = '🏆';
+                titleEl.innerText = 'Luar Biasa!';
                 msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.';
                 scoreEl.className = 'text-6xl font-black text-green-600 drop-shadow-sm';
                 setTimeout(() => {
@@ -933,11 +1043,13 @@ import Mascot from '../../components/Mascot.astro';
                     confetti({ particleCount: 120, spread: 70, origin: { x: 0.7, y: 0.6 }, colors: ['#22c55e', '#f472b6', '#a78bfa'] });
                 }, 400);
             } else if (score >= 60) {
-                emojiEl.innerText = '👍'; titleEl.innerText = 'Kerja Bagus!';
+                emojiEl.innerText = '👍';
+                titleEl.innerText = 'Kerja Bagus!';
                 msgEl.innerText = 'Nilaimu sudah cukup baik. Terus usahakan belajar lebih giat lagi biar makin mantap!';
                 scoreEl.className = 'text-6xl font-black text-blue-500 drop-shadow-sm';
             } else {
-                emojiEl.innerText = '💪'; titleEl.innerText = 'Tetap Semangat!';
+                emojiEl.innerText = '💪';
+                titleEl.innerText = 'Tetap Semangat!';
                 msgEl.innerText = 'Jangan sedih kalau nilainya masih kecil. Kegagalan adalah awal dari keberhasilan, yuk belajar lagi!';
                 scoreEl.className = 'text-6xl font-black text-amber-500 drop-shadow-sm';
             }
@@ -948,12 +1060,13 @@ import Mascot from '../../components/Mascot.astro';
                 if (btnHome) { btnHome.innerText = "Kembali ke Editor Soal"; btnHome.onclick = () => window.location.replace('/bank-soal'); }
             }
 
-            localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
+            localStorage.removeItem(timeKey);
+            localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
 
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Selesai';
             btn.classList.replace('bg-green-600', 'bg-gray-800');
             document.getElementById('modalResult').classList.replace('hidden', 'flex');
-
+            
         } catch (e) {
             console.error(e);
             window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.');
@@ -969,7 +1082,8 @@ import Mascot from '../../components/Mascot.astro';
     .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     @keyframes slideUp { 0% { transform: translateY(20px) scale(0.95); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 
-    .question-block input[type="radio"]:checked + span, #kuesionerContainer input[type="radio"]:checked + span {
+    .question-block input[type="radio"]:checked + span,
+    #kuesionerContainer input[type="radio"]:checked + span {
         animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
     .question-block input[type="radio"]:checked + span { color: #16a34a; }
@@ -979,4 +1093,178 @@ import Mascot from '../../components/Mascot.astro';
 
     .question-block label:has(input:checked) { background-color: #f0fdf4; border-color: #86efac; }
     #kuesionerContainer label:has(input:checked) { background-color: #eff6ff; border-color: #93c5fd; }
+
+    /* ==========================================
+       SOAL URUTAN
+    ========================================== */
+
+    .urutan-badge-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #1d4ed8;
+        background: #dbeafe;
+        border: 1px solid #93c5fd;
+        padding: 3px 10px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .urutan-instruksi {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 10px 12px;
+    }
+    .urutan-instruksi-icon {
+        width: 18px; height: 18px;
+        border-radius: 50%;
+        background: #3b82f6;
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+    .urutan-instruksi p {
+        font-size: 11px;
+        font-weight: 600;
+        color: #1e40af;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .urutan-zone-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px !important;
+    }
+
+    /* Zone drag (flex row) */
+    .urutan-number-zone {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+        background: #f0f9ff;
+        border: 1.5px dashed #7dd3fc;
+        border-radius: 14px;
+        min-height: 58px;
+        align-items: center;
+    }
+
+    /* Memaksa List menjadi Horizontal Kiri ke Kanan */
+    .urutan-horizontal-list {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100%;
+        min-height: 60px;
+    }
+
+/* --- EFEK DRAG SORTABLEJS --- */
+    
+/* Efek bayangan di tempat asal */
+.sortable-ghost {
+            opacity: 0.1 !important;
+            filter: grayscale(1);
+            transform: scale(0.9);
+        }
+
+        /* Efek saat dadu sedang melayang ditarik */
+        .sortable-drag {
+            cursor: grabbing !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1) !important;
+            transform: rotate(5deg) scale(1.15) !important;
+            z-index: 100 !important;
+            animation: wiggle 0.3s infinite ease-in-out;
+        }
+
+        /* Animasi getar saat ditarik */
+        @keyframes wiggle {
+            0% { transform: rotate(5deg) scale(1.15); }
+            50% { transform: rotate(-3deg) scale(1.15); }
+            100% { transform: rotate(5deg) scale(1.15); }
+        }
+
+        /* Efek transisi antar dadu */
+        .urutan-card {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+    /* Indikator */
+    .urutan-indikator-wrap {
+        background: #f8faff;
+        border: 1.5px solid #bfdbfe;
+        border-radius: 14px;
+        padding: 10px 14px;
+    }
+    .urutan-ind-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+    .urutan-ind-pills {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .urutan-ind-pill {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        border: 1.5px solid;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px;
+        font-weight: 800;
+    }
+    .urutan-ind-arrow {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    /* Keterangan list (statis) */
+    .urutan-keterangan-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .urutan-keterangan-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #f8fafc;
+        border: 1px solid #e0f2fe;
+        border-radius: 12px;
+        padding: 8px 12px;
+    }
+    .urutan-keterangan-num {
+        width: 26px; height: 26px;
+        border-radius: 8px;
+        border: 1.5px solid;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .urutan-keterangan-text {
+        font-size: 12px;
+        color: #374151;
+        font-weight: 500;
+        line-height: 1.4;
+    }
 </style>

@@ -175,6 +175,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         <option value="pilgan">Pilihan Ganda</option>
                         <option value="tf">Benar / Salah</option>
                         <option value="drag">Drag & Drop (Menghubungkan)</option>
+                        <option value="urutan">Mengurutkan (Puzzle)</option>
                     </select>
                 </div>
 
@@ -191,6 +192,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <button type="button" onclick="insertBlank(this)" class="w-full text-[10px] font-bold bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-plus"></i> Sisipkan [BLANK]
                     </button>
+                </div>
+
+                <div class="urutan-tools hidden p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-3 mt-3 w-full">
+                    <div class="w-8 h-8 rounded-full bg-teal-200 text-teal-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-list-ol"></i></div>
+                    <p class="text-[10px] font-bold text-teal-800 leading-relaxed">Mode Mengurutkan aktif.<br>Masukkan opsi secara acak. Tentukan <b>URUTAN BENARNYA</b> di bagian Kunci Jawaban bawah.</p>
                 </div>
 
                 <div>
@@ -229,6 +235,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <div id="editKeyDrag" class="key-drag hidden w-full">
                         <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN DRAG & DROP:</span>
                         <div class="drag-keys-container grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div class="key-urutan hidden w-full">
+                        <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN URUTAN:</span>
+                        <div class="urutan-keys-container flex flex-col gap-2"></div>
                     </div>
 
                     <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200">
@@ -280,17 +291,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
         fiqih:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   badge: 'bg-blue-100 text-blue-700'   },
         tauhid:  { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700'},
     };
-
     let summaryData = {};
     let activeSubjectForUpload = 'tajwid';
     let resolvedWeekForUpload  = 1;
-    let allWeeksData = {}; 
+    let allWeeksData = {};
     let isSortAsc = true;
     let isSummaryCached = false; 
 
     let isDirty = false;
     let pendingCloseAction = null;
-
     document.addEventListener('input', (e) => {
         if (e.target.closest('.card-core-logic')) isDirty = true;
     });
@@ -299,7 +308,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.addEventListener('beforeunload', (e) => {
         if (isDirty) { e.preventDefault(); e.returnValue = ''; }
     });
-
     window.showConfirmBack = (action) => {
         pendingCloseAction = action;
         document.getElementById('modalConfirmBack').classList.replace('hidden', 'flex');
@@ -314,11 +322,52 @@ import ModalAlert from '../../components/ModalAlert.astro';
         if (pendingCloseAction) pendingCloseAction();
     };
 
-    // ================================================================
-    // CORE LOGIC (HELPER UNTUK BUILDER SOAL & MODAL EDIT)
-    // ================================================================
-    
-    // PERBAIKAN RESPONSIVE: Menggunakan w-full dan flex-col di container HP
+    window.relabelOptions = (card) => {
+        const rows = card.querySelectorAll('.opt-row');
+        rows.forEach((r, idx) => {
+            const letter = String.fromCharCode(65 + idx);
+            r.dataset.key = letter;
+            r.querySelector('label').innerText = `Opsi ${letter}`;
+            r.querySelector('input').placeholder = `Jawaban ${letter}`;
+        });
+    };
+
+    window.updateUrutanKeys = (card, presetKeys = null) => {
+        const keyContainer = card.querySelector('.urutan-keys-container');
+        if (!keyContainer) return;
+        const rows = Array.from(card.querySelectorAll('.opt-row'));
+
+        let html = '';
+        rows.forEach((_, i) => {
+            const optionsHtml = rows.map(r => {
+                const val = r.querySelector('.opt-val')?.value?.trim() || '';
+                const key = r.dataset.key;
+                return `<option value="${key}">Opsi ${key} ${val ? `(${val})` : ''}</option>`;
+            }).join('');
+
+            html += `
+                <div class="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-sm w-full mt-1">
+                    <span class="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded border border-teal-100 shrink-0">Ke-${i+1}</span>
+                    <select class="urutan-key-select text-xs font-bold border-none bg-transparent outline-none flex-1 text-gray-700 cursor-pointer min-w-0 truncate">
+                        <option value="">Pilih Opsi...</option>
+                        ${optionsHtml}
+                    </select>
+                </div>
+            `;
+        });
+        keyContainer.innerHTML = html;
+
+        if (presetKeys && Array.isArray(presetKeys)) {
+            const selects = keyContainer.querySelectorAll('.urutan-key-select');
+            selects.forEach((sel, i) => {
+                if (presetKeys[i]) {
+                    const matchedRow = rows.find(r => r.querySelector('.opt-val').value.trim() === presetKeys[i]);
+                    if (matchedRow) sel.value = matchedRow.dataset.key;
+                }
+            });
+        }
+    };
+
     window.appendOptionRow = (wrapper, key, val) => {
         const row = document.createElement('div');
         row.className = "opt-row flex items-center gap-2 w-full";
@@ -328,15 +377,21 @@ import ModalAlert from '../../components/ModalAlert.astro';
             <input type="text" class="opt-val flex-1 min-w-0 p-3 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-200 shadow-sm font-medium text-gray-700" placeholder="Jawaban ${key}" value="${val}">
             <button type="button" onclick="removeOptionRow(this)" class="btn-remove-opt shrink-0 text-red-400 bg-red-50 hover:bg-red-100 w-10 h-10 rounded-lg flex items-center justify-center transition-colors active:scale-95" title="Hapus"><i class="fa-solid fa-xmark"></i></button>
         `;
-        
         row.querySelector('.opt-val').addEventListener('input', () => {
             const card = wrapper.closest('.card-core-logic');
-            if (card?.querySelector('.type-input')?.value === 'drag') {
+            const type = card?.querySelector('.type-input')?.value;
+            if (type === 'drag') {
                 const textarea = card.querySelector('.q-input');
                 const selects = card.querySelectorAll('.drag-key-select');
                 const currentKeys = Array.from(selects).map(s => s.value);
                 updateDragKeys(textarea);
                 const newSelects = card.querySelectorAll('.drag-key-select');
+                newSelects.forEach((sel, i) => { if (currentKeys[i]) sel.value = currentKeys[i]; });
+            } else if (type === 'urutan') {
+                const selects = card.querySelectorAll('.urutan-key-select');
+                const currentKeys = Array.from(selects).map(s => s.value);
+                updateUrutanKeys(card);
+                const newSelects = card.querySelectorAll('.urutan-key-select');
                 newSelects.forEach((sel, i) => { if (currentKeys[i]) sel.value = currentKeys[i]; });
             }
         });
@@ -395,10 +450,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 const key = row.dataset.key;
                 return `<option value="${key}">${key}: ${val || '(kosong)'}</option>`;
             }).join('');
-            
-            // PERBAIKAN RESPONSIVE: min-w-0 agar tidak merusak Grid di HP
             html += `
-                <div class="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 w-full overflow-hidden">
+                <div class="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-indigo-400 w-full overflow-hidden mt-1">
                     <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 shrink-0">B${i+1}</span>
                     <select class="drag-key-select text-xs font-bold border-none bg-transparent outline-none flex-1 text-gray-700 cursor-pointer min-w-0 truncate">
                         ${optionsHtml}
@@ -407,7 +460,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             `;
         }
         keyContainer.innerHTML = html;
-
         if (presetKeys) {
             const selects = keyContainer.querySelectorAll('.drag-key-select');
             const keysArray = presetKeys.split(',');
@@ -422,15 +474,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const card = btn.closest('.card-core-logic');
         const wrapper = card.querySelector('.options-wrapper');
         const currentRows = wrapper.querySelectorAll('.opt-row');
-        const nextCharCode = 65 + currentRows.length; 
-        
+        const nextCharCode = 65 + currentRows.length;
         if (nextCharCode > 72) { return window.showToast?.('warning', 'Maksimal', 'Maksimal 8 opsi jawaban (A-H).'); }
         
         const letter = String.fromCharCode(nextCharCode);
         appendOptionRow(wrapper, letter, "");
         
         const type = card.querySelector('.type-input').value;
+        relabelOptions(card);
+
         if (type === 'drag') updateDragKeys(card.querySelector('.q-input'));
+        else if (type === 'urutan') {
+            const selects = card.querySelectorAll('.urutan-key-select');
+            const currentKeys = Array.from(selects).map(s => s.value);
+            updateUrutanKeys(card);
+            const newSelects = card.querySelectorAll('.urutan-key-select');
+            newSelects.forEach((sel, i) => { if (currentKeys[i]) sel.value = currentKeys[i]; });
+        }
         else if (type === 'pilgan') syncStandardKeys(card);
     };
 
@@ -445,20 +505,20 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
         btn.closest('.opt-row').remove();
         
-        const rows = wrapper.querySelectorAll('.opt-row');
-        rows.forEach((r, idx) => {
-            const letter = String.fromCharCode(65 + idx);
-            r.dataset.key = letter;
-            r.querySelector('label').innerText = `Opsi ${letter}`;
-            r.querySelector('input').placeholder = `Jawaban ${letter}`;
-        });
-        
         const type = card.querySelector('.type-input').value;
+        relabelOptions(card);
+
         if (type === 'drag') updateDragKeys(card.querySelector('.q-input'));
+        else if (type === 'urutan') {
+            const selects = card.querySelectorAll('.urutan-key-select');
+            const currentKeys = Array.from(selects).map(s => s.value);
+            updateUrutanKeys(card);
+            const newSelects = card.querySelectorAll('.urutan-key-select');
+            newSelects.forEach((sel, i) => { if (currentKeys[i]) sel.value = currentKeys[i]; });
+        }
         else if (type === 'pilgan') syncStandardKeys(card);
     };
 
-    // [PERBAIKAN BUG FATAL] Safe Null Checking di setiap elemen
     window.toggleCardType = (selectEl, presetKey = null) => {
         const card = selectEl.closest('.card-core-logic');
         if (!card) return;
@@ -469,23 +529,27 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const btnAddOpt = card.querySelector('.btn-add-option');
         const tfWrapper = card.querySelector('.tf-wrapper');
         const dragTools = card.querySelector('.drag-tools');
+        const urutanTools = card.querySelector('.urutan-tools'); 
         const keyStandard = card.querySelector('.key-standard');
         const keyDrag = card.querySelector('.key-drag');
         const keyInput = card.querySelector('.key-input');
         const textarea = card.querySelector('.q-input');
-
-        // Sembunyikan semua section dinamis dulu
+        const keyUrutan = card.querySelector('.key-urutan'); 
+        
         if(optWrapper) optWrapper.classList.add('hidden');
         if(btnAddOpt) btnAddOpt.classList.add('hidden');
         if(tfWrapper) tfWrapper.classList.add('hidden');
         if(dragTools) dragTools.classList.add('hidden');
+        if(urutanTools) urutanTools.classList.add('hidden');
         if(keyStandard) keyStandard.classList.add('hidden');
         if(keyDrag) keyDrag.classList.add('hidden');
+        if(keyUrutan) keyUrutan.classList.add('hidden'); // Sembunyikan dulu
+
+        relabelOptions(card);
 
         if (type === 'tf') {
             if(tfWrapper) tfWrapper.classList.remove('hidden');
             if(keyStandard) keyStandard.classList.remove('hidden');
-            
             if(keyInput) {
                 Array.from(keyInput.options).forEach(o => {
                     if(o.value === 'C' || o.value === 'D' || o.value > 'B') o.style.display = 'none';
@@ -495,7 +559,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 if(keyInput.value !== 'A' && keyInput.value !== 'B') keyInput.value = 'A';
                 if(presetKey === 'A' || presetKey === 'B') keyInput.value = presetKey;
             }
+        } else if (type === 'urutan') {
+            if(optWrapper) optWrapper.classList.remove('hidden');
+            if(btnAddOpt) btnAddOpt.classList.remove('hidden');
+            if(urutanTools) urutanTools.classList.remove('hidden');
+            if(keyUrutan) keyUrutan.classList.remove('hidden'); // Munculkan bagian kunci urutan
             
+            card.querySelectorAll('.btn-remove-opt').forEach(btn => btn.style.display = 'flex');
+            
+            if(keyUrutan) updateUrutanKeys(card, presetKey); // Render kuncinya
         } else if (type === 'drag') {
             if(optWrapper) optWrapper.classList.remove('hidden');
             if(btnAddOpt) btnAddOpt.classList.remove('hidden');
@@ -504,7 +576,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             
             card.querySelectorAll('.btn-remove-opt').forEach(btn => btn.style.display = 'flex');
             if(textarea) updateDragKeys(textarea, presetKey);
-
         } else { // pilgan
             if(optWrapper) optWrapper.classList.remove('hidden');
             if(btnAddOpt) btnAddOpt.classList.remove('hidden');
@@ -519,14 +590,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const type = card.querySelector('.type-input')?.value || 'pilgan';
         const question = card.querySelector('.q-input')?.value.trim() || '';
         const level = card.querySelector('.level-input')?.value || 'sedang';
-        // [BARU]: Ambil value image_url
         const image_url = card.querySelector('.img-input')?.value.trim() || null;
-        
+
         let finalOptions = {};
         let finalKey = "A";
+
         if (type === 'tf') {
             finalOptions = { A: "Benar", B: "Salah" };
             finalKey = card.querySelector('.key-input')?.value || 'A';
+        } else if (type === 'urutan') {
+            const rows = card.querySelectorAll('.opt-row');
+            finalOptions = Array.from(rows).map(r => r.querySelector('.opt-val').value.trim()).filter(v => v !== '');
+            
+            const selects = card.querySelectorAll('.urutan-key-select');
+            finalKey = Array.from(selects).map(sel => {
+                const row = Array.from(rows).find(r => r.dataset.key === sel.value);
+                return row ? row.querySelector('.opt-val').value.trim() : "";
+            }).filter(v => v !== '');
         } else {
             const rows = card.querySelectorAll('.opt-row');
             rows.forEach(r => { finalOptions[r.dataset.key] = r.querySelector('.opt-val').value.trim(); });
@@ -542,17 +622,12 @@ import ModalAlert from '../../components/ModalAlert.astro';
         return { type, question, options: finalOptions, correct_answer: finalKey, difficulty_level: level, image_url };
     };
 
-    // ================================================================
-    // MODAL UPLOAD & RENDER PREVIEW
-    // ================================================================
-
+    // (BAGIAN UPLOAD & MODAL LAINNYA TETAP SAMA SEPERTI SEBELUMNYA)
     document.getElementById('btnOpenUpload').onclick = async () => {
         await loadSummaryIntoModal();
         document.getElementById('modalUpload').classList.remove('hidden');
     };
-    
     window.closeUpload  = () => document.getElementById('modalUpload').classList.add('hidden');
-    
     window.closePreview = () => {
         if (isDirty) {
             showConfirmBack(() => document.getElementById('modalPreview').classList.add('hidden'));
@@ -565,12 +640,12 @@ import ModalAlert from '../../components/ModalAlert.astro';
         if (!isSummaryCached) {
             const btn = document.getElementById('btnOpenUpload');
             const oldContent = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg"></i>'; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg"></i>';
             try {
                 const res = await fetch(`${API_URL}/api/onboarding/questions/summary`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const result = await res.json();
                 summaryData = result.data || {};
-                isSummaryCached = true; 
+                isSummaryCached = true;
             } catch (e) { console.error("Gagal mengambil summary", e); } 
             finally { btn.innerHTML = oldContent; }
         }
@@ -608,7 +683,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     document.getElementById('sisipanWeek').onchange = () => resolvedWeekForUpload = parseInt(document.getElementById('sisipanWeek').value) || null;
 
     document.getElementById('btnDownloadTemplate').onclick = () => {
-        const templateText = `TIPE: pilgan\nQ: Contoh perbuatan syirik adalah?\nA: Shalat tepat waktu\nB: Berdoa kepada Allah\nC: Meminta kepada kuburan\nD: Membaca Al-Qur'an\nKUNCI: C\nLEVEL: MUDAH\n\nTIPE: tf\nQ: Berbakti kepada orang tua adalah kewajiban yang utama.\nA: Benar\nB: Salah\nKUNCI: A\nLEVEL: SEDANG\n\nTIPE: drag\nQ: Ya Allah ampunilah dosaku dan dosa [BLANK] yang menyayangiku.\nA: Kucingku\nB: Guruku\nC: Kedua orang tuaku\nD: Tetanggaku\nKUNCI: C\nLEVEL: MUDAH`;
+        const templateText = `TIPE: pilgan\nQ: Contoh perbuatan syirik adalah?\nA: Shalat tepat waktu\nB: Berdoa kepada Allah\nC: Meminta kepada kuburan\nD: Membaca Al-Qur'an\nKUNCI: C\nLEVEL: MUDAH\n\nTIPE: tf\nQ: Berbakti kepada orang tua adalah kewajiban yang utama.\nA: Benar\nB: Salah\nKUNCI: A\nLEVEL: SEDANG\n\nTIPE: drag\nQ: Ya Allah ampunilah dosaku dan dosa [BLANK] yang menyayangiku.\nA: Kucingku\nB: Guruku\nC: Kedua orang tuaku\nD: Tetanggaku\nKUNCI: C\nLEVEL: MUDAH\n\nTIPE: urutan\nQ: Urutkan rukun wudhu yang benar.\nA: Basuh Tangan\nB: Niat\nC: Cuci Kaki\nD: Basuh Muka\nKUNCI: B, D, A, C\nLEVEL: SEDANG`;
         const blob = new Blob([templateText], { type: 'text/plain' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
@@ -638,21 +713,29 @@ import ModalAlert from '../../components/ModalAlert.astro';
             const lines = block.split('\n').map(l => l.trim());
             const type = lines.find(l => l.startsWith('TIPE:'))?.replace('TIPE:', '').trim().toLowerCase() || 'pilgan';
             const q = lines.find(l => l.startsWith('Q:'))?.replace('Q:', '').trim() || '';
-            const key = lines.find(l => l.startsWith('KUNCI:'))?.replace('KUNCI:', '').trim() || 'A';
+            let key = lines.find(l => l.startsWith('KUNCI:'))?.replace('KUNCI:', '').trim() || 'A'; 
             const level = lines.find(l => l.startsWith('LEVEL:'))?.replace('LEVEL:', '').trim().toLowerCase() || 'sedang';
-            // [BARU]: Deteksi baris IMG: di file .txt
             const img = lines.find(l => l.startsWith('IMG:'))?.replace('IMG:', '').trim() || null;
+            let options = {}; 
             
-            const options = {};
             ['A','B','C','D','E','F','G','H'].forEach(letter => {
                 const line = lines.find(l => l.startsWith(`${letter}:`));
                 if (line) options[letter] = line.replace(`${letter}:`, '').trim();
             });
-     
+
             if ((type === 'pilgan' || type === 'drag') && Object.keys(options).length === 0) {
                 options.A = ""; options.B = ""; options.C = ""; options.D = "";
             }
-            return { type, q, options, key, level, image_url: img }; // Tambahkan image_url
+
+            if (type === 'urutan') {
+                const arr = Object.values(options).filter(v => v !== '');
+                const keyLetters = key.split(',').map(s => s.trim());
+                const correctArr = keyLetters.map(k => options[k]).filter(Boolean);
+                
+                options = arr;
+                key = correctArr;
+            }
+            return { type, q, options, key, level, image_url: img };
         }).filter(item => item.q !== '');
     };
 
@@ -669,9 +752,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     const createSoalCard = (item, displayIndex) => {
         const type = item.type || 'pilgan';
         const div = document.createElement('div');
-        // PASTIKAN CLASS card-core-logic ADA DI SINI AGAR JS BISA MENEMUKANNYA
         div.className = "soal-card card-core-logic bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-sm";
-        
         div.innerHTML = `
             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 pb-3 border-b border-gray-100">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -680,6 +761,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         <option value="pilgan" ${type==='pilgan'?'selected':''}>Pilihan Ganda</option>
                         <option value="tf" ${type==='tf'?'selected':''}>Benar / Salah</option>
                         <option value="drag" ${type==='drag'?'selected':''}>Drag & Drop</option>
+                        <option value="urutan" ${type==='urutan'?'selected':''}>Mengurutkan (Puzzle)</option>
                     </select>
                 </div>
                 <button type="button" onclick="this.closest('.soal-card').remove(); markDirty();" class="text-red-500 font-bold text-[10px] self-end sm:self-auto hover:bg-red-50 p-2 rounded-lg transition-colors border border-red-100 sm:border-none flex items-center gap-1.5"><i class="fa-solid fa-trash"></i> Hapus</button>
@@ -687,17 +769,10 @@ import ModalAlert from '../../components/ModalAlert.astro';
             
             <div class="drag-tools hidden mb-3 p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-start gap-2.5">
-                    <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
-                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-                    </div>
-                    <p class="text-[10px] text-indigo-900 leading-relaxed font-medium">
-                        <b class="text-indigo-700">Mode Drag & Drop:</b><br>
-                        Klik tombol di bawah untuk menyisipkan kolom kosong pada soal.
-                    </p>
+                    <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
+                    <p class="text-[10px] text-indigo-900 leading-relaxed font-medium"><b class="text-indigo-700">Mode Drag & Drop:</b><br>Klik tombol di bawah untuk menyisipkan kolom kosong pada soal.</p>
                 </div>
-                <button type="button" onclick="insertBlank(this)" class="w-full sm:w-auto text-[10px] font-bold bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
-                    <i class="fa-solid fa-plus"></i> Sisipkan [BLANK]
-                </button>
+                <button type="button" onclick="insertBlank(this)" class="w-full sm:w-auto text-[10px] font-bold bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0"><i class="fa-solid fa-plus"></i> Sisipkan [BLANK]</button>
             </div>
 
             <div class="space-y-3">
@@ -721,6 +796,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 </div>
             </div>
 
+            <div class="urutan-tools hidden mb-3 p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-3 w-full mt-3">
+                <div class="w-8 h-8 rounded-full bg-teal-200 text-teal-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-list-ol"></i></div>
+                <p class="text-[10px] font-bold text-teal-800 leading-relaxed">Mode Mengurutkan aktif.<br>Masukkan elemen di bawah secara acak. Sistem akan mengacaknya saat ujian.</p>
+            </div>
+
             <div class="options-wrapper flex flex-col gap-2 mt-3 w-full"></div>
             <button type="button" class="btn-add-option hidden text-[10px] font-bold text-blue-500 mt-2 w-full p-3 bg-blue-50 border-2 border-dashed border-blue-200 hover:bg-blue-100 rounded-xl transition-colors active:scale-95 text-center" onclick="addOptionRow(this)">+ Tambah Pilihan Jawaban</button>
 
@@ -740,6 +820,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <div class="drag-keys-container grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
 
+                <div class="key-urutan hidden w-full">
+                    <span class="text-[10px] font-bold text-gray-400 mb-2 block">KUNCI JAWABAN URUTAN:</span>
+                    <div class="urutan-keys-container flex flex-col gap-2"></div>
+                </div>
+
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200">
                     <span class="text-[10px] font-bold text-gray-400 shrink-0">LEVEL KESULITAN:</span>
                     <select class="level-input text-xs font-bold border border-gray-200 bg-white text-indigo-700 rounded-lg px-3 py-2.5 shadow-sm outline-none w-full sm:flex-1 appearance-none">
@@ -750,10 +835,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 </div>
             </div>
         `;
-        
         const optWrapper = div.querySelector('.options-wrapper');
         const defaultOpts = item.options && Object.keys(item.options).length > 0 ? item.options : { A: "", B: "", C: "", D: "" };
-        Object.entries(defaultOpts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
+        
+        if (Array.isArray(defaultOpts)) {
+            defaultOpts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); });
+        } else {
+            Object.entries(defaultOpts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
+        }
 
         setTimeout(() => toggleCardType(div.querySelector('.type-input'), item.key), 10);
         return div;
@@ -771,17 +860,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const cards   = document.querySelectorAll('#previewContent .soal-card');
         const subject = activeSubjectForUpload;
         const week    = parseInt(document.getElementById('targetWeek').value);
-
         if (!week || week < 1) return window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
 
         const questionsData = [];
         cards.forEach(card => {
             const data = extractCardData(card);
-            if (data.question && (data.type === 'tf' || (data.options.A && data.options.B))) {
+            if (data.question && (data.type === 'tf' || data.type === 'urutan' || (data.options.A && data.options.B))) {
                 questionsData.push(data);
             }
         });
-
         if (questionsData.length === 0) return window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
 
         const btn = document.getElementById('btnFinalSave');
@@ -798,18 +885,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan.`);
                 isSummaryCached = false; 
                 isDirty = false; 
-                setTimeout(() => { document.getElementById('modalPreview').classList.add('hidden'); fetchAccordion(); }, 1200); 
+                setTimeout(() => { document.getElementById('modalPreview').classList.add('hidden'); fetchAccordion(); }, 1200);
             } else window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
-        } catch (err) { console.error(err); window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
+        } catch (err) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
         finally { btn.textContent = "Simpan"; btn.disabled = false; }
     };
 
-    // ================================================================
-    // EDIT SOAL SATUAN
-    // ================================================================
     window.openEditSoal = (q) => {
         const modal = document.getElementById('modalEditSoal');
-        
         document.getElementById('editSoalId').value = q.id;
         document.getElementById('editSoalType').value = q.type || 'pilgan';
         document.getElementById('editSoalQ').value = q.question;
@@ -820,12 +903,17 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const optWrapper = document.getElementById('editOptionsWrapper');
         optWrapper.innerHTML = '';
         const opts = q.options && Object.keys(q.options).length > 0 ? q.options : {A:"", B:"", C:"", D:""};
-        Object.entries(opts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
+        
+        if (Array.isArray(opts)) {
+            opts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); });
+        } else {
+            Object.entries(opts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
+        }
 
         toggleEditType(q.correct_answer);
         
         modal.classList.replace('hidden', 'flex');
-        isDirty = false; 
+        isDirty = false;
     };
 
     window.toggleEditType = (presetKey = null) => {
@@ -841,14 +929,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
         if (isDirty) showConfirmBack(doClose);
         else doClose();
     };
-    
+
     window.submitEditSoal = async () => {
         const modal = document.getElementById('modalEditSoal');
         const id = document.getElementById('editSoalId').value;
         const payload = extractCardData(modal);
 
-        if (!payload.question || (payload.type !== 'tf' && (!payload.options.A || !payload.options.B))) {
-            return window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal 2 opsi wajib diisi.');
+        if (!payload.question || (payload.type !== 'tf' && payload.type !== 'urutan' && (!payload.options.A || !payload.options.B))) {
+            return window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal opsi wajib diisi.');
         }
 
         try {
@@ -859,7 +947,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             });
             if (res.ok) {
                 window.showToast('success', 'Berhasil', 'Soal berhasil diperbarui.');
-                
                 isDirty = false; 
                 document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
                 
@@ -872,26 +959,19 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         }
                     }
                 }
-                renderAllWeeks(); 
+                renderAllWeeks();
             } else window.showToast('danger', 'Error', (await res.json()).message || 'Gagal update.');
         } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
-    // ================================================================
-    // FETCH & RENDER ACCORDION SOAL
-    // ================================================================
     const fetchAccordion = async () => {
         const container = document.getElementById('accordionContainer');
-        container.innerHTML = `
-            <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
-            <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>
-            <div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>`;
+        container.innerHTML = `<div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div><div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div><div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>`;
         try {
             const responses = await Promise.all(SUBJECTS.map(s =>
                     fetch(`${API_URL}/api/onboarding/questions/${s}`, { headers: { 'Authorization': `Bearer ${token}` } })
                     .then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {} }))
             ));
-
             allWeeksData = {};
             responses.forEach(({ subject, grouped }) => {
                 Object.keys(grouped).forEach(weekStr => {
@@ -902,7 +982,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             });
             renderAllWeeks();
         } catch (e) {
-            console.error("Gagal load accordion:", e);
             container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat data.</p>';
         }
     };
@@ -910,8 +989,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     document.getElementById('searchWeek').addEventListener('input', () => renderAllWeeks());
     document.getElementById('btnSortWeek').addEventListener('click', () => {
         isSortAsc = !isSortAsc;
-        document.getElementById('btnSortWeek').innerHTML = isSortAsc 
-            ? '<i class="fa-solid fa-arrow-down-1-9"></i>' : '<i class="fa-solid fa-arrow-down-9-1"></i>';
+        document.getElementById('btnSortWeek').innerHTML = isSortAsc ? '<i class="fa-solid fa-arrow-down-1-9"></i>' : '<i class="fa-solid fa-arrow-down-9-1"></i>';
         renderAllWeeks();
     });
 
@@ -923,13 +1001,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
         if (searchTerm) weeks = weeks.filter(w => w.toString() === searchTerm);
         weeks.sort((a, b) => isSortAsc ? a - b : b - a);
-
         if (weeks.length === 0) {
-            container.innerHTML = `
-                <div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-                    <i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i>
-                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Data Tidak Ditemukan</p>
-                </div>`;
+            container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200"><i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Data Tidak Ditemukan</p></div>`;
             return;
         }
         weeks.forEach(week => container.appendChild(renderWeekAccordion(week, allWeeksData[week])));
@@ -942,19 +1015,10 @@ import ModalAlert from '../../components/ModalAlert.astro';
         
         const header = document.createElement('div');
         header.className = `bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors`;
-        header.innerHTML = `
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div>
-                <div>
-                    <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
-                    <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
-                </div>
-            </div>
-            <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 accordion-arrow"></i>`;
+        header.innerHTML = `<div class="flex items-center gap-4"><div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div><div><h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3><p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p></div></div><i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 accordion-arrow"></i>`;
         
         const body = document.createElement('div');
-        body.className = 'accordion-body hidden bg-white p-4 space-y-3'; 
-
+        body.className = 'accordion-body hidden bg-white p-4 space-y-3';
         SUBJECTS.forEach(subject => {
             const qList = subjectsData[subject];
             if (qList && qList.length > 0) {
@@ -966,20 +1030,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 subjHeader.className = `${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all`;
                 const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
                 
-                subjHeader.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-base">${icon}</span>
-                        <span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span>
-                        <span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${qList.length} soal</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa">
-                            <i class="fa-solid fa-eye text-[10px]"></i>
-                        </button>
-                        <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 subj-arrow text-xs ml-1"></i>
-                    </div>
-                `;
-
+                subjHeader.innerHTML = `<div class="flex items-center gap-3"><span class="text-base">${icon}</span><span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span><span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${qList.length} soal</span></div><div class="flex items-center gap-2"><button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa"><i class="fa-solid fa-eye text-[10px]"></i></button><i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 subj-arrow text-xs ml-1"></i></div>`;
+                
                 const subjBody = document.createElement('div');
                 subjBody.className = `hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}`;
                 subjBody.innerHTML = qList.map((q, i) => renderSoalItem(q, i, subject)).join('');
@@ -1012,22 +1064,12 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     const renderSoalItem = (q, index, subject) => {
-        // [BARU]: Thumbnail jika ada image_url
-        const thumbHtml = q.image_url ? `
-            <div class="mt-2 mb-2 w-full max-w-[120px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-white">
-                <img src="${q.image_url}" class="w-full h-auto object-contain max-h-24" onerror="this.parentElement.remove()">
-            </div>
-        ` : '';
-
-        const typeBadge = q.type === 'tf' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 border border-purple-200 uppercase tracking-widest shadow-sm">T/F</span>' :
-                          q.type === 'drag' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200 uppercase tracking-widest shadow-sm">DRAG</span>' :
-                          '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 uppercase tracking-widest shadow-sm">PG</span>';
-
+        const thumbHtml = q.image_url ? `<div class="mt-2 mb-2 w-full max-w-[120px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-white"><img src="${q.image_url}" class="w-full h-auto object-contain max-h-24" onerror="this.parentElement.remove()"></div>` : '';
+        const typeBadge = q.type === 'tf' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 border border-purple-200 uppercase tracking-widest shadow-sm">T/F</span>' : q.type === 'drag' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200 uppercase tracking-widest shadow-sm">DRAG</span>' : q.type === 'urutan' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-600 border border-teal-200 uppercase tracking-widest shadow-sm">URUTAN</span>' : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 uppercase tracking-widest shadow-sm">PG</span>';
+        
         let optHtml = '';
         if (q.type === 'drag') {
-            const allOpts = Object.entries(q.options || {})
-                .map(([k, v]) => `<span class="inline-block px-1.5 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-700 font-bold">${k}: ${v}</span>`)
-                .join(' ');
+            const allOpts = Object.entries(q.options || {}).map(([k, v]) => `<span class="inline-block px-1.5 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-700 font-bold">${k}: ${v}</span>`).join(' ');
             const answerKeys = (q.correct_answer || '').split(',');
             let blankIndex = 0;
             const filledSentence = (q.question || '').replace(/\[BLANK\]/g, () => {
@@ -1036,126 +1078,66 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 blankIndex++;
                 return `<span class="inline-block bg-green-100 text-green-700 font-black px-1.5 py-0.5 rounded border border-green-300 text-[10px]">${val}</span>`;
             });
-            optHtml = `
-                <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Kalimat Lengkap:</p>
-                    <p class="text-[11px] text-gray-700 leading-relaxed font-medium">${filledSentence}</p>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">Pilihan Jawaban:</p>
-                    <div class="flex flex-wrap gap-1">${allOpts}</div>
-                </div>`;
+            optHtml = `<div class="space-y-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Kalimat Lengkap:</p><p class="text-[11px] text-gray-700 leading-relaxed font-medium">${filledSentence}</p><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">Pilihan Jawaban:</p><div class="flex flex-wrap gap-1">${allOpts}</div></div>`;
+        } else if (q.type === 'urutan') {
+            const arrUrutan = Array.isArray(q.options) ? q.options : [];
+            const keyArr = Array.isArray(q.correct_answer) ? q.correct_answer : []; 
+            const finalRenderArr = keyArr.length > 0 ? keyArr : arrUrutan;
+            optHtml = `<div class="space-y-1"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Urutan Benar:</p><div class="flex flex-wrap items-center gap-1.5 mt-1">${finalRenderArr.map((item) => `<span class="inline-block px-2 py-1 rounded bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px]">${item}</span>`).join('<i class="fa-solid fa-arrow-right text-[10px] text-gray-300"></i>')}</div></div>`;
         } else {
-            optHtml = Object.entries(q.options || {})
-                .map(([k, v]) => `<span class="${k === q.correct_answer ? 'text-green-600 font-bold' : 'text-gray-400'}">${k}: ${v}</span>`)
-                .join(' · ');
+            optHtml = Object.entries(q.options || {}).map(([k, v]) => `<span class="${k === q.correct_answer ? 'text-green-600 font-bold' : 'text-gray-400'}">${k}: ${v}</span>`).join(' · ');
         }
         
         const levelColor = { mudah: 'text-green-600 bg-green-50', sedang: 'text-blue-600 bg-blue-50', sulit: 'text-red-500 bg-red-50' };
         const lc = levelColor[q.difficulty_level] || 'text-gray-500 bg-gray-50';
 
-        return `
-            <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm space-y-2" data-soal-id="${q.id}">
-                <div class="flex items-start justify-between gap-2 border-b border-gray-100 pb-2">
-                    <div class="flex-1">
-                        <p class="text-xs font-bold text-gray-800 leading-relaxed">${index + 1}. ${q.question}</p>
-                        ${thumbHtml}
-                    </div>
-                    <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        <div class="flex items-center gap-1">
-                            ${typeBadge}
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border border-white shadow-sm ${lc}">${q.difficulty_level}</span>
-                        </div>
-                        <div class="flex gap-1 mt-1">
-                            <button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})" class="w-6 h-6 flex items-center justify-center bg-white text-blue-500 border border-blue-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="hapusSoal('${q.id}', '${subject}')" class="w-6 h-6 flex items-center justify-center bg-white text-red-500 border border-red-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-[10px] leading-relaxed pt-1">${optHtml}</div>
-            </div>`;
+        return `<div class="bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm space-y-2" data-soal-id="${q.id}"><div class="flex items-start justify-between gap-2 border-b border-gray-100 pb-2"><div class="flex-1"><p class="text-xs font-bold text-gray-800 leading-relaxed">${index + 1}. ${q.question}</p>${thumbHtml}</div><div class="flex flex-col items-end gap-1.5 flex-shrink-0"><div class="flex items-center gap-1">${typeBadge}<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border border-white shadow-sm ${lc}">${q.difficulty_level}</span></div><div class="flex gap-1 mt-1"><button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})" class="w-6 h-6 flex items-center justify-center bg-white text-blue-500 border border-blue-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Edit"><i class="fa-solid fa-pen"></i></button><button onclick="hapusSoal('${q.id}', '${subject}')" class="w-6 h-6 flex items-center justify-center bg-white text-red-500 border border-red-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Hapus"><i class="fa-solid fa-trash"></i></button></div></div></div><div class="text-[10px] leading-relaxed pt-1">${optHtml}</div></div>`;
     };
 
     window.hapusSoal = async (id, subject) => {
         if (!confirm(`Hapus soal ini dari bank soal ${subject}? Tindakan tidak bisa dibatalkan.`)) return;
         try {
-            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 window.showToast('success', 'Terhapus', 'Soal berhasil dihapus.');
                 isSummaryCached = false; 
-
                 for (const week in allWeeksData) {
                     if (allWeeksData[week][subject]) {
                         const qIndex = allWeeksData[week][subject].findIndex(q => q.id === id);
-                        if (qIndex !== -1) {
-                            allWeeksData[week][subject].splice(qIndex, 1);
-                            break;
-                        }
+                        if (qIndex !== -1) { allWeeksData[week][subject].splice(qIndex, 1); break; }
                     }
                 }
-                renderAllWeeks(); 
+                renderAllWeeks();
             } else window.showToast('danger', 'Error', 'Gagal menghapus soal.');
         } catch { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
-    // ================================================================
-    // FITUR GAMBAR: Upload File & Live Preview
-    // ================================================================
-
-    // Upload dari card soal di preview (input manual / parse TXT)
     window.handleCardImgUpload = async (fileInput) => {
         const file = fileInput.files[0];
         if (!file) return;
-        
         const card = fileInput.closest('.card-core-logic');
         const imgInput = card.querySelector('.img-input');
         const previewWrap = card.querySelector('.img-preview');
-        
-        // Tampilkan loading state (opsional)
         imgInput.value = "Sedang mengupload...";
-
-        // Siapkan form data
         const formData = new FormData();
-        formData.append('file', file); // Sesuaikan dengan nama field di backend-mu
-
+        formData.append('file', file);
         try {
-            // Tembak API upload backend-mu
-            const res = await fetch(`${API_URL}/api/upload-image`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            
+            const res = await fetch(`${API_URL}/api/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
             const result = await res.json();
-            
             if (res.ok) {
-                // Dapatkan URL gambar asli dari server
-                const finalImageUrl = result.data.url; // Sesuaikan dengan response API-mu
-                
+                const finalImageUrl = result.data.url;
                 imgInput.value = finalImageUrl;
-                
-                // Render preview
                 if (previewWrap) {
                     previewWrap.classList.remove('hidden');
                     const existingImg = previewWrap.querySelector('img');
-                    if (existingImg) {
-                        existingImg.src = finalImageUrl;
-                    } else {
-                        previewWrap.innerHTML = `<img src="${finalImageUrl}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.closest('.img-preview').classList.add('hidden')">`;
-                    }
+                    if (existingImg) existingImg.src = finalImageUrl;
+                    else previewWrap.innerHTML = `<img src="${finalImageUrl}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.closest('.img-preview').classList.add('hidden')">`;
                 }
                 markDirty();
-            } else {
-                window.showToast?.('danger', 'Error', 'Gagal upload gambar.');
-                imgInput.value = "";
-            }
-        } catch (err) {
-            window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan saat upload.');
-            imgInput.value = "";
-        }
+            } else { window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); imgInput.value = ""; }
+        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan saat upload.'); imgInput.value = ""; }
     };
-    // Sync live preview saat user mengetik URL di img-input card
+
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('img-input') && e.target.closest('.card-core-logic')) {
             const card = e.target.closest('.card-core-logic');
@@ -1167,14 +1149,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     const existingImg = previewWrap.querySelector('img');
                     if (existingImg) existingImg.src = url;
                     else previewWrap.innerHTML = `<img src="${url}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.closest('.img-preview').classList.add('hidden')">`;
-                } else {
-                    previewWrap.classList.add('hidden');
-                }
+                } else { previewWrap.classList.add('hidden'); }
             }
         }
     });
 
-    // Upload dari modal Edit Soal
     window.handleEditImgUpload = (fileInput) => {
         const file = fileInput.files[0];
         if (!file) return;
@@ -1188,16 +1167,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
         reader.readAsDataURL(file);
     };
 
-    // Preview gambar di modal Edit saat URL diketik
     window.previewEditImg = (url) => {
         const previewWrap = document.getElementById('editImgPreview');
         const previewEl = document.getElementById('editImgPreviewEl');
-        if (url && url.trim()) {
-            previewEl.src = url.trim();
-            previewWrap.classList.remove('hidden');
-        } else {
-            previewWrap.classList.add('hidden');
-        }
+        if (url && url.trim()) { previewEl.src = url.trim(); previewWrap.classList.remove('hidden'); } 
+        else { previewWrap.classList.add('hidden'); }
     };
 
     fetchAccordion();
