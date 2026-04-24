@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Toast from '../../components/Toast.astro';
 import PhotoBooth from '../../components/PhotoBooth.astro';
+import Mascot from '../../components/Mascot.astro';
 ---
 
 <Layout title="Sesi Pengerjaan - yukNgaji">
@@ -156,6 +157,7 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         </div>
     </div>
 
+    <Mascot />
     <PhotoBooth />
     <Toast />
 </Layout>
@@ -335,6 +337,38 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
                     localStorage.setItem(qKey, JSON.stringify(questions.map(q => q.id)));
                 }
             }
+
+            // SUNTIKKAN KONFIGURASI MASKOT KHUSUS FORM (MODE PEEK)
+         if (window.MiawMascot) {
+             await window.MiawMascot.init({
+                 mode: 'peek',
+                 animations: {
+                     PEEK_IN: { path: '/CAT LOTTIE/SHOWING CAT.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null },
+                     PEEK_IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0, lottieDuration: 5000, data: null },
+                     PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 3000, data: null }
+                 },
+                 texts: {
+                     entering: "Haloo! Aku temenin ngisi ya miaw~",
+                     idleArrive: "Semangat ngerjainnya, jangan buru-buru!",
+                     idlePhrases: [
+                         "Udah sampai mana nih ngisinya? miaw~", 
+                         "Miaw... pelan-pelan aja isinya biar teliti.", 
+                         "Jangan lupa kejujurannya ya, aku awasin lho 👀",
+                         "Kalau bingung, baca pelan-pelan lagi aja.",
+                         "Miaw... cuacanya enak ya buat rebahan."
+                     ],
+                     warnings: [
+                         "Miaw... kok aku dicuekin terus sih?",
+                         "Kamu asik ngisi sendiri ya... liatin aku dong!"
+                     ],
+                     dismissNormal: "Yaudah deh, aku sembunyi dulu di bawah meja. Miaw~",
+                     callNormalArrive: "Bosan di bawah... aku temenin lagi ya! Miaw~"
+                 }
+             });
+
+             // Munculkan maskot otomatis setelah 2 detik halaman terbuka
+             setTimeout(() => { window.MiawMascot.show(); }, 2000);
+         }
 
             renderQuestions();
             restoreDraftAnswers();
@@ -614,8 +648,8 @@ import PhotoBooth from '../../components/PhotoBooth.astro';
         }
     };
 
-    document.getElementById('questionsList').addEventListener('change', () => { isDirty = true; saveDraftAnswers(); validate(); });
-    document.getElementById('kuesionerContainer').addEventListener('change', () => { isDirty = true; validate(); saveDraftAnswers(); });
+    document.getElementById('questionsList').addEventListener('change', () => { isDirty = true; saveDraftAnswers(); validate(); window.MiawMascot?.resetTimer(); });
+    document.getElementById('kuesionerContainer').addEventListener('change', () => { isDirty = true; validate(); saveDraftAnswers(); window.MiawMascot?.resetTimer(); });
 
     // ==========================================
     // 4. TIMER & EARLY FINISH
