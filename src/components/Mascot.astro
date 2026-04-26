@@ -160,12 +160,21 @@
         });
     };
 
-    const setChat = (type, text, actionType = null, theme = 'default', duration = 3500) => {
+    // [UPDATE]: Fungsi setChat agar bisa memproses fungsi dinamis & menghilangkan tanda kutip literal
+    const setChat = (type, textRaw, actionType = null, theme = 'default', duration = 3500) => {
+        let text = "";
+        try {
+            // Evaluasi jika teks berupa fungsi (agar bisa dinamis membaca waktu/nama)
+            text = typeof textRaw === 'function' ? textRaw() : textRaw;
+        } catch(e) {
+            text = "Miaw miaw...";
+        }
+
         const bubble = document.getElementById('mascot-chat');
         let themeClass = theme === 'warning' ? 'bubble-warning' : '';
         bubble.className = `mascot-bubble ${type === 'small' ? 'bubble-small' : 'bubble-large'} ${themeClass}`;
         
-        let htmlContent = `<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">"${text}"</span>`;
+        let htmlContent = `<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">${text}</span>`;
         if (actionType) {
             htmlContent += `<div class="chat-choices mt-2"><button class="btn-choice btn-yes" onclick="window.MiawMascot.handleChoice('${actionType}', true)">Ya</button><button class="btn-choice btn-no" onclick="window.MiawMascot.handleChoice('${actionType}', false)">Tidak</button></div>`;
         }
@@ -179,7 +188,7 @@
                     bubble.style.opacity = "0"; 
                     bubble.style.transform = type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)";
                 } 
-            }, duration); 
+            }, duration);
         }
     };
 
@@ -456,6 +465,10 @@
                 setChat('large', cfg.texts.helpReject, null, 'warning', 4000); 
             }
             setTimeout(() => { retreatCat(); }, 1500);
+        },
+        say: (type, text, actionType = null, theme = 'default', duration = 4000) => {
+            if (catState === "HIDDEN" || mState.isDismissed || mState.isPranking || mState.isThreatening) return;
+            setChat(type, text, actionType, theme, duration);
         }
     };
 })();
