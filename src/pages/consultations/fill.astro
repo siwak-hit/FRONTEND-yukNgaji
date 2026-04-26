@@ -262,7 +262,7 @@ import Mascot from '../../components/Mascot.astro';
         
         <div id="meme67ResultView" class="hidden w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-gray-900 bg-black my-auto mx-auto">
             
-            <video id="meme67Video" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+            <video id="meme67Video" src="/video/cat-67.mp4" preload="auto" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
             
             <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
                 
@@ -1620,18 +1620,30 @@ import Mascot from '../../components/Mascot.astro';
                 bonusEl.classList.add('hidden');
             }
 
-// [LOGIKA EASTER EGG: KUCING SIX SEVEN]
-if (finalScore === 67) {
+            // [LOGIKA EASTER EGG: KUCING SIX SEVEN]
+            if (finalScore === 67) {
                 // Tampilkan Mode Meme, Sembunyikan Normal
                 normalView.classList.replace('flex', 'hidden');
                 memeView.classList.replace('hidden', 'block');
                 
                 // Putar Video (muted dimatikan agar suara muncul)
                 const vid = document.getElementById('meme67Video');
-                vid.src = "/video/cat-67.mp4"; 
-                vid.volume = 0.6;
-                vid.muted = false;
-                vid.play().catch(() => { vid.muted = true; vid.play(); });
+                
+                if (vid) {
+                    vid.currentTime = 0;
+                    vid.muted = true; // Paksa bisu dulu
+                    
+                    vid.play().then(() => {
+                        // Kalau udah muter, baru nyalain suaranya
+                        vid.muted = false;
+                        vid.volume = 0.6;
+                    }).catch((e) => {
+                        vid.muted = true;
+                        vid.play();
+                    });
+                }
+
+                emojiEl.innerText = '🔥';
                 
             } else {
                 // Tampilkan Mode Normal, Sembunyikan Meme

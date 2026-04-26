@@ -142,7 +142,7 @@ import Mascot from '../../components/Mascot.astro'; // <--- KOMPONEN MASKOT
   <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
     <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
         
-        <video id="videoAngryCat" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+        <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="auto" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
         
         <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
             
@@ -481,10 +481,20 @@ import Mascot from '../../components/Mascot.astro'; // <--- KOMPONEN MASKOT
         if (modal) modal.classList.replace('hidden', 'flex');
         
         if (vid) {
-            vid.src = "/video/cat-angry.mp4"; 
-            vid.volume = 0.6; 
-            vid.muted = false; // Matikan muted agar suara muncul
-            vid.play().catch(() => { vid.muted = true; vid.play(); });
+            vid.currentTime = 0;
+            vid.muted = true; // Paksa bisu dulu biar browser izinkan jalan
+            
+            // Putar videonya
+            vid.play().then(() => {
+                // Begitu berhasil muter, baru kita nyalain suaranya!
+                vid.muted = false; 
+                vid.volume = 0.6;
+            }).catch((e) => {
+                console.warn("Browser nge-block video:", e);
+                // Kalau tetep gagal, biarin muter bisu (minimal animasinya jalan)
+                vid.muted = true;
+                vid.play();
+            });
         }
 
         // Efek Hukuman
