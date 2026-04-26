@@ -14,6 +14,9 @@
   </div>
   
   <div id="mascot-lottie-hidden" style="position: absolute; opacity: 0; pointer-events: none; width: 140px; height: 140px;"></div>
+    <div id="mascot-video-container" class="hidden absolute bottom-0 right-0 w-[150px] z-[100] drop-shadow-xl rounded-xl overflow-hidden pointer-events-none transition-all duration-300">
+        <video id="mascot-video-player" muted playsinline class="w-full h-auto object-cover rounded-xl"></video>
+    </div>
   <canvas id="mascot-lottie" width="140" height="140" class="cursor-pointer drop-shadow-xl" onclick="window.MiawMascot.handleClick()"></canvas>
 </div>
 
@@ -430,41 +433,62 @@
         },
         handleChoice: (actionType, isYes) => {
             const bubble = document.getElementById('mascot-chat');
+            
             if (actionType === 'ASK_THREAT') {
                 bubble.style.opacity = "0";
                 if (isYes) {
-                    mState.isReturnedAuto = false; mState.isDismissed = true; mState.isThreatening = true;
+                    mState.isReturnedAuto = false;
+                    mState.isDismissed = true; mState.isThreatening = true;
                     clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.prank); clearTimeout(timers.comeback); 
                     catState = "LEAVING"; applyCatState("LEAVING");
                     setChat('large', cfg.texts.threatExecute, null, 'warning', 4000); 
-                    cfg.actions.onThreatExecute(); 
+                    cfg.actions.onThreatExecute();
                     const mc = document.getElementById('mascot-container'); const icon = document.getElementById('toggleCatIcon');
-                    icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200"; 
+                    icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
                     setTimeout(() => { mc.style.transition = 'right 3s linear, transform 3s linear'; mc.style.right = '-250px'; }, 3000);
-                } else { mState.isReturnedAuto = false; setChat('small', "Nah gitu dong, aku anteng aja kok di sini...", null, 'default', 4000); }
-                return; 
+                } else { 
+                    mState.isReturnedAuto = false; 
+                    setChat('small', "Nah gitu dong, aku anteng aja kok di sini...", null, 'default', 4000);
+                }
+                return;
             }
+            
             if (actionType === 'ASK_DIFFICULTY') {
                 if (isYes) {
                     const isHelpUsed = localStorage.getItem('cat_help_used') === 'true';
                     if (!isHelpUsed) { setChat('large', cfg.texts.clickYesOffer, 'FREEZE'); } 
-                    else { setChat('large', cfg.texts.clickYesEmpty, null, 'default', 4000); setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500); }
+                    else { 
+                        setChat('large', cfg.texts.clickYesEmpty, null, 'default', 4000);
+                        setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500); 
+                    }
                 } else { 
-                    // PERBAIKAN: Gunakan 'large' agar posisi chat tidak lompat saat kucing masih di tengah (Close Up)
-                    setChat('large', cfg.texts.clickNo, null, 'warning', 4000); 
-                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 1500); 
+                    // [PERBAIKAN]: Eksekusi Kucing Marah saat menolak bantuan sejak awal!
+                    if (typeof window.triggerAngryCat === 'function') {
+                        window.triggerAngryCat();
+                    } else {
+                        setChat('large', cfg.texts.clickNo, null, 'warning', 4000);
+                    }
+                    // Waktu mundur diperlama sedikit (2500ms) agar teks peringatan bisa terbaca
+                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500); 
                 }
                 return;
             }
-            bubble.style.opacity = "0"; 
+            
+            bubble.style.opacity = "0";
+            
             if (actionType === 'FREEZE' && isYes) {
-                localStorage.setItem('cat_help_used', 'true'); setChat('large', cfg.texts.helpExecute, null, 'default', 4000);
+                localStorage.setItem('cat_help_used', 'true');
+                setChat('large', cfg.texts.helpExecute, null, 'default', 4000);
                 cfg.actions.onHelpExecute(() => { if (catState === "IDLE_EDGE") setChat('small', cfg.texts.helpDone, null, 'default', 4000); });
             } else if (actionType === 'FREEZE' && !isYes) { 
-                // PERBAIKAN: Gunakan 'large' agar posisi chat tidak lompat saat menolak bantuan (Close Up)
-                setChat('large', cfg.texts.helpReject, null, 'warning', 4000); 
+                // [PERBAIKAN]: Eksekusi juga jika menolak di pertanyaan kedua
+                if (typeof window.triggerAngryCat === 'function') {
+                    window.triggerAngryCat();
+                } else {
+                    setChat('large', cfg.texts.helpReject, null, 'warning', 4000);
+                }
             }
-            setTimeout(() => { retreatCat(); }, 1500);
+            setTimeout(() => { retreatCat(); }, 2500);
         },
         say: (type, text, actionType = null, theme = 'default', duration = 4000) => {
             if (catState === "HIDDEN" || mState.isDismissed || mState.isPranking || mState.isThreatening) return;

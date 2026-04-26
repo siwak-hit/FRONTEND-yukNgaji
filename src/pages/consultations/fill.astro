@@ -258,39 +258,55 @@ import Mascot from '../../components/Mascot.astro';
         </div>
     </div>
 
-    <div id="modalResult" class="fixed inset-0 bg-black/90 z-[500] hidden items-center justify-center p-4 backdrop-blur-md">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-center relative overflow-hidden animate-slide-up">
-            <div class="absolute -top-20 -right-20 w-40 h-40 bg-green-500/10 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
-
-            <div id="resultEmoji" class="text-6xl mb-4 relative z-10 animate-bounce drop-shadow-sm">🏆</div>
-            <h3 id="resultTitle" class="font-black text-gray-800 text-2xl mb-2 relative z-10">Luar Biasa!</h3>
-            <p id="resultMessage" class="text-xs text-gray-500 mb-6 leading-relaxed relative z-10">Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.</p>
+    <div id="modalResult" class="fixed inset-0 bg-black/90 z-[500] hidden items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+        
+        <div id="meme67ResultView" class="hidden w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-gray-900 bg-black my-auto mx-auto">
             
-            <div class="bg-gray-50 rounded-3xl p-5 mb-8 border border-gray-100 relative z-10 shadow-inner">
-                <div class="mb-4">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Nilai Akademik</p>
-                    <div id="resultScore" class="text-6xl font-black text-green-600 drop-shadow-sm transition-all duration-700">100</div>
-                    <div id="resultBonus" class="hidden text-xs font-black text-indigo-500 mt-2 animate-bounce-short bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
-                        +0 (Double Poin) ✨
-                    </div>
+            <video id="meme67Video" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+            
+            <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
+                
+                <div class="text-5xl mb-3 relative z-10 animate-bounce">🔥</div>
+                <h3 class="font-black text-gray-950 text-2xl mb-1 uppercase tracking-widest relative z-10">SIX SEVEN!!</h3>
+                <p class="text-[10px] font-bold text-purple-800 mb-5 leading-relaxed relative z-10 px-2">Wah! Nilai kamu pas banget 67! Dapet salam perayaan dari MIAW!</p>
+                
+                <div class="text-6xl font-black text-purple-600 mb-6 drop-shadow-sm animate-pulse relative z-10">67</div>
+
+                <button onclick="window.location.replace('/consultations')" class="w-full py-4 bg-gray-950 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all relative z-10 uppercase tracking-widest">
+                    Tutup & Kembali
+                </button>
+            </div>
+        </div>
+
+        <div id="normalResultView" class="flex flex-col bg-white w-full max-w-sm rounded-[2rem] p-7 text-center animate-slide-up my-auto mx-auto relative overflow-hidden">
+            <div id="resultEmoji" class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h3 id="resultTitle" class="font-black text-gray-800 text-xl mb-1">Luar Biasa!</h3>
+            <p id="resultMessage" class="text-[10px] text-gray-400 font-bold mb-5 leading-relaxed">Alhamdulillah, nilaimu sangat bagus!</p>
+            
+            <div class="bg-gray-50 rounded-3xl p-4 mb-6 border border-gray-100 shadow-inner relative z-10">
+                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nilai Akhir</p>
+                <div id="resultScore" class="text-5xl font-black text-green-600 leading-none">100</div>
+                <div id="resultBonus" class="hidden text-[9px] font-black text-indigo-500 mt-2 bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
+                    +0 (Double Poin) ✨
                 </div>
-                <div class="grid grid-cols-2 gap-3 border-t border-gray-200 pt-4">
+                
+                <div class="grid grid-cols-2 gap-2 border-t border-gray-200 mt-4 pt-4 relative z-10">
                     <div>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Waktu</p>
-                        <p id="resultTime" class="text-sm font-black text-gray-700">01m 15s</p>
+                        <p class="text-[8px] font-black text-gray-400 uppercase">Waktu</p>
+                        <p id="resultTime" class="text-xs font-black text-gray-700">--:--</p>
                     </div>
                     <div>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pojok Curhat</p>
-                        <p id="resultSocial" class="text-sm font-black text-gray-700">Sangat Baik</p>
+                        <p class="text-[8px] font-black text-gray-400 uppercase">Karakter</p>
+                        <p id="resultSocial" class="text-xs font-black text-gray-700">Baik</p>
                     </div>
                 </div>
             </div>
             
-            <button id="btnReturnResult" onclick="window.location.replace('/consultations')" class="w-full py-4 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all relative z-10">
-                Kembali ke Beranda
+            <button onclick="window.location.replace('/consultations')" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
+                Tutup & Kembali
             </button>
         </div>
+
     </div>
 
     <Mascot />
@@ -1465,6 +1481,8 @@ import Mascot from '../../components/Mascot.astro';
         // Bersihkan warna dari state sebelumnya
         btn.classList.remove('bg-blue-600', 'bg-gray-200', 'bg-pink-500');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
+        const normalView = document.getElementById('normalResultView');
+        const memeView = document.getElementById('meme67ResultView');
 
         // Tarik jawaban dari DOM
         const answers = [];
@@ -1602,25 +1620,42 @@ import Mascot from '../../components/Mascot.astro';
                 bonusEl.classList.add('hidden');
             }
 
-            if (finalScore >= 80) {
-                emojiEl.innerText = '🏆';
-                titleEl.innerText = 'Luar Biasa!';
-                msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong dan terus pertahankan prestasimu ya.';
-                scoreEl.className = 'text-6xl font-black text-green-600 drop-shadow-sm transition-all duration-700';
-                setTimeout(() => {
-                    confetti({ particleCount: 120, spread: 70, origin: { x: 0.3, y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#eab308'] });
-                    confetti({ particleCount: 120, spread: 70, origin: { x: 0.7, y: 0.6 }, colors: ['#22c55e', '#f472b6', '#a78bfa'] });
-                }, 400);
-            } else if (finalScore >= 60) {
-                emojiEl.innerText = '👍';
-                titleEl.innerText = 'Kerja Bagus!';
-                msgEl.innerText = 'Nilaimu sudah cukup baik. Terus usahakan belajar lebih giat lagi biar makin mantap!';
-                scoreEl.className = 'text-6xl font-black text-blue-500 drop-shadow-sm transition-all duration-700';
+// [LOGIKA EASTER EGG: KUCING SIX SEVEN]
+if (finalScore === 67) {
+                // Tampilkan Mode Meme, Sembunyikan Normal
+                normalView.classList.replace('flex', 'hidden');
+                memeView.classList.replace('hidden', 'block');
+                
+                // Putar Video (muted dimatikan agar suara muncul)
+                const vid = document.getElementById('meme67Video');
+                vid.src = "/video/cat-67.mp4"; 
+                vid.volume = 0.6;
+                vid.muted = false;
+                vid.play().catch(() => { vid.muted = true; vid.play(); });
+                
             } else {
-                emojiEl.innerText = '💪';
-                titleEl.innerText = 'Tetap Semangat!';
-                msgEl.innerText = 'Jangan sedih kalau nilainya masih kecil. Kegagalan adalah awal dari keberhasilan, yuk belajar lagi!';
-                scoreEl.className = 'text-6xl font-black text-amber-500 drop-shadow-sm transition-all duration-700';
+                // Tampilkan Mode Normal, Sembunyikan Meme
+                normalView.classList.replace('hidden', 'flex');
+                memeView.classList.replace('block', 'hidden');
+
+                // Populasi data ke Mode Normal
+                scoreEl.innerText = finalScore;
+                
+                // Reset styling score dari pulse meme
+                scoreEl.className = 'text-5xl font-black leading-none transition-all duration-700';
+
+                // Teks Dinamis Mode Normal
+                if (finalScore >= 80) {
+                    emojiEl.innerText = '🏆'; titleEl.innerText = 'Luar Biasa!'; msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong ya.';
+                    scoreEl.classList.add('text-green-600');
+                    setTimeout(() => { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }, 300);
+                } else if (finalScore >= 60) {
+                    emojiEl.innerText = '👍'; titleEl.innerText = 'Kerja Bagus!'; msgEl.innerText = 'Nilaimu sudah cukup baik. Terus usahakan belajar lebih giat lagi!';
+                    scoreEl.classList.add('text-blue-500');
+                } else {
+                    emojiEl.innerText = '💪'; titleEl.innerText = 'Tetap Semangat!'; msgEl.innerText = 'Jangan sedih kalau nilainya masih kecil. Kegagalan adalah awal keberhasilan!';
+                    scoreEl.classList.add('text-amber-500');
+                }
             }
 
             if (isPreview) {

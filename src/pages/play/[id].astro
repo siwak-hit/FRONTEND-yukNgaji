@@ -138,6 +138,27 @@ import Mascot from '../../components/Mascot.astro'; // <--- KOMPONEN MASKOT
       </button>
     </div>
   </div>
+
+  <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
+    <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
+        
+        <video id="videoAngryCat" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+        
+        <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
+            
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3 border border-red-200 shadow-inner relative z-10">
+                <i class="fa-solid fa-fire-flame-curved animate-pulse"></i>
+            </div>
+            
+            <h3 class="text-xl font-black text-gray-950 mb-1 uppercase tracking-widest relative z-10">Sombong Banget!</h3>
+            <p class="text-[11px] font-bold text-red-800 mb-5 leading-relaxed relative z-10">Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼</p>
+            
+            <button onclick="closeAngryCat()" class="w-full py-3 text-xs bg-red-600 hover:bg-red-700 text-white rounded-xl font-black active:scale-95 transition-all shadow-lg shadow-red-500/30 relative z-10 uppercase tracking-wider">
+                Ampun Miaw...
+              </button>
+        </div>
+    </div>
+</div>
   
   <div id="modalMiawLetter" class="modal-backdrop hidden z-[260]">
     <div class="modal-box animate-slide-up border-2 border-amber-500">
@@ -300,7 +321,7 @@ import Mascot from '../../components/Mascot.astro'; // <--- KOMPONEN MASKOT
                     texts: {
                         idlePhrases: ["Pelan-pelan aja bacanya... miaw", "Fokus, fokus... Waktu terus berjalan lho."],
                         warnings: ["Miaw... kamu asik sendiri ya? Kok aku gak diajak main."],
-                        prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal nyembunyiin soal ujiannya! Mwehehehe~",
+                        prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal nyembunyiin jawaban ujiannya! Mwehehehe~",
                         threatExecute: "Yaudah aku pergi! Tapi rasain nih waktu ujianmu aku cepetin!",
                     },
                     actions: {
@@ -436,6 +457,50 @@ import Mascot from '../../components/Mascot.astro'; // <--- KOMPONEN MASKOT
             console.error(e);
             window.showToast?.('danger', 'Error', 'Gagal memuat ujian.');
         }
+    };
+
+
+    let hasTriggeredAngryCat = false; 
+
+    window.triggerAngryCat = () => {
+        if (hasTriggeredAngryCat) {
+            if (window.MiawMascot) {
+                window.MiawMascot.say('large', "Awas ya manggil-manggil lagi tapi nggak ada tujuannya! 😾", null, 'warning');
+            }
+            return;
+        }
+
+        const modal = document.getElementById('modalAngryCat');
+        const vid = document.getElementById('videoAngryCat');
+        const descText = modal.querySelector('p.text-red-800');
+
+        if (descText) {
+            descText.innerText = "Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼";
+        }
+
+        if (modal) modal.classList.replace('hidden', 'flex');
+        
+        if (vid) {
+            vid.src = "/video/cat-angry.mp4"; 
+            vid.volume = 0.6; 
+            vid.muted = false; // Matikan muted agar suara muncul
+            vid.play().catch(() => { vid.muted = true; vid.play(); });
+        }
+
+        // Efek Hukuman
+        timeLeft = Math.max(0, timeLeft - 60);
+        updateTimerUI();
+        const tc = document.getElementById('timerRing');
+        if (tc) tc.classList.add('animate-pulse');
+
+        hasTriggeredAngryCat = true; 
+    };
+
+    window.closeAngryCat = () => {
+        const modal = document.getElementById('modalAngryCat');
+        if (modal) modal.classList.replace('flex', 'hidden');
+        const vid = document.getElementById('videoAngryCat');
+        if (vid) vid.pause();
     };
 
     window.exitPreview = () => {
