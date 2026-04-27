@@ -19,8 +19,9 @@ import Toast from '../../components/Toast.astro';
         <section class="mb-6">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Belum Kebagian Kursi</h2>
-                <button id="btnReset" class="text-[10px] bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-all"><i class="fa-solid fa-rotate-left mr-1"></i> Reset Semua</button>
+                <button id="btnReset" class="text-[10px] bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold active:scale-95 transition-all"><i class="fa-solid fa-rotate-left mr-1"></i> Reset</button>
             </div>
+            
             <div id="unassignedPool" class="flex gap-4 overflow-x-auto pb-4 pt-2 px-1 no-scrollbar min-h-[100px]">
                 <div class="flex items-center justify-center w-full text-xs text-gray-400 italic">Memuat data Siswa / Anak...</div>
             </div>
@@ -43,6 +44,9 @@ import Toast from '../../components/Toast.astro';
 
     </div>
     <Toast />
+    <button id="btnRandomFixed" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[60] bg-indigo-600 text-white px-6 py-3.5 rounded-full shadow-[0_10px_30px_rgba(79,70,229,0.4)] font-black text-sm flex items-center gap-2 active:scale-95 transition-all hover:bg-indigo-700 border-2 border-indigo-500">
+        <i class="fa-solid fa-shuffle"></i> Acak Duduk
+    </button>
 </Layout>
 
 <script>
@@ -57,6 +61,190 @@ import Toast from '../../components/Toast.astro';
     let selectedStudentId = null;
 
     if (!token) window.location.replace('/');
+
+    const HISTORY_KEY = 'yukngaji_seat_history';
+
+    const btnRandomFixed = document.getElementById('btnRandomFixed');
+    if (btnRandomFixed) {
+        btnRandomFixed.onclick = () => {
+            if (students.length === 0) {
+                window.showToast?.('warning', 'Data Kosong', 'Belum ada data siswa untuk diacak.');
+                return;
+            }
+
+            // 1. PENCARIAN MURID TESTING (KUNCI MATI)
+            const sXaviera = students.find(s => s.name.toLowerCase().includes('xaviera'));
+            const sJohnDoe = students.find(s => s.name.toLowerCase().includes('john doe'));
+            
+            // 2. Pisahkan murid reguler
+            const regularStudents = students.filter(s => {
+                const cleanName = s.name.toLowerCase();
+                return !cleanName.includes('xaviera') && !cleanName.includes('john doe');
+            });
+
+            // History setup
+            let pairHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            let pastPairsSet = new Set(pairHistory.flat());
+            const getPairId = (id1, id2) => [id1, id2].sort().join('|');
+
+            // --- 3. FUNGSI VALIDASI SUPER KOMPLEKS ---
+            const isArrangementValid = (arr, checkHistory, strictDistance) => {
+                let deskMap = {}; // Untuk menyimpan nomor meja masing-masing target
+                
+                // Petakan index posisi ke nomor meja (Meja 0, Meja 1, dst...)
+                arr.forEach((student, index) => {
+                    const deskIdx = Math.floor(index / 2);
+                    const name = student.name.toLowerCase();
+                    
+                    // Catat nomor meja untuk nama-nama yang punya aturan khusus
+                    ['ara', 'dira', 'putri', 'difa', 'sabira', 'haidar', 'salsa', 'zidan'].forEach(keyword => {
+                        if (name.includes(keyword)) deskMap[keyword] = deskIdx;
+                    });
+                });
+
+                // Syarat "Jauh": Selisih nomor meja minimal 2 (artinya ada jeda minimal 1 meja)
+                // Jika strictDistance false, minimal beda meja aja (selisih 1)
+                const minDistance = strictDistance ? 2 : 1; 
+
+                // ATURAN 1: Ara jauh dari Dira
+                if (deskMap['ara'] !== undefined && deskMap['dira'] !== undefined) {
+                    if (Math.abs(deskMap['ara'] - deskMap['dira']) < minDistance) return false;
+                }
+                
+                // ATURAN 2: Putri jauh dari Difa & Sabira
+                if (deskMap['putri'] !== undefined && deskMap['difa'] !== undefined) {
+                    if (Math.abs(deskMap['putri'] - deskMap['difa']) < minDistance) return false;
+                }
+                if (deskMap['putri'] !== undefined && deskMap['sabira'] !== undefined) {
+                    if (Math.abs(deskMap['putri'] - deskMap['sabira']) < minDistance) return false;
+                }
+
+                // ATURAN 3, 4, dan Aturan Salsa: Haram Semeja (Selisih meja == 0)
+                const neverTogether = [
+                    ['sabira', 'difa'],   // Aturan 3
+                    ['ara', 'haidar'],    // Aturan 4
+                    ['salsa', 'dira'],    // Aturan Salsa lama
+                    ['salsa', 'putri'],
+                    ['salsa', 'ara'],
+                    ['salsa', 'zidan']
+                ];
+
+                for (let [p1, p2] of neverTogether) {
+                    // Kalau dua-duanya masuk hari ini, pastikan nomor mejanya gak sama
+                    if (deskMap[p1] !== undefined && deskMap[p2] !== undefined) {
+                        if (deskMap[p1] === deskMap[p2]) return false; // Gagal! Mereka semeja!
+                    }
+                }
+
+                // ATURAN 5: History Pasangan
+                if (checkHistory) {
+                    for (let i = 0; i < arr.length; i += 2) {
+                        const left = arr[i];
+                        const right = arr[i+1];
+                        if (!left || !right) continue;
+                        
+                        const currentPairId = getPairId(left.id, right.id);
+                        if (pastPairsSet.has(currentPairId)) return false; // Gagal! Baru aja duduk bareng
+                    }
+                }
+
+                return true; // Lulus semua sensor!
+            };
+
+            // 4. PROSES ACAK DENGAN 3 TINGKAT FALLBACK
+            let shuffledRegs = [];
+            let isValid = false;
+            let attempts = 0;
+            const maxAttempts = 1000; // Kasih limit gede biar mesin nyari keras
+
+            // TINGKAT 1: Jarak Jauh + History Baru
+            while (!isValid && attempts < maxAttempts) {
+                shuffledRegs = [...regularStudents];
+                for (let i = shuffledRegs.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffledRegs[i], shuffledRegs[j]] = [shuffledRegs[j], shuffledRegs[i]];
+                }
+                isValid = isArrangementValid(shuffledRegs, true, true);
+                attempts++;
+            }
+
+            // TINGKAT 2: Kalau nyerah, turunkan standar jarak (Yg penting beda meja + History baru)
+            if (!isValid) {
+                attempts = 0;
+                while (!isValid && attempts < maxAttempts) {
+                    shuffledRegs = [...regularStudents];
+                    for (let i = shuffledRegs.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffledRegs[i], shuffledRegs[j]] = [shuffledRegs[j], shuffledRegs[i]];
+                    }
+                    isValid = isArrangementValid(shuffledRegs, true, false);
+                    attempts++;
+                }
+            }
+
+            // TINGKAT 3: Mode Pasrah! Beda meja aja, lupain history.
+            if (!isValid) {
+                console.warn('Terlalu banyak aturan! Mengorbankan history demi memisahkan murid yang musuhan.');
+                attempts = 0;
+                while (!isValid && attempts < maxAttempts) {
+                    shuffledRegs = [...regularStudents];
+                    for (let i = shuffledRegs.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffledRegs[i], shuffledRegs[j]] = [shuffledRegs[j], shuffledRegs[i]];
+                    }
+                    isValid = isArrangementValid(shuffledRegs, false, false);
+                    attempts++;
+                }
+            }
+
+            // 5. MENGHITUNG MEJA DAN MENYUSUN POSISI
+            const totalDesks = Math.ceil(students.length / 2);
+            let newSeatMap = {};
+
+            const lastDeskIdx = totalDesks;
+            if (sXaviera) newSeatMap[`meja-${lastDeskIdx}-kiri`] = sXaviera.id;
+            if (sJohnDoe) newSeatMap[`meja-${lastDeskIdx}-kanan`] = sJohnDoe.id;
+
+            let regIdx = 0;
+            const currentPairsToSave = [];
+
+            for (let i = 1; i <= totalDesks; i++) {
+                let currentLeftId = null;
+                let currentRightId = null;
+
+                ['kiri', 'kanan'].forEach(side => {
+                    const seatKey = `meja-${i}-${side}`;
+                    if (!newSeatMap[seatKey] && regIdx < shuffledRegs.length) {
+                        const studentId = shuffledRegs[regIdx].id;
+                        newSeatMap[seatKey] = studentId;
+                        
+                        if (side === 'kiri') currentLeftId = studentId;
+                        if (side === 'kanan') currentRightId = studentId;
+                        
+                        regIdx++;
+                    }
+                });
+
+                if (currentLeftId && currentRightId && i !== lastDeskIdx) {
+                    currentPairsToSave.push(getPairId(currentLeftId, currentRightId));
+                }
+            }
+
+            // UPDATE HISTORY
+            pairHistory.unshift(currentPairsToSave);
+            if (pairHistory.length > 2) pairHistory.pop();
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(pairHistory));
+
+            // 6. RENDER KE LAYAR
+            seatMap = newSeatMap;
+            selectedStudentId = null;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seatMap));
+            renderUI();
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+            window.showToast?.('success', 'Formasi Diacak!', 'Aturan permusuhan & jarak meja berhasil diterapkan!');
+        };
+    }
 
     const init = async () => {
         try {

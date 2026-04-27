@@ -144,28 +144,32 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         `).join('');
     };
 
-    // Upload via Base64 agar lebih mudah tanpa multer
+    // Upload via FormData agar sama persis dan se-stabil fill.astro
     window.openCamera = () => {
-        window.openPhotoBooth(currentStudentName, 'Galeri', (file) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                const base64Data = reader.result;
-                try {
-                    window.showToast?.('info', 'Mengunggah...', 'Menyimpan foto ke database...');
-                    const res = await fetch(`${API_URL}/api/students/${studentId}/upload-photo`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ image_base64: base64Data })
-                    });
-                    if (res.ok) {
-                        window.showToast?.('success', 'Berhasil', 'Foto berhasil masuk galeri!');
-                        fetchGalleryData();
-                    } else throw new Error();
-                } catch (err) {
-                    window.showToast?.('danger', 'Error', 'Gagal menyimpan foto.');
+        window.openPhotoBooth(currentStudentName, 'Galeri', async (file) => {
+            try {
+                window.showToast?.('info', 'Mengunggah...', 'Menyimpan foto ke database...');
+                
+                // Gunakan FormData, bukan FileReader/Base64
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const res = await fetch(`${API_URL}/api/students/${studentId}/upload-photo`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }, // PENTING: Jangan taruh Content-Type di sini!
+                    body: formData
+                });
+
+                if (res.ok) {
+                    window.showToast?.('success', 'Berhasil', 'Foto berhasil masuk galeri!');
+                    fetchGalleryData(); // Refresh grid foto
+                } else {
+                    const errData = await res.json();
+                    throw new Error(errData.message || 'Gagal menyimpan foto.');
                 }
-            };
+            } catch (err) {
+                window.showToast?.('danger', 'Error', err.message);
+            }
         });
     };
 
