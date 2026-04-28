@@ -716,7 +716,7 @@ import Toast from '../../components/Toast.astro';
 
     window.closeReviewModal = () => document.getElementById('modalReview').classList.replace('flex', 'hidden');
 
-window.openReviewModal = async (subject, week) => {
+    window.openReviewModal = async (subject, week) => {
     const modal = document.getElementById('modalReview');
     const container = document.getElementById('reviewContainer');
     const subtitle = document.getElementById('reviewSubtitle');
@@ -739,19 +739,28 @@ window.openReviewModal = async (subject, week) => {
         // Parsing JSON dengan aman
         let studentAnswers = reviewData.result.student_answers;
         if (typeof studentAnswers === 'string') {
-            try { studentAnswers = JSON.parse(studentAnswers); } catch(e) { studentAnswers = []; }
+            try { studentAnswers = JSON.parse(studentAnswers);
+            } catch(e) { studentAnswers = []; }
         }
         if (!Array.isArray(studentAnswers)) studentAnswers = [];
-
         const isLegacyData = studentAnswers.length === 0;
+
+        // [PERBAIKAN LOGIKA]: Filter bank soal agar HANYA menampilkan soal yang dikerjakan anak (maks 6 soal)
+        let filteredQuestions = reviewData.questions;
+        if (!isLegacyData) {
+            // Ambil semua ID soal yang benar-benar di-submit oleh anak
+            const answeredIds = studentAnswers.map(a => String(a.question_id).trim());
+            // Filter bank soal, sisakan hanya yang ID-nya ada di daftar answeredIds
+            filteredQuestions = reviewData.questions.filter(q => answeredIds.includes(String(q.id).trim()));
+        }
 
         // VARIABEL UNTUK MENGHITUNG STATISTIK
         let correctCount = 0;
         let wrongCount = 0;
         let emptyCount = 0;
 
-        // 1. RENDER LIST SOAL SEKALIGUS MENGHITUNG STATISTIK
-        const questionsHtml = reviewData.questions.map((q, idx) => {
+        // 1. RENDER LIST SOAL SEKALIGUS MENGHITUNG STATISTIK (Gunakan filteredQuestions)
+        const questionsHtml = filteredQuestions.map((q, idx) => {
             const type = q.type || 'pilgan';
             
             const ansObj = studentAnswers.find(a => String(a.question_id).trim() === String(q.id).trim());
@@ -809,7 +818,7 @@ window.openReviewModal = async (subject, week) => {
 
                     const keyLabel = type === 'tf' ? (safeK === 'A' ? 'BENAR' : 'SALAH') : safeK;
                     const badgeColor = isLegacyData ? 'bg-gray-100 text-gray-400' : (isTheCorrectKey ? 'bg-green-200 text-green-700' : isStudentChoice ? 'bg-red-200 text-red-700' : 'bg-gray-100 text-gray-400');
-
+                    
                     return `<div class="${optClass}"><div class="flex items-center gap-3"><span class="w-6 h-6 rounded-full flex items-center justify-center font-black ${badgeColor} shrink-0">${keyLabel}</span><span>${v}</span></div>${iconHtml}</div>`;
                 }).join('') + `</div>`;
             } else if (type === 'drag') {
@@ -851,7 +860,6 @@ window.openReviewModal = async (subject, week) => {
                 });
 
                 optionsHtml = `<div class="mt-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-inner"><p class="text-xs font-bold text-gray-800 leading-loose">${questionWithAnswers}</p></div>`;
-                
                 if (isLegacyData) {
                     const dragOpts = `<div class="flex flex-wrap gap-2 mt-3">` + Object.entries(q.options || {}).map(([k, v]) => `<span class="px-3 py-1.5 bg-white border border-indigo-100 text-indigo-600 text-[10px] font-bold rounded-lg shadow-sm">${v}</span>`).join('') + `</div>`;
                     optionsHtml += dragOpts;
