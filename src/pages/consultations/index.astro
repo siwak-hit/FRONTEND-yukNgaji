@@ -303,30 +303,82 @@ import Toast from '../../components/Toast.astro';
         renderStudentGrid(filtered, finishedStudentIds);
     });
 
+// ================================================================
+    // LOGIKA PORTAL UJIAN (DIOPTIMASI DENGAN SYARAT 5 PERTEMUAN)
     // ================================================================
-    // LOGIKA PORTAL UJIAN (DIOPTIMASI & UI BARU)
-    // ================================================================
-    window.openExamPortal = () => {
-        document.getElementById('modalExamPortal').classList.replace('hidden', 'flex');
+    
+    let subjectCompletionCache = {}; // Cache penyimpan status kelulusan tugas per mapel
+
+    // Fungsi baru untuk mengecek siapa saja yang belum tuntas Pertemuan 1 - 5
+    const fetchSubjectCompletion = async (subject) => {
+        if (subjectCompletionCache[subject]) return subjectCompletionCache[subject];
         
+        try {
+            const weeks = [1, 2, 3, 4, 5];
+            // Fetch status minggu 1-5 secara bersamaan (paralel) agar cepat
+            const promises = weeks.map(w => 
+                fetch(`${API_URL}/api/onboarding/status?subject=${subject}&week=${w}`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                }).then(r => r.json())
+            );
+            const results = await Promise.all(promises);
+            
+            let missingMap = {};
+            // Cocokkan data setiap siswa
+            allStudents.forEach(student => {
+                let missing = [];
+                weeks.forEach((w, index) => {
+                    const studentIdsCompleted = results[index].data || [];
+                    if (!studentIdsCompleted.includes(student.id)) {
+                        missing.push(w); // Catat minggu berapa yang dia belum ngerjain
+                    }
+                });
+                missingMap[student.id] = missing;
+            });
+            
+            subjectCompletionCache[subject] = missingMap;
+            return missingMap;
+        } catch (e) {
+            console.error("Gagal fetch completion status", e);
+            return {};
+        }
+    };
+
+    window.openExamPortal = async () => {
+        document.getElementById('modalExamPortal').classList.replace('hidden', 'flex');
         const examSelect = document.getElementById('portalExamSelect');
         const pendingExams = cachedActiveExams.filter(e => !e.isFullyCompleted);
         
         if (pendingExams.length > 0) {
             examSelect.innerHTML = pendingExams.map(e => `<option value="${e.id}">${e.subject.toUpperCase()} - ${e.title}</option>`).join('');
-            const firstExamId = pendingExams[0].id;
-            renderPortalStudents(allStudents, firstExamId);
+            
+            // Tampilkan loading saat mengecek syarat
+            document.getElementById('portalStudentList').innerHTML = '<div class="col-span-2 text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl mb-2"></i><br><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Memeriksa syarat ujian...</span></div>';
+            
+            const firstExam = pendingExams[0];
+            await fetchSubjectCompletion(firstExam.subject); // Tunggu pengecekan selesai
+            
+            renderPortalStudents(allStudents, firstExam.id);
         } else {
             examSelect.innerHTML = `<option value="">Semua ujian telah tuntas!</option>`;
             renderPortalStudents([], null);
         }
     };
 
-    document.getElementById('portalExamSelect').addEventListener('change', (e) => {
+    document.getElementById('portalExamSelect').addEventListener('change', async (e) => {
         const selectedExamId = e.target.value;
-        const term = document.getElementById('portalStudentSearch').value.toLowerCase();
-        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-        renderPortalStudents(filtered, selectedExamId);
+        const exam = cachedActiveExams.find(ex => ex.id === selectedExamId);
+        
+        if (exam) {
+            // Tampilkan loading saat ganti mapel ujian
+            document.getElementById('portalStudentList').innerHTML = '<div class="col-span-2 text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl mb-2"></i><br><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Memeriksa syarat ujian...</span></div>';
+            
+            await fetchSubjectCompletion(exam.subject);
+            
+            const term = document.getElementById('portalStudentSearch').value.toLowerCase();
+            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+            renderPortalStudents(filtered, selectedExamId);
+        }
     });
 
     document.getElementById('portalStudentSearch').addEventListener('input', (e) => {
@@ -345,11 +397,14 @@ import Toast from '../../components/Toast.astro';
 
         const exam = cachedActiveExams.find(e => e.id === examId);
         const results = exam ? exam.results : [];
+        const missingMap = (exam && subjectCompletionCache[exam.subject]) ? subjectCompletionCache[exam.subject] : {};
 
         container.innerHTML = studentsData.map(s => {
             const studentResult = results.find(r => r.student_id === s.id);
+            const missingWeeks = missingMap[s.id] || [];
             
             if (studentResult) {
+                // STATUS 1: SUDAH MENGERJAKAN UJIAN
                 return `
                     <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 opacity-60 grayscale pointer-events-none">
                         <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-emerald-200 text-emerald-700">
@@ -362,7 +417,22 @@ import Toast from '../../components/Toast.astro';
                         <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i>
                     </div>
                 `;
+            } else if (missingWeeks.length > 0) {
+                // STATUS 2: BELUM MEMENUHI SYARAT (TUGAS 1-5 BELUM LENGKAP)
+                const missingStr = missingWeeks.join(', ');
+                return `
+                    <div class="p-3 rounded-xl border border-amber-200 bg-amber-50 flex items-center gap-3 opacity-70 grayscale pointer-events-none" title="Belum mengerjakan tugas pertemuan ${missingStr}">
+                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-amber-200 text-amber-700">
+                            ${s.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-black text-gray-800 truncate">${s.name}</p>
+                            <p class="text-[9px] font-bold text-amber-600 uppercase tracking-widest mt-0.5"><i class="fa-solid fa-lock text-[8px] mr-0.5"></i> Blm Tugas: ${missingStr}</p>
+                        </div>
+                    </div>
+                `;
             } else {
+                // STATUS 3: SIAP UJIAN (BISA DIKLIK)
                 const isSelected = selectedPortalStudentId === s.id;
                 return `
                     <div onclick="selectPortalStudent('${s.id}')" class="cursor-pointer p-3 rounded-xl border ${isSelected ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-gray-200'} flex items-center gap-3 transition-all active:scale-95">
@@ -371,7 +441,7 @@ import Toast from '../../components/Toast.astro';
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-[11px] font-black text-gray-800 truncate mb-0.5">${s.name}</p>
-                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">${s.grade}</p>
+                            <p class="text-[9px] font-bold ${isSelected ? 'text-indigo-400' : 'text-gray-400'} uppercase tracking-widest">Siap Ujian!</p>
                         </div>
                         ${isSelected ? '<i class="fa-solid fa-circle-check text-indigo-500 text-base"></i>' : ''}
                     </div>

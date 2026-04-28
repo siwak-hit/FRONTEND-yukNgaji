@@ -272,7 +272,7 @@ import Mascot from '../../components/Mascot.astro';
                 
                 <div class="text-6xl font-black text-purple-600 mb-6 drop-shadow-sm animate-pulse relative z-10">67</div>
 
-                <button onclick="window.location.replace('/consultations')" class="w-full py-4 bg-gray-950 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all relative z-10 uppercase tracking-widest">
+                <button onclick="closeResultAndCheckReminder()" class="w-full py-4 bg-gray-950 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all relative z-10 uppercase tracking-widest">
                     Tutup & Kembali
                 </button>
             </div>
@@ -307,6 +307,23 @@ import Mascot from '../../components/Mascot.astro';
             </button>
         </div>
 
+    </div>
+
+    <div id="modalExamReminder" class="fixed inset-0 bg-black/80 z-[800] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-center border-4 border-indigo-400 transform scale-100 animate-bounce-short">
+            <div class="w-24 h-24 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 border border-indigo-100 shadow-inner">
+                🎓
+            </div>
+            <h3 class="font-black text-gray-800 text-2xl mb-2">Pengumuman!</h3>
+            <p class="text-sm text-gray-600 mb-6 leading-relaxed font-medium">
+                Selamat! Kamu sudah menyelesaikan 5 pertemuan berturut-turut. <br><br>
+                Jangan lupa besok <b>Ujian <span id="examReminderSubject" class="uppercase text-indigo-600 font-black">Mapel</span></b>. <br>
+                Pelajari lagi materi yang telah diajarkan ya!
+            </p>
+            <button onclick="closeExamReminder()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm uppercase tracking-widest">
+                Siap, Laksanakan!
+            </button>
+        </div>
     </div>
 
     <Mascot />
@@ -387,6 +404,9 @@ import Mascot from '../../components/Mascot.astro';
     let wrongQuestionsGlobal = [];
     let isQuizStarted = false;
 
+    let completedWeeksForSubject = [];
+    window.shouldShowExamReminder = false;
+
     // Database Harga (Statis, tanpa inflasi)
     const ITEM_DB = {
         item_double_score: { name: "Double Poin", price: 50, icon: "✨", desc: "Sihir rahasia untuk mendongkrak nilaimu di akhir ujian! Semakin kecil nilaimu, semakin besar tambahan poin yang akan kamu dapatkan." },
@@ -427,6 +447,30 @@ import Mascot from '../../components/Mascot.astro';
             btn.classList.replace('h-[48px]', 'h-[40px]');
             btn.classList.remove('bg-indigo-800');
         }
+    };
+
+    window.closeResultAndCheckReminder = () => {
+        // Tutup modal hasil nilai
+        document.getElementById('modalResult').classList.replace('flex', 'hidden');
+        
+        if (window.shouldShowExamReminder) {
+            // Jika syarat terpenuhi, munculkan Modal Ujian
+            document.getElementById('modalExamReminder').classList.replace('hidden', 'flex');
+            document.getElementById('examReminderSubject').innerText = subject;
+            
+            // Efek suara/getar opsional
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            setTimeout(() => { 
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, colors: ['#4f46e5', '#818cf8', '#ffffff'] }); 
+            }, 300);
+        } else {
+            // Jika belum lulus 5 pertemuan, langsung kembali ke menu
+            window.location.replace('/consultations');
+        }
+    };
+
+    window.closeExamReminder = () => {
+        window.location.replace('/consultations');
     };
 
     // --- LOGIKA KLAIM BONUS WELCOME ---
@@ -611,6 +655,12 @@ import Mascot from '../../components/Mascot.astro';
                 const qData = await qRes.json();
                 currentStudentName = student.data.name?.split(' ')[0] || "Anak Baik";
                 
+                if (consData.data) {
+                    // Ambil daftar 'week' yang sudah pernah dikerjakan oleh siswa di mapel ini
+                    completedWeeksForSubject = consData.data
+                        .filter(c => c.subject === subject)
+                        .map(c => parseInt(c.week));
+                }
                 if (consData.data && consData.data.length > 0) hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
                 else hasPriorPhoto = false;
 
@@ -1674,6 +1724,23 @@ import Mascot from '../../components/Mascot.astro';
                 msgEl.innerText = "Simulasi Selesai. Data ini tidak tersimpan ke database anak.";
                 const btnHome = document.getElementById('btnReturnResult');
                 if (btnHome) { btnHome.innerText = "Kembali ke Editor Soal"; btnHome.onclick = () => window.location.replace('/bank-soal'); }
+            }
+
+            if (!isPreview) {
+                // Masukkan minggu yang baru saja disubmit ke dalam daftar (jika belum ada)
+                if (!completedWeeksForSubject.includes(parsedWeek)) {
+                    completedWeeksForSubject.push(parsedWeek);
+                }
+                
+                // Cek apakah pertemuan 1, 2, 3, 4, dan 5 semuanya ada di dalam array completedWeeksForSubject
+                const hasCompleted1to5 = [1, 2, 3, 4, 5].every(w => completedWeeksForSubject.includes(w));
+                
+                // Gunakan localStorage agar modal peringatan tidak muncul berulang-ulang jika dia retake
+                const reminderKey = `exam_reminder_${studentId}_${subject}`;
+                if (hasCompleted1to5 && !localStorage.getItem(reminderKey)) {
+                    localStorage.setItem(reminderKey, 'true');
+                    window.shouldShowExamReminder = true; // Tandai untuk dimunculkan nanti
+                }
             }
 
             localStorage.removeItem(timeKey);
