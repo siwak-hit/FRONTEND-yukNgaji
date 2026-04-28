@@ -77,23 +77,45 @@ import Toast from '../../components/Toast.astro';
 
         <section class="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 mb-6">
             
-            <div class="flex items-center gap-3 mb-5">
+            <div class="flex items-center gap-3 mb-5 relative">
                 <div id="studentInitial" class="w-14 h-14 bg-green-100 text-green-600 font-bold rounded-2xl flex items-center justify-center text-xl flex-shrink-0">--</div>
                 <div class="flex-1 min-w-0">
                     <h2 id="studentName" class="text-lg font-bold text-gray-800 truncate">Memuat...</h2>
                     <p id="studentGrade" class="text-xs text-gray-400 font-medium uppercase tracking-wider">--</p>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <button onclick="openRaportModal()"
-                        class="w-9 h-9 bg-green-600 text-white rounded-xl shadow-md shadow-green-600/30 flex items-center justify-center active:scale-95 transition-all"
-                        title="Buat & Download Raport">
-                        <i class="fa-solid fa-file-pdf text-sm"></i>
+                
+                <div class="relative flex-shrink-0">
+                    <button onclick="toggleQuickActions()" id="btnQuickActions"
+                        class="relative w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all">
+                        <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+                        <span id="studentTotalPointsBadge" class="absolute -top-1 -right-1 bg-amber-500 text-white text-[7px] px-1.5 py-0.5 rounded-full font-black shadow-sm">0</span>
                     </button>
-                    <button id="infoKalengBtn"
-                        class="w-9 h-9 bg-gray-100 text-gray-400 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all"
-                        title="Memuat status kaleng...">
-                        <i class="fa-solid fa-jar text-sm"></i>
-                    </button>
+        
+                    <div id="dropdownQuickActions" class="hidden absolute right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl w-52 z-[60] overflow-hidden">
+                        <div class="p-2 space-y-1">
+                            <button onclick="openPointHistory(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50 text-gray-600 transition-colors rounded-xl text-xs font-bold text-left relative">
+                                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-500 flex items-center justify-center shrink-0">💰</div>
+                                <div class="flex-1">
+                                    <p>Dompet Poin</p>
+                                    <p class="text-[9px] text-amber-600 font-black"><span id="studentTotalPointsText">0</span> Poin</p>
+                                </div>
+                            </button>
+                            <button onclick="toggleInfaqCan(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-gray-600 transition-colors rounded-xl text-xs font-bold text-left">
+                                <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center shrink-0"><i class="fa-solid fa-jar"></i></div>
+                                <div class="flex-1">
+                                    <p>Status Kaleng</p>
+                                    <p id="kalengStatusText" class="text-[9px] font-black uppercase tracking-tighter">Memuat...</p>
+                                </div>
+                            </button>
+                            <button onclick="openRaportModal(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-green-50 text-gray-600 transition-colors rounded-xl text-xs font-bold text-left">
+                                <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-file-pdf"></i></div>
+                                <div class="flex-1">
+                                    <p>Cetak Raport</p>
+                                    <p class="text-[9px] text-green-600">PDF Document</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -188,7 +210,18 @@ import Toast from '../../components/Toast.astro';
                 <button id="tabCons" class="flex-1 py-3 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest"><i class="fa-regular fa-comments mr-1"></i> Konsultasi</button>
             </div>
             <div id="contentTodo" class="block"><div id="todoContainer" class="space-y-3"><p class="text-center text-gray-400 text-sm py-4">Memuat tugas...</p></div></div>
-            <div id="contentCons" class="hidden"><div id="consContainer" class="space-y-4"><p class="text-center text-gray-400 text-sm py-4">Memuat riwayat...</p></div></div>
+            <div id="contentCons" class="hidden">
+                <div class="flex justify-end mb-3">
+                    <select id="filterKonsul" onchange="renderConsultations()" class="bg-gray-50 border border-gray-100 text-[10px] font-bold rounded-xl px-3 py-2 outline-none">
+                        <option value="all">Semua Waktu (Maks 5)</option>
+                        <option value="7">7 Hari Terakhir</option>
+                        <option value="30">30 Hari Terakhir</option>
+                    </select>
+                </div>
+                <div id="consContainer" class="space-y-4">
+                    <p class="text-center text-gray-400 text-sm py-4">Memuat riwayat...</p>
+                </div>
+            </div>
         </section>
 
     </div>
@@ -427,6 +460,31 @@ import Toast from '../../components/Toast.astro';
             </div>
         </div>
     </div>
+
+    <div id="modalPointHistory" class="fixed inset-0 bg-black/60 z-[9999] hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm transition-opacity opacity-0">
+        <div class="bg-white w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[80vh] transform translate-y-full transition-transform duration-300" id="pointHistoryBox">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-black text-gray-800 text-xl">Riwayat Poin</h3>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Saldo: <span class="text-amber-500" id="drawerTotalPoints">0</span> Poin</p>
+                </div>
+                <button onclick="closePointHistory()" class="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <select id="filterDays" onchange="openPointHistory()" class="flex-1 bg-gray-50 border border-gray-100 text-[10px] font-bold rounded-xl px-3 py-2.5 outline-none">
+                    <option value="all">Semua Waktu</option>
+                    <option value="7">7 Hari Terakhir</option>
+                    <option value="30">30 Hari Terakhir</option>
+                </select>
+                <select id="filterLimit" onchange="openPointHistory()" class="bg-gray-50 border border-gray-100 text-[10px] font-bold rounded-xl px-3 py-2.5 outline-none">
+                    <option value="10">Limit 10</option>
+                    <option value="25">Limit 25</option>
+                </select>
+            </div>
+            <div id="pointHistoryList" class="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-6"></div>
+        </div>
+    </div>
 </Layout>
 
 <div id="modalSusulan" class="fixed inset-0 bg-black/70 z-[90] hidden items-center justify-center p-4 backdrop-blur-sm">
@@ -481,6 +539,57 @@ import Toast from '../../components/Toast.astro';
         }
     };
 
+    window.toggleInfaqCan = () => {
+        const modal = document.getElementById('modalKaleng');
+        const messageEl = document.getElementById('kalengMessage');
+        messageEl.innerHTML = getKalengMessage();
+        modal.classList.remove('hidden');
+    };
+
+    // Pastikan tombol tutup modal kaleng tetap berfungsi
+    document.getElementById('closeModalKaleng').addEventListener('click', () => {
+        document.getElementById('modalKaleng').classList.add('hidden');
+    });
+
+    window.renderConsultations = () => {
+        const container = document.getElementById('consContainer');
+        const filterValue = document.getElementById('filterKonsul')?.value || 'all';
+
+        // Pastikan data tersedia
+        if (!globalConsultations?.data || globalConsultations.data.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat kuesioner.</p>';
+            return;
+        }
+
+        const now = new Date();
+        
+        // 1. Filter berdasarkan waktu
+        let filteredData = globalConsultations.data.filter(item => {
+            if (filterValue === 'all') return true;
+            const itemDate = new Date(item.created_at);
+            const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
+            return diffDays <= parseInt(filterValue);
+        });
+
+        // 2. Batasi maksimal 5 data terakhir
+        filteredData = filteredData.slice(0, 5);
+
+        // 3. Render ke HTML
+        container.innerHTML = filteredData.length ? filteredData.map(item => `
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
+                <div class="flex justify-between items-center"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Mg ${item.week} • ${item.subject}</span><span class="text-[10px] text-gray-400 font-bold uppercase">${new Date(item.created_at).toLocaleDateString('id-ID')}</span></div>
+                <div class="grid grid-cols-3 gap-2 py-2 border-y border-dashed border-gray-100">
+                    <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Akhlak</p><p class="text-sm font-black text-green-600">${item.akhlak_score}</p></div>
+                    <div class="text-center border-x border-dashed border-gray-100"><p class="text-[9px] text-gray-400 font-bold uppercase">Disiplin</p><p class="text-sm font-black text-blue-600">${item.disiplin_score}</p></div>
+                    <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Keaktifan</p><p class="text-sm font-black text-purple-600">${item.aktif_score}</p></div>
+                </div>
+                ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
+                
+                ${item.week ? `<button onclick="openReviewModal('${item.subject}', ${item.week})" class="mt-2 w-full py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-bold transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> Lihat Jawaban Anak</button>` : ''}
+            </div>
+        `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Tidak ada data di rentang waktu ini.</p>';
+    };
+
     const updateNavigatorUI = () => {
         const counter = document.getElementById('studentNavCounter');
         const input   = document.getElementById('studentSearchInput');
@@ -503,6 +612,12 @@ import Toast from '../../components/Toast.astro';
         if (newIndex < 0 || newIndex >= allStudents.length) return;
         const target = allStudents[newIndex];
         window.location.href = `/student/${target.id}`;
+    };
+
+    // Logika buka-tutup Menu Aksi Cepat (Raport, Kaleng, Poin)
+    window.toggleQuickActions = () => {
+        const menu = document.getElementById('dropdownQuickActions');
+        menu.classList.toggle('hidden');
     };
 
     // Search dengan debounce
@@ -565,12 +680,19 @@ import Toast from '../../components/Toast.astro';
         if (e.target.value.trim()) renderDropdown(e.target.value);
     });
 
-    // Tutup dropdown kalau klik di luar
     document.addEventListener('click', (e) => {
-        const input    = document.getElementById('studentSearchInput');
-        const dropdown = document.getElementById('studentSearchDropdown');
-        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
+        // Logika tutup dropdown Quick Actions
+        const btnActions = document.getElementById('btnQuickActions');
+        const menuActions = document.getElementById('dropdownQuickActions');
+        if (btnActions && menuActions && !btnActions.contains(e.target) && !menuActions.contains(e.target)) {
+            menuActions.classList.add('hidden');
+        }
+
+        // Logika tutup dropdown Search Siswa
+        const inputSearch = document.getElementById('studentSearchInput');
+        const dropdownSearch = document.getElementById('studentSearchDropdown');
+        if (inputSearch && dropdownSearch && !inputSearch.contains(e.target) && !dropdownSearch.contains(e.target)) {
+            dropdownSearch.classList.add('hidden');
         }
     });
 
@@ -994,11 +1116,6 @@ import Toast from '../../components/Toast.astro';
     let hasCan = false;
     let lastReceived = null;
 
-    const infoBtn  = document.getElementById('infoKalengBtn');
-    const modal    = document.getElementById('modalKaleng');
-    const closeBtn = document.getElementById('closeModalKaleng');
-    const messageEl = document.getElementById('kalengMessage');
-
     function getKalengMessage() {
         if (hasCan) return "⚠️ Anak ini belum balikkin kaleng infaq! (Jangan dikasih kaleng baru).";
         if (!lastReceived || lastReceived === "null") return "Anak ini belum pernah dikasih kaleng. Bisa diberikan pada Senin malam terdekat.";
@@ -1014,8 +1131,6 @@ import Toast from '../../components/Toast.astro';
         return `Belum dikasih kaleng infaq. Sudah terlewat ${Math.abs(diffDays)} hari dari jadwal.<br><br><span class="text-sm text-gray-500">(Jadwal: ${tglStr})</span>`;
     }
 
-    infoBtn.addEventListener('click', () => { messageEl.innerHTML = getKalengMessage(); modal.classList.remove('hidden'); });
-    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
     // --- FETCH DATA ---
     const fetchData = async () => {
@@ -1036,6 +1151,7 @@ import Toast from '../../components/Toast.astro';
             studentExamResults = examData.data || [];
 
             const student  = await stdRes.json();
+            updateStudentUI(student.data);
             const progress = await progRes.json();
             const todos    = await todoRes.json();
             globalConsultations = await consRes.json();
@@ -1068,16 +1184,6 @@ import Toast from '../../components/Toast.astro';
 
             hasCan = student.data.has_infaq_can;
             lastReceived = student.data.last_can_received_at;
-            const btnKaleng = document.getElementById('infoKalengBtn');
-            const baseShape = 'w-10 h-10 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all border';
-            if (hasCan) {
-                btnKaleng.className = `${baseShape} bg-red-50 text-red-500 border-red-200`;
-                btnKaleng.title = '⚠️ Belum Mengembalikan Kaleng (Klik info)';
-            } else {
-                btnKaleng.className = `${baseShape} bg-green-50 text-green-600 border-green-200`;
-                btnKaleng.title = '⚠️ Belum dikasih kaleng (Klik info)';
-            }
-            btnKaleng.innerHTML = '<i class="fa-solid fa-jar text-lg"></i>';
 
             if (progress.data) {
                 initChart(progress.data);
@@ -1121,22 +1227,97 @@ import Toast from '../../components/Toast.astro';
                 todoContainer.innerHTML = ''; 
             }
 
-            const consContainer = document.getElementById('consContainer');
-            consContainer.innerHTML = globalConsultations.data.length ? globalConsultations.data.map(item => `
-                <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
-                    <div class="flex justify-between items-center"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Mg ${item.week} • ${item.subject}</span><span class="text-[10px] text-gray-400 font-bold uppercase">${new Date(item.created_at).toLocaleDateString('id-ID')}</span></div>
-                    <div class="grid grid-cols-3 gap-2 py-2 border-y border-dashed border-gray-100">
-                        <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Akhlak</p><p class="text-sm font-black text-green-600">${item.akhlak_score}</p></div>
-                        <div class="text-center border-x border-dashed border-gray-100"><p class="text-[9px] text-gray-400 font-bold uppercase">Disiplin</p><p class="text-sm font-black text-blue-600">${item.disiplin_score}</p></div>
-                        <div class="text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">Keaktifan</p><p class="text-sm font-black text-purple-600">${item.aktif_score}</p></div>
-                    </div>
-                    ${item.image_url ? `<img src="${item.image_url}" class="w-full h-48 object-cover object-top rounded-2xl border border-gray-100 mt-2 shadow-sm" alt="Foto Konsul">` : ''}
-                    
-                    ${item.week ? `<button onclick="openReviewModal('${item.subject}', ${item.week})" class="mt-2 w-full py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-[10px] font-bold transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> Lihat Jawaban Anak</button>` : ''}
-                </div>
-            `).join('') : '<p class="text-center text-gray-400 text-sm py-4">Belum ada riwayat kuesioner.</p>';
+            renderConsultations();
 
         } catch (error) { console.error('fetchData Error:', error); }
+    };
+
+
+    // --- SINKRONISASI DATA UTAMA ---
+    const updateStudentUI = (student) => {
+        const pts = student.poin || 0;
+        // Update label poin di 3 lokasi
+        const elBadge = document.getElementById('studentTotalPointsBadge');
+        const elText = document.getElementById('studentTotalPointsText');
+        const elDrawer = document.getElementById('drawerTotalPoints');
+        if(elBadge) elBadge.innerText = pts;
+        if(elText) elText.innerText = pts;
+        if(elDrawer) elDrawer.innerText = pts;
+
+        // Update Status Kaleng
+        const canEl = document.getElementById('kalengStatusText');
+        if(canEl) {
+            if(student.has_infaq_can) {
+                canEl.innerText = "Dibawa Anak";
+                canEl.className = "text-[9px] font-black uppercase tracking-tighter text-green-600";
+            } else {
+                canEl.innerText = "Di Ustadz";
+                canEl.className = "text-[9px] font-black uppercase tracking-tighter text-gray-400";
+            }
+        }
+    };
+
+    // --- FUNGSI RIWAYAT POIN ---
+    window.openPointHistory = async () => {
+        const modal = document.getElementById('modalPointHistory');
+        const box = document.getElementById('pointHistoryBox');
+        const days = document.getElementById('filterDays')?.value || 'all';
+        const limit = document.getElementById('filterLimit')?.value || '10';
+
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); box.classList.replace('translate-y-full', 'translate-y-0'); }, 10);
+
+        const list = document.getElementById('pointHistoryList');
+        list.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500"></i></div>';
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/point-history?limit=${limit}&days=${days}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                list.innerHTML = data.data.map(item => {
+                    // Gray-out untuk data lama (Legacy)
+                    const legacyStyle = item.isLegacy ? 'opacity-30 grayscale pointer-events-none' : 'bg-white shadow-sm';
+                    const legacyBadge = item.isLegacy ? '<span class="text-[7px] bg-gray-200 text-gray-500 px-1 rounded ml-1">LOG LAMA</span>' : '';
+
+                    return `
+                    <div class="flex items-center gap-3 p-3 rounded-2xl border border-gray-100 ${legacyStyle}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-gray-50 border border-gray-50 shadow-inner">${item.icon}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-gray-800 truncate">${item.title} ${legacyBadge}</p>
+                            <p class="text-[9px] text-gray-400 mt-0.5">${formatDate(item.date)}</p>
+                        </div>
+                        <div class="px-3 py-1.5 rounded-xl border font-black text-sm ${item.isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}">
+                            ${item.points}
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        } catch (e) { list.innerHTML = '<p class="text-center text-xs text-red-500">Gagal memuat data.</p>'; }
+    };
+
+    // --- FUNGSI FORMAT TANGGAL ---
+    const formatDate = (dateString) => {
+        return new Intl.DateTimeFormat('id-ID', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit' 
+        }).format(new Date(dateString));
+    };
+
+    window.closePointHistory = () => {
+        const modal = document.getElementById('modalPointHistory');
+        const box = document.getElementById('pointHistoryBox');
+        
+        modal.classList.replace('opacity-100', 'opacity-0');
+        if (window.innerWidth < 640) box.classList.replace('translate-y-0', 'translate-y-full');
+        else box.classList.remove('animate-bounce-short');
+
+        setTimeout(() => { modal.classList.replace('flex', 'hidden'); }, 300);
     };
 
     // window.toggleTodo = async (id, status) => { /* logic update todo... */ await fetchData(); };
@@ -1389,29 +1570,6 @@ import Toast from '../../components/Toast.astro';
 
     window.closeRaportModal = () => document.getElementById('modalRaport').classList.replace('flex', 'hidden');
 
-    window.generateSystemNote = async () => {
-        const name = document.getElementById('rapName').value;
-        const btn  = document.querySelector('button[onclick="generateSystemNote()"]');
-        const payload = {
-            studentName: name,
-            academic:  { tajwid: document.getElementById('rapTajwid').value, fiqih: document.getElementById('rapFiqih').value, tauhid: document.getElementById('rapTauhid').value, quran: document.getElementById('rapQuran').value },
-            behavior:  { kedisiplinan: document.getElementById('rapSikap1').value, akhlak: document.getElementById('rapSikap2').value, keaktifan: document.getElementById('rapSikap3').value }
-        };
-        try {
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
-            const res = await fetch(`${API_URL}/api/raports/generate-note`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (res.ok) {
-                document.getElementById('rapNote').value = result.data;
-                analisisAIGlobal = result.analisis || null; // simpan untuk PDF hal. 2
-            }
-        } catch (e) { console.error(e); }
-        finally { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI'; }
-    };
 
     // ================================================================
     // HELPER PDF: gambar satu tabel dengan header & baris data

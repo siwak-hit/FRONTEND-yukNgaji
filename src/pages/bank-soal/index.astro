@@ -967,25 +967,201 @@ import ModalAlert from '../../components/ModalAlert.astro';
         } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
+// =================================================================
+    // 1. GLOBAL STATE & CACHE BARU
+    // =================================================================
+    let accordionSummary = {}; // Menyimpan kerangka (minggu & mapel)
+    let soalCache = {};        // Menyimpan data soal yang sudah di-fetch: Format { "1-tajwid": [...] }
+    let activeWeek = null;     // Melacak Pertemuan mana yang sedang terbuka
+
+    // =================================================================
+    // 2. FETCH SUMMARY (Hanya load struktur & jumlah soal)
+    // =================================================================
     const fetchAccordion = async () => {
         const container = document.getElementById('accordionContainer');
-        container.innerHTML = `<div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div><div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div><div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>`;
+        container.innerHTML = `<div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>...`;
+        
         try {
-            const responses = await Promise.all(SUBJECTS.map(s =>
-                    fetch(`${API_URL}/api/onboarding/questions/${s}`, { headers: { 'Authorization': `Bearer ${token}` } })
-                    .then(r => r.json()).then(result => ({ subject: s, grouped: result.data || {} }))
-            ));
-            allWeeksData = {};
-            responses.forEach(({ subject, grouped }) => {
-                Object.keys(grouped).forEach(weekStr => {
-                    const weekNum = parseInt(weekStr);
-                    if (!allWeeksData[weekNum]) allWeeksData[weekNum] = { tajwid: [], fiqih: [], tauhid: [] };
-                    allWeeksData[weekNum][subject] = grouped[weekStr];
-                });
+            // Asumsi: Lu bikin endpoint baru yang mereturn summary/metadata jumlah soal
+            // Jika belum ada, sementara gunakan logic fetch yang lama tapi JANGAN di-render dulu
+            const res = await fetch(`${API_URL}/api/onboarding/questions/summary-all`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
             });
-            renderAllWeeks();
+            const result = await res.json();
+            
+            // Format ekspektasi accordionSummary: 
+            // { 1: { tajwid: 9, fiqih: 9, tauhid: 4 }, 2: { tajwid: 6, ... } }
+            accordionSummary = result.data; 
+            renderAllWeeksShell();
         } catch (e) {
-            container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat data.</p>';
+            container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat struktur data.</p>';
+        }
+    };
+
+    // =================================================================
+    // 3. RENDER KERANGKA PERTEMUAN (SHELL)
+    // =================================================================
+    const renderAllWeeksShell = () => {
+        const container = document.getElementById('accordionContainer');
+        container.innerHTML = '';
+        
+        const weeks = Object.keys(accordionSummary).map(Number).sort((a, b) => isSortAsc ? a - b : b - a);
+        
+        if (weeks.length === 0) {
+            container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200"><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Belum Ada Soal</p></div>`;
+            return;
+        }
+
+        weeks.forEach(week => {
+            const counts = accordionSummary[week];
+            const totalQ = (counts.tajwid || 0) + (counts.fiqih || 0) + (counts.tauhid || 0);
+            
+            // Render UI Accordion Pertemuan (Masih kosong isinya)
+            const wrapper = document.createElement('div');
+            wrapper.className = `pertemuan-wrapper rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
+            wrapper.dataset.week = week;
+
+            wrapper.innerHTML = `
+                <div class="pertemuan-header bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors" onclick="togglePertemuan(${week})">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div>
+                        <div>
+                            <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
+                            <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 arrow-pertemuan"></i>
+                </div>
+                <div class="pertemuan-body hidden bg-white p-4 space-y-3" id="body-week-${week}"></div>
+            `;
+            container.appendChild(wrapper);
+        });
+    };
+
+    // =================================================================
+    // 4. LOGIC EXCLUSIVE ACCORDION PERTEMUAN
+    // =================================================================
+    window.togglePertemuan = (week) => {
+        const targetBody = document.getElementById(`body-week-${week}`);
+        const wrapper = targetBody.closest('.pertemuan-wrapper');
+        const arrow = wrapper.querySelector('.arrow-pertemuan');
+        const isCurrentlyHidden = targetBody.classList.contains('hidden');
+
+        // Tutup SEMUA pertemuan yang lagi kebuka (Exclusive Accordion)
+        document.querySelectorAll('.pertemuan-body').forEach(el => {
+            el.classList.add('hidden');
+            el.closest('.pertemuan-wrapper').querySelector('.arrow-pertemuan').style.transform = '';
+        });
+
+        if (isCurrentlyHidden) {
+            // Buka pertemuan yang di-klik
+            targetBody.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+            activeWeek = week;
+            
+            // Render Mapel di dalamnya jika belum di-render
+            if (targetBody.innerHTML.trim() === '') {
+                renderMapelShells(week, targetBody);
+            }
+        } else {
+            activeWeek = null; // Reset jika ditutup
+        }
+    };
+
+    // =================================================================
+    // 5. RENDER KERANGKA MAPEL DI DALAM PERTEMUAN
+    // =================================================================
+    const renderMapelShells = (week, containerEl) => {
+        const counts = accordionSummary[week];
+        
+        // Injeksi Bulk Mode Button
+        containerEl.innerHTML = `
+            <div class="flex justify-end mb-1" id="btnBulkModeWrap-${week}">
+                <button onclick="enterBulkMode(${week})" class="text-[10px] font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i> Bulk Action</button>
+            </div>
+            `;
+
+        SUBJECTS.forEach(subject => {
+            const count = counts[subject] || 0;
+            if (count === 0) return; // Skip mapel kalau gak ada soal
+
+            const c = SUBJECT_COLORS[subject];
+            const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
+
+            const mapelWrapper = document.createElement('div');
+            mapelWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white mapel-wrapper`;
+            mapelWrapper.dataset.subject = subject;
+
+            mapelWrapper.innerHTML = `
+                <div class="mapel-header ${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all" onclick="toggleMapel(${week}, '${subject}', this)">
+                    <div class="flex items-center gap-3">
+                        <span class="text-base">${icon}</span>
+                        <span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span>
+                        <span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${count} soal</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa"><i class="fa-solid fa-eye text-[10px]"></i></button>
+                        <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 arrow-mapel text-xs ml-1"></i>
+                    </div>
+                </div>
+                <div class="mapel-body hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}" id="body-mapel-${week}-${subject}"></div>
+            `;
+            containerEl.appendChild(mapelWrapper);
+        });
+    };
+
+    // =================================================================
+    // 6. LAZY FETCHING & CACHING SAAT MAPEL DI-EXPAND
+    // =================================================================
+    window.toggleMapel = async (week, subject, headerEl) => {
+        const targetBody = document.getElementById(`body-mapel-${week}-${subject}`);
+        const wrapper = targetBody.closest('.mapel-wrapper');
+        const arrow = wrapper.querySelector('.arrow-mapel');
+        const isCurrentlyHidden = targetBody.classList.contains('hidden');
+
+        // Tutup SEMUA Mapel lain di dalam Pertemuan yang sama (Exclusive)
+        const weekBody = document.getElementById(`body-week-${week}`);
+        weekBody.querySelectorAll('.mapel-body').forEach(el => {
+            el.classList.add('hidden');
+            el.closest('.mapel-wrapper').querySelector('.arrow-mapel').style.transform = '';
+        });
+
+        if (isCurrentlyHidden) {
+            targetBody.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+            
+            const cacheKey = `${week}-${subject}`;
+            if (soalCache[cacheKey]) {
+                const qIndex = soalCache[cacheKey].findIndex(q => q.id === id);
+                if (qIndex !== -1) { 
+                    soalCache[cacheKey].splice(qIndex, 1); 
+                    // Update UI spesifik yang kebuka aja
+                    document.getElementById(`body-mapel-${week}-${subject}`).innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subject, week)).join('');
+                }
+            }
+            
+            // Cek apakah data sudah ada di Cache?
+            if (!soalCache[cacheKey]) {
+                // Tampilkan Loading
+                targetBody.innerHTML = `<div class="py-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i><p class="text-[10px] font-bold uppercase tracking-widest">Mengambil Soal...</p></div>`;
+                
+                try {
+                    // Fetch data HANYA untuk mapel dan minggu ini!
+                    const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}`, { 
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    });
+                    const result = await res.json();
+                    
+                    // Simpan ke memory Cache
+                    soalCache[cacheKey] = result.data || []; 
+                } catch(e) {
+                    targetBody.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Gagal memuat soal.</p>`;
+                    return;
+                }
+            }
+
+            // Render soal dari Cache
+            targetBody.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subject, week)).join('');
         }
     };
 
