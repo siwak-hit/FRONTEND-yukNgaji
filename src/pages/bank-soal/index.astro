@@ -291,37 +291,51 @@ import ModalAlert from '../../components/ModalAlert.astro';
         fiqih:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   badge: 'bg-blue-100 text-blue-700'   },
         tauhid:  { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700'},
     };
+
+    // =================================================================
+    // 1. GLOBAL STATE & CACHE BARU (LAZY LOADING)
+    // =================================================================
+    let accordionSummary = {}; // Menyimpan kerangka (minggu & mapel)
+    let soalCache = {};        // Menyimpan data soal yang sudah di-fetch: Format { "1-tajwid": [...] }
+    let activeWeek = null;     // Melacak Pertemuan mana yang sedang terbuka
+    
     let summaryData = {};
     let activeSubjectForUpload = 'tajwid';
     let resolvedWeekForUpload  = 1;
-    let allWeeksData = {};
     let isSortAsc = true;
     let isSummaryCached = false; 
-
     let isDirty = false;
     let pendingCloseAction = null;
+
     document.addEventListener('input', (e) => {
         if (e.target.closest('.card-core-logic')) isDirty = true;
     });
+
     window.markDirty = () => { isDirty = true; };
 
     window.addEventListener('beforeunload', (e) => {
         if (isDirty) { e.preventDefault(); e.returnValue = ''; }
     });
+
     window.showConfirmBack = (action) => {
         pendingCloseAction = action;
         document.getElementById('modalConfirmBack').classList.replace('hidden', 'flex');
     };
+
     window.closeConfirmBack = () => {
         pendingCloseAction = null;
         document.getElementById('modalConfirmBack').classList.replace('flex', 'hidden');
     };
+
     window.forceCloseAction = () => {
         isDirty = false; 
         document.getElementById('modalConfirmBack').classList.replace('flex', 'hidden');
         if (pendingCloseAction) pendingCloseAction();
     };
 
+    // =================================================================
+    // 2. LOGIC EDITOR SOAL (TOOLS, DRAG & DROP, URUTAN)
+    // =================================================================
     window.relabelOptions = (card) => {
         const rows = card.querySelectorAll('.opt-row');
         rows.forEach((r, idx) => {
@@ -550,7 +564,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             if(tfWrapper) tfWrapper.classList.remove('hidden');
             if(keyStandard) keyStandard.classList.remove('hidden');
             if(keyInput) {
-                // BUG FIX: Inject explicit options untuk T/F
                 keyInput.innerHTML = `
                     <option value="A">A (Benar)</option>
                     <option value="B">B (Salah)</option>
@@ -589,7 +602,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const question = card.querySelector('.q-input')?.value.trim() || '';
         const level = card.querySelector('.level-input')?.value || 'sedang';
         const image_url = card.querySelector('.img-input')?.value.trim() || null;
-
         let finalOptions = {};
         let finalKey = "A";
 
@@ -599,7 +611,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         } else if (type === 'urutan') {
             const rows = card.querySelectorAll('.opt-row');
             finalOptions = Array.from(rows).map(r => r.querySelector('.opt-val').value.trim()).filter(v => v !== '');
-            
             const selects = card.querySelectorAll('.urutan-key-select');
             finalKey = Array.from(selects).map(sel => {
                 const row = Array.from(rows).find(r => r.dataset.key === sel.value);
@@ -608,7 +619,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         } else {
             const rows = card.querySelectorAll('.opt-row');
             rows.forEach(r => { finalOptions[r.dataset.key] = r.querySelector('.opt-val').value.trim(); });
-            
             if (type === 'drag') {
                 const selects = card.querySelectorAll('.drag-key-select');
                 finalKey = Array.from(selects).map(s => s.value).join(',');
@@ -620,18 +630,429 @@ import ModalAlert from '../../components/ModalAlert.astro';
         return { type, question, options: finalOptions, correct_answer: finalKey, difficulty_level: level, image_url };
     };
 
-    // (BAGIAN UPLOAD & MODAL LAINNYA TETAP SAMA SEPERTI SEBELUMNYA)
+    // =================================================================
+    // 3. LAZY LOADING ACCORDION (MAPEL & PERTEMUAN)
+    // =================================================================
+    
+    // FETCH DATA
+    const fetchAccordion = async () => {
+        const container = document.getElementById('accordionContainer');
+        // [FIX BUG 2] Spinner Loading Keren saat Load Data
+        container.innerHTML = `
+            <div class="py-12 flex flex-col items-center justify-center">
+                <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-green-500"></i>
+                <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Memuat Bank Soal...</p>
+            </div>
+        `;
+        
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/questions/summary-all`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await res.json();
+            accordionSummary = result.data; 
+            renderAllWeeksShell();
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat struktur data.</p>';
+        }
+    };
+
+    // RENDER KERANGKA ACCORDION
+    const renderAllWeeksShell = () => {
+        const container = document.getElementById('accordionContainer');
+        container.innerHTML = '';
+        
+        const searchTerm = document.getElementById('searchWeek').value.trim();
+        let weeks = Object.keys(accordionSummary).map(Number);
+        
+        if (searchTerm) weeks = weeks.filter(w => w.toString() === searchTerm);
+        weeks.sort((a, b) => isSortAsc ? a - b : b - a);
+
+        if (weeks.length === 0) {
+            container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200"><i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Data Tidak Ditemukan</p></div>`;
+            return;
+        }
+
+        weeks.forEach(week => {
+            const counts = accordionSummary[week];
+            const totalQ = (counts.tajwid || 0) + (counts.fiqih || 0) + (counts.tauhid || 0);
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = `pertemuan-wrapper rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
+            wrapper.dataset.week = week;
+
+            wrapper.innerHTML = `
+                <div class="pertemuan-header bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors" onclick="togglePertemuan(${week})">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div>
+                        <div>
+                            <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
+                            <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 arrow-pertemuan"></i>
+                </div>
+                <div class="pertemuan-body hidden bg-white p-4 space-y-3" id="body-week-${week}"></div>
+            `;
+            container.appendChild(wrapper);
+        });
+    };
+
+    // SEARCH & SORT BINDINGS
+    document.getElementById('searchWeek').addEventListener('input', () => renderAllWeeksShell());
+    document.getElementById('btnSortWeek').addEventListener('click', () => {
+        isSortAsc = !isSortAsc;
+        document.getElementById('btnSortWeek').innerHTML = isSortAsc ? '<i class="fa-solid fa-arrow-down-1-9"></i>' : '<i class="fa-solid fa-arrow-down-9-1"></i>';
+        renderAllWeeksShell();
+    });
+
+    window.togglePertemuan = (week) => {
+        const targetBody = document.getElementById(`body-week-${week}`);
+        const wrapper = targetBody.closest('.pertemuan-wrapper');
+        const arrow = wrapper.querySelector('.arrow-pertemuan');
+        const isCurrentlyHidden = targetBody.classList.contains('hidden');
+
+        document.querySelectorAll('.pertemuan-body').forEach(el => {
+            el.classList.add('hidden');
+            el.closest('.pertemuan-wrapper').querySelector('.arrow-pertemuan').style.transform = '';
+        });
+
+        if (isCurrentlyHidden) {
+            targetBody.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+            activeWeek = week;
+            
+            if (targetBody.innerHTML.trim() === '') {
+                renderMapelShells(week, targetBody);
+            }
+        } else {
+            activeWeek = null;
+        }
+    };
+
+    const renderMapelShells = (week, containerEl) => {
+        const counts = accordionSummary[week];
+        
+        containerEl.innerHTML = `
+            <div class="flex justify-end mb-1" id="btnBulkModeWrap-${week}">
+                <button onclick="enterBulkMode(${week})" class="text-[10px] font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i> Bulk Action</button>
+            </div>
+            <div class="flex flex-wrap justify-between items-center bg-red-50 p-3 rounded-xl border border-red-100 mb-3 hidden gap-2" id="bulkToolbar-${week}">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="selectAll-${week}" class="w-4 h-4 accent-red-500 rounded cursor-pointer" onchange="toggleSelectAll(${week}, this.checked)">
+                    <label for="selectAll-${week}" class="text-[10px] font-bold text-red-700 cursor-pointer uppercase tracking-wider mt-0.5">Pilih Semua</label>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="cancelBulkMode(${week})" class="text-[10px] font-bold text-red-400 hover:text-red-600 px-3 py-1.5 transition-colors">Batal</button>
+                    <button onclick="executeBulkDelete(${week})" class="text-[10px] font-bold bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-trash"></i> Hapus (<span id="bulkCount-${week}">0</span>)</button>
+                </div>
+            </div>
+        `;
+
+        SUBJECTS.forEach(subject => {
+            const count = counts[subject] || 0;
+            if (count === 0) return; 
+
+            const c = SUBJECT_COLORS[subject];
+            const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
+
+            const mapelWrapper = document.createElement('div');
+            mapelWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white mapel-wrapper`;
+            mapelWrapper.dataset.subject = subject;
+
+            mapelWrapper.innerHTML = `
+                <div class="mapel-header ${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all" onclick="toggleMapel(${week}, '${subject}', this)">
+                    <div class="flex items-center gap-3">
+                        <span class="text-base">${icon}</span>
+                        <span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span>
+                        <span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${count} soal</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa"><i class="fa-solid fa-eye text-[10px]"></i></button>
+                        <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 arrow-mapel text-xs ml-1"></i>
+                    </div>
+                </div>
+                <div class="mapel-body hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}" id="body-mapel-${week}-${subject}"></div>
+            `;
+            containerEl.appendChild(mapelWrapper);
+        });
+    };
+
+    window.toggleMapel = async (week, subject, headerEl) => {
+        const targetBody = document.getElementById(`body-mapel-${week}-${subject}`);
+        const wrapper = targetBody.closest('.mapel-wrapper');
+        const arrow = wrapper.querySelector('.arrow-mapel');
+        const isCurrentlyHidden = targetBody.classList.contains('hidden');
+
+        const weekBody = document.getElementById(`body-week-${week}`);
+        weekBody.querySelectorAll('.mapel-body').forEach(el => {
+            el.classList.add('hidden');
+            el.closest('.mapel-wrapper').querySelector('.arrow-mapel').style.transform = '';
+        });
+
+        if (isCurrentlyHidden) {
+            targetBody.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+            
+            const cacheKey = `${week}-${subject}`;
+            
+            if (!soalCache[cacheKey]) {
+                targetBody.innerHTML = `<div class="py-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block text-green-500"></i><p class="text-[10px] font-bold uppercase tracking-widest">Mengambil Soal...</p></div>`;
+                try {
+                    const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const result = await res.json();
+                    soalCache[cacheKey] = result.data || []; 
+                } catch(e) {
+                    targetBody.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Gagal memuat soal.</p>`;
+                    return;
+                }
+            }
+            // [FIX BUG 3] Murni Render Cache tanpa logika id is not defined
+            targetBody.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subject, week)).join('');
+        }
+    };
+
+    window.previewKuesioner = (e, subject, week) => {
+        e.stopPropagation();
+        window.location.href = `/consultations/fill?preview=true&subject=${subject}&week=${week}`;
+    };
+
+    const renderSoalItem = (q, index, subject, week) => {
+        const thumbHtml = q.image_url ? `<div class="mt-2 mb-2 w-full max-w-[120px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-white"><img src="${q.image_url}" class="w-full h-auto object-contain max-h-24" onerror="this.parentElement.remove()"></div>` : '';
+        const typeBadge = q.type === 'tf' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 border border-purple-200 uppercase tracking-widest shadow-sm">T/F</span>' : q.type === 'drag' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200 uppercase tracking-widest shadow-sm">DRAG</span>' : q.type === 'urutan' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-600 border border-teal-200 uppercase tracking-widest shadow-sm">URUTAN</span>' : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 uppercase tracking-widest shadow-sm">PG</span>';
+        let optHtml = '';
+        
+        if (q.type === 'drag') {
+            const allOpts = Object.entries(q.options || {}).map(([k, v]) => `<span class="inline-block px-1.5 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-700 font-bold">${k}: ${v}</span>`).join(' ');
+            const answerKeys = (q.correct_answer || '').split(',');
+            let blankIndex = 0;
+            const filledSentence = (q.question || '').replace(/\[BLANK\]/g, () => {
+                const key = answerKeys[blankIndex] || '?';
+                const val = (q.options || {})[key] || key;
+                blankIndex++;
+                return `<span class="inline-block bg-green-100 text-green-700 font-black px-1.5 py-0.5 rounded border border-green-300 text-[10px]">${val}</span>`;
+            });
+            optHtml = `<div class="space-y-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Kalimat Lengkap:</p><p class="text-[11px] text-gray-700 leading-relaxed font-medium">${filledSentence}</p><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">Pilihan Jawaban:</p><div class="flex flex-wrap gap-1">${allOpts}</div></div>`;
+        } else if (q.type === 'urutan') {
+            const arrUrutan = Array.isArray(q.options) ? q.options : [];
+            const keyArr = Array.isArray(q.correct_answer) ? q.correct_answer : []; 
+            const finalRenderArr = keyArr.length > 0 ? keyArr : arrUrutan;
+            optHtml = `<div class="space-y-1"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Urutan Benar:</p><div class="flex flex-wrap items-center gap-1.5 mt-1">${finalRenderArr.map((item) => `<span class="inline-block px-2 py-1 rounded bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px]">${item}</span>`).join('<i class="fa-solid fa-arrow-right text-[10px] text-gray-300"></i>')}</div></div>`;
+        } else {
+            optHtml = Object.entries(q.options || {}).map(([k, v]) => `<span class="${k === q.correct_answer ? 'text-green-600 font-bold' : 'text-gray-400'}">${k}: ${v}</span>`).join(' · ');
+        }
+        
+        const levelColor = { mudah: 'text-green-600 bg-green-50', sedang: 'text-blue-600 bg-blue-50', sulit: 'text-red-500 bg-red-50' };
+        const lc = levelColor[q.difficulty_level] || 'text-gray-500 bg-gray-50';
+
+        return `<div class="bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm space-y-2 relative" data-soal-id="${q.id}">
+            <div class="flex items-start justify-between gap-2 border-b border-gray-100 pb-2">
+                <div class="flex items-start gap-2 flex-1">
+                    <div class="hidden bulk-checkbox-wrap week-${week} mt-0.5 shrink-0">
+                        <input type="checkbox" class="w-4 h-4 accent-red-500 rounded cursor-pointer bulk-checkbox" value="${q.id}" onchange="updateBulkCount(${week})">
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-gray-800 leading-relaxed">${index + 1}. ${q.question}</p>
+                        ${thumbHtml}
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <div class="flex items-center gap-1">${typeBadge}<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border border-white shadow-sm ${lc}">${q.difficulty_level}</span></div>
+                    <div class="flex gap-1 mt-1">
+                        <button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})" class="w-6 h-6 flex items-center justify-center bg-white text-blue-500 border border-blue-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="hapusSoal('${q.id}', '${subject}')" class="w-6 h-6 flex items-center justify-center bg-white text-red-500 border border-red-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="text-[10px] leading-relaxed pt-1">${optHtml}</div>
+        </div>`;
+    };
+
+    // =================================================================
+    // 4. CRUD ACTIONS (DELETE, EDIT, UPLOAD, BULK)
+    // =================================================================
+    window.hapusSoal = async (id, subject) => {
+        if (!confirm(`Hapus soal ini dari bank soal ${subject}? Tindakan tidak bisa dibatalkan.`)) return;
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                window.showToast('success', 'Terhapus', 'Soal berhasil dihapus.');
+                isSummaryCached = false; 
+                
+                // Cari dan Hapus dari soalCache
+                for (const cacheKey in soalCache) {
+                    if (cacheKey.includes(`-${subject}`)) {
+                        const qIndex = soalCache[cacheKey].findIndex(q => q.id === id);
+                        if (qIndex !== -1) { 
+                            soalCache[cacheKey].splice(qIndex, 1); 
+                            const [w, subj] = cacheKey.split('-');
+                            const bodyMapel = document.getElementById(`body-mapel-${w}-${subj}`);
+                            if (bodyMapel && !bodyMapel.classList.contains('hidden')) {
+                                bodyMapel.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subj, w)).join('');
+                            }
+                            break; 
+                        }
+                    }
+                }
+                fetchAccordion(); // Update ulang angka
+            } else window.showToast('danger', 'Error', 'Gagal menghapus soal.');
+        } catch { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
+    };
+
+    window.submitEditSoal = async () => {
+        const modal = document.getElementById('modalEditSoal');
+        const id = document.getElementById('editSoalId').value;
+        const payload = extractCardData(modal);
+
+        if (!payload.question || (payload.type !== 'tf' && payload.type !== 'urutan' && (!payload.options.A || !payload.options.B))) {
+            return window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal opsi wajib diisi.');
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                window.showToast('success', 'Berhasil', 'Soal berhasil diperbarui.');
+                isDirty = false; 
+                document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
+                
+                // [FIX BUG 1] Update Live di Cache dan UI
+                for (const cacheKey in soalCache) {
+                    const qIndex = soalCache[cacheKey].findIndex(q => q.id === id);
+                    if (qIndex !== -1) {
+                        soalCache[cacheKey][qIndex] = { ...soalCache[cacheKey][qIndex], ...payload };
+                        const [w, subj] = cacheKey.split('-');
+                        const bodyMapel = document.getElementById(`body-mapel-${w}-${subj}`);
+                        if (bodyMapel && !bodyMapel.classList.contains('hidden')) {
+                            bodyMapel.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subj, w)).join('');
+                        }
+                        break;
+                    }
+                }
+            } else window.showToast('danger', 'Error', (await res.json()).message || 'Gagal update.');
+        } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
+    };
+
+    document.getElementById('btnFinalSave').onclick = async () => {
+        const cards   = document.querySelectorAll('#previewContent .soal-card');
+        const subject = activeSubjectForUpload;
+        const week    = parseInt(document.getElementById('targetWeek').value);
+        if (!week || week < 1) return window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
+
+        const questionsData = [];
+        cards.forEach(card => {
+            const data = extractCardData(card);
+            if (data.question && (data.type === 'tf' || data.type === 'urutan' || (data.options.A && data.options.B))) {
+                questionsData.push(data);
+            }
+        });
+        if (questionsData.length === 0) return window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
+
+        const btn = document.getElementById('btnFinalSave');
+        btn.textContent = "Menyimpan..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/upload-template`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, week, questions: questionsData })
+            });
+            const result = await res.json();
+            if (res.ok) {
+                window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan.`);
+                isSummaryCached = false; 
+                isDirty = false; 
+                // Kosongkan cache untuk pertemuan ini agar fetch ulang data terbaru
+                Object.keys(soalCache).forEach(key => { if(key.startsWith(`${week}-`)) delete soalCache[key]; });
+                setTimeout(() => { document.getElementById('modalPreview').classList.add('hidden'); fetchAccordion(); }, 1200);
+            } else window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
+        } catch (err) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
+        finally { btn.textContent = "Simpan"; btn.disabled = false; }
+    };
+
+    // FITUR BULK ACTION
+    window.enterBulkMode = (week) => {
+        document.getElementById(`btnBulkModeWrap-${week}`).classList.add('hidden');
+        document.getElementById(`bulkToolbar-${week}`).classList.remove('hidden');
+        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week}`).forEach(el => el.classList.remove('hidden'));
+        updateBulkCount(week);
+    };
+
+    window.cancelBulkMode = (week) => {
+        document.getElementById(`btnBulkModeWrap-${week}`).classList.remove('hidden');
+        document.getElementById(`bulkToolbar-${week}`).classList.add('hidden');
+        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week}`).forEach(el => {
+            el.classList.add('hidden');
+            el.querySelector('input').checked = false;
+        });
+        document.getElementById(`selectAll-${week}`).checked = false;
+    };
+
+    window.toggleSelectAll = (week, isChecked) => {
+        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]`).forEach(cb => { cb.checked = isChecked; });
+        updateBulkCount(week);
+    };
+
+    window.updateBulkCount = (week) => {
+        const count = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]:checked`).length;
+        document.getElementById(`bulkCount-${week}`).innerText = count;
+        const total = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]`).length;
+        document.getElementById(`selectAll-${week}`).checked = (count === total && total > 0);
+    };
+
+    window.executeBulkDelete = async (week) => {
+        const checked = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]:checked`);
+        if (checked.length === 0) return window.showToast('warning', 'Perhatian', 'Pilih minimal 1 soal untuk dihapus.');
+        if (!confirm(`Yakin ingin menghapus ${checked.length} soal terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+        const idsToDelete = Array.from(checked).map(cb => cb.value);
+        const btn = document.querySelector(`#bulkToolbar-${week} button.bg-red-500`);
+        const oldText = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
+        btn.disabled = true;
+        try {
+            const deletePromises = idsToDelete.map(id => fetch(`${API_URL}/api/onboarding/questions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }));
+            await Promise.all(deletePromises);
+
+            window.showToast('success', 'Berhasil', `${idsToDelete.length} soal berhasil dihapus.`);
+            isSummaryCached = false;
+            
+            idsToDelete.forEach(id => {
+                for (const cacheKey in soalCache) {
+                    if (cacheKey.startsWith(`${week}-`)) {
+                        const qIndex = soalCache[cacheKey].findIndex(q => q.id === id);
+                        if (qIndex !== -1) { 
+                            soalCache[cacheKey].splice(qIndex, 1);
+                            const [w, subj] = cacheKey.split('-');
+                            const bodyMapel = document.getElementById(`body-mapel-${w}-${subj}`);
+                            if (bodyMapel && !bodyMapel.classList.contains('hidden')) {
+                                bodyMapel.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subj, w)).join('');
+                            }
+                        }
+                    }
+                }
+            });
+            fetchAccordion(); // Refresh angka
+        } catch (err) {
+            window.showToast('danger', 'Error', 'Terjadi kesalahan saat menghapus massal.');
+            btn.innerHTML = oldText; btn.disabled = false;
+        }
+    };
+
+    // =================================================================
+    // 5. HELPER UPLOAD FILE & GAMBAR
+    // =================================================================
     document.getElementById('btnOpenUpload').onclick = async () => {
         await loadSummaryIntoModal();
         document.getElementById('modalUpload').classList.remove('hidden');
     };
+    
     window.closeUpload  = () => document.getElementById('modalUpload').classList.add('hidden');
     window.closePreview = () => {
-        if (isDirty) {
-            showConfirmBack(() => document.getElementById('modalPreview').classList.add('hidden'));
-        } else {
-            document.getElementById('modalPreview').classList.add('hidden');
-        }
+        if (isDirty) showConfirmBack(() => document.getElementById('modalPreview').classList.add('hidden'));
+        else document.getElementById('modalPreview').classList.add('hidden');
     };
 
     const loadSummaryIntoModal = async () => {
@@ -698,12 +1119,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         reader.readAsText(file);
     };
 
-    window.openManualFromModal = () => { 
-        closeUpload(); 
-        renderPreview([]); 
-        addNewQuestionField(); 
-        isDirty = false; 
-    };
+    window.openManualFromModal = () => { closeUpload(); renderPreview([]); addNewQuestionField(); isDirty = false; };
 
     const parseTextToJSON = (text) => {
         const blocks = text.split(/\r?\n\r?\n/);
@@ -729,9 +1145,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 const arr = Object.values(options).filter(v => v !== '');
                 const keyLetters = key.split(',').map(s => s.trim());
                 const correctArr = keyLetters.map(k => options[k]).filter(Boolean);
-                
-                options = arr;
-                key = correctArr;
+                options = arr; key = correctArr;
             }
             return { type, q, options, key, level, image_url: img };
         }).filter(item => item.q !== '');
@@ -835,12 +1249,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         `;
         const optWrapper = div.querySelector('.options-wrapper');
         const defaultOpts = item.options && Object.keys(item.options).length > 0 ? item.options : { A: "", B: "", C: "", D: "" };
-        
-        if (Array.isArray(defaultOpts)) {
-            defaultOpts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); });
-        } else {
-            Object.entries(defaultOpts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
-        }
+        if (Array.isArray(defaultOpts)) { defaultOpts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); }); } 
+        else { Object.entries(defaultOpts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); }); }
 
         setTimeout(() => toggleCardType(div.querySelector('.type-input'), item.key), 10);
         return div;
@@ -852,41 +1262,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const card = createSoalCard({}, null);
         container.appendChild(card);
         setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
-    };
-
-    document.getElementById('btnFinalSave').onclick = async () => {
-        const cards   = document.querySelectorAll('#previewContent .soal-card');
-        const subject = activeSubjectForUpload;
-        const week    = parseInt(document.getElementById('targetWeek').value);
-        if (!week || week < 1) return window.showToast('warning', 'Perhatian', 'Nomor pertemuan tidak valid.');
-
-        const questionsData = [];
-        cards.forEach(card => {
-            const data = extractCardData(card);
-            if (data.question && (data.type === 'tf' || data.type === 'urutan' || (data.options.A && data.options.B))) {
-                questionsData.push(data);
-            }
-        });
-        if (questionsData.length === 0) return window.showToast('warning', 'Perhatian', 'Tidak ada soal yang valid untuk disimpan.');
-
-        const btn = document.getElementById('btnFinalSave');
-        btn.textContent = "Menyimpan..."; btn.disabled = true;
-
-        try {
-            const res = await fetch(`${API_URL}/api/onboarding/upload-template`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subject, week, questions: questionsData })
-            });
-            const result = await res.json();
-            if (res.ok) {
-                window.showToast('success', 'Berhasil', `${questionsData.length} soal disimpan.`);
-                isSummaryCached = false; 
-                isDirty = false; 
-                setTimeout(() => { document.getElementById('modalPreview').classList.add('hidden'); fetchAccordion(); }, 1200);
-            } else window.showToast('danger', 'Error', result.message || 'Gagal menyimpan.');
-        } catch (err) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); } 
-        finally { btn.textContent = "Simpan"; btn.disabled = false; }
     };
 
     window.openEditSoal = (q) => {
@@ -902,13 +1277,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
         optWrapper.innerHTML = '';
         const opts = q.options && Object.keys(q.options).length > 0 ? q.options : {A:"", B:"", C:"", D:""};
         
-        if (Array.isArray(opts)) {
-            opts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); });
-        } else {
-            Object.entries(opts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); });
-        }
+        if (Array.isArray(opts)) { opts.forEach((v, i) => { appendOptionRow(optWrapper, i + 1, v); }); } 
+        else { Object.entries(opts).forEach(([k, v]) => { appendOptionRow(optWrapper, k, v); }); }
 
-        // BUG FIX: Parse JSON jika tipe urutan tapi value string dari DB
         let presetAnswer = q.correct_answer;
         if (q.type === 'urutan' && typeof presetAnswer === 'string') {
             try { presetAnswer = JSON.parse(presetAnswer); } catch(e) {}
@@ -919,9 +1290,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         isDirty = false;
     };
 
-    window.toggleEditType = (presetKey = null) => {
-        toggleCardType(document.getElementById('editSoalType'), presetKey);
-    };
+    window.toggleEditType = (presetKey = null) => { toggleCardType(document.getElementById('editSoalType'), presetKey); };
 
     window.closeEditSoal = () => {
         const doClose = () => {
@@ -931,406 +1300,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
         };
         if (isDirty) showConfirmBack(doClose);
         else doClose();
-    };
-
-    window.submitEditSoal = async () => {
-        const modal = document.getElementById('modalEditSoal');
-        const id = document.getElementById('editSoalId').value;
-        const payload = extractCardData(modal);
-
-        if (!payload.question || (payload.type !== 'tf' && payload.type !== 'urutan' && (!payload.options.A || !payload.options.B))) {
-            return window.showToast('warning', 'Perhatian', 'Pertanyaan dan minimal opsi wajib diisi.');
-        }
-
-        try {
-            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                window.showToast('success', 'Berhasil', 'Soal berhasil diperbarui.');
-                isDirty = false; 
-                document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
-                
-                for (const week in allWeeksData) {
-                    for (const subj in allWeeksData[week]) {
-                        const qIndex = allWeeksData[week][subj].findIndex(q => q.id === id);
-                        if (qIndex !== -1) {
-                            allWeeksData[week][subj][qIndex] = { ...allWeeksData[week][subj][qIndex], ...payload };
-                            break;
-                        }
-                    }
-                }
-                renderAllWeeks();
-            } else window.showToast('danger', 'Error', (await res.json()).message || 'Gagal update.');
-        } catch (e) { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
-    };
-
-// =================================================================
-    // 1. GLOBAL STATE & CACHE BARU
-    // =================================================================
-    let accordionSummary = {}; // Menyimpan kerangka (minggu & mapel)
-    let soalCache = {};        // Menyimpan data soal yang sudah di-fetch: Format { "1-tajwid": [...] }
-    let activeWeek = null;     // Melacak Pertemuan mana yang sedang terbuka
-
-    // =================================================================
-    // 2. FETCH SUMMARY (Hanya load struktur & jumlah soal)
-    // =================================================================
-    const fetchAccordion = async () => {
-        const container = document.getElementById('accordionContainer');
-        container.innerHTML = `<div class="animate-pulse bg-white h-16 rounded-2xl border border-gray-100"></div>...`;
-        
-        try {
-            // Asumsi: Lu bikin endpoint baru yang mereturn summary/metadata jumlah soal
-            // Jika belum ada, sementara gunakan logic fetch yang lama tapi JANGAN di-render dulu
-            const res = await fetch(`${API_URL}/api/onboarding/questions/summary-all`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
-            const result = await res.json();
-            
-            // Format ekspektasi accordionSummary: 
-            // { 1: { tajwid: 9, fiqih: 9, tauhid: 4 }, 2: { tajwid: 6, ... } }
-            accordionSummary = result.data; 
-            renderAllWeeksShell();
-        } catch (e) {
-            container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Gagal memuat struktur data.</p>';
-        }
-    };
-
-    // =================================================================
-    // 3. RENDER KERANGKA PERTEMUAN (SHELL)
-    // =================================================================
-    const renderAllWeeksShell = () => {
-        const container = document.getElementById('accordionContainer');
-        container.innerHTML = '';
-        
-        const weeks = Object.keys(accordionSummary).map(Number).sort((a, b) => isSortAsc ? a - b : b - a);
-        
-        if (weeks.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200"><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Belum Ada Soal</p></div>`;
-            return;
-        }
-
-        weeks.forEach(week => {
-            const counts = accordionSummary[week];
-            const totalQ = (counts.tajwid || 0) + (counts.fiqih || 0) + (counts.tauhid || 0);
-            
-            // Render UI Accordion Pertemuan (Masih kosong isinya)
-            const wrapper = document.createElement('div');
-            wrapper.className = `pertemuan-wrapper rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
-            wrapper.dataset.week = week;
-
-            wrapper.innerHTML = `
-                <div class="pertemuan-header bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors" onclick="togglePertemuan(${week})">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div>
-                        <div>
-                            <h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3>
-                            <p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 arrow-pertemuan"></i>
-                </div>
-                <div class="pertemuan-body hidden bg-white p-4 space-y-3" id="body-week-${week}"></div>
-            `;
-            container.appendChild(wrapper);
-        });
-    };
-
-    // =================================================================
-    // 4. LOGIC EXCLUSIVE ACCORDION PERTEMUAN
-    // =================================================================
-    window.togglePertemuan = (week) => {
-        const targetBody = document.getElementById(`body-week-${week}`);
-        const wrapper = targetBody.closest('.pertemuan-wrapper');
-        const arrow = wrapper.querySelector('.arrow-pertemuan');
-        const isCurrentlyHidden = targetBody.classList.contains('hidden');
-
-        // Tutup SEMUA pertemuan yang lagi kebuka (Exclusive Accordion)
-        document.querySelectorAll('.pertemuan-body').forEach(el => {
-            el.classList.add('hidden');
-            el.closest('.pertemuan-wrapper').querySelector('.arrow-pertemuan').style.transform = '';
-        });
-
-        if (isCurrentlyHidden) {
-            // Buka pertemuan yang di-klik
-            targetBody.classList.remove('hidden');
-            arrow.style.transform = 'rotate(180deg)';
-            activeWeek = week;
-            
-            // Render Mapel di dalamnya jika belum di-render
-            if (targetBody.innerHTML.trim() === '') {
-                renderMapelShells(week, targetBody);
-            }
-        } else {
-            activeWeek = null; // Reset jika ditutup
-        }
-    };
-
-    // =================================================================
-    // 5. RENDER KERANGKA MAPEL DI DALAM PERTEMUAN
-    // =================================================================
-    const renderMapelShells = (week, containerEl) => {
-        const counts = accordionSummary[week];
-        
-        // Injeksi Bulk Mode Button
-        containerEl.innerHTML = `
-            <div class="flex justify-end mb-1" id="btnBulkModeWrap-${week}">
-                <button onclick="enterBulkMode(${week})" class="text-[10px] font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i> Bulk Action</button>
-            </div>
-            `;
-
-        SUBJECTS.forEach(subject => {
-            const count = counts[subject] || 0;
-            if (count === 0) return; // Skip mapel kalau gak ada soal
-
-            const c = SUBJECT_COLORS[subject];
-            const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
-
-            const mapelWrapper = document.createElement('div');
-            mapelWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white mapel-wrapper`;
-            mapelWrapper.dataset.subject = subject;
-
-            mapelWrapper.innerHTML = `
-                <div class="mapel-header ${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all" onclick="toggleMapel(${week}, '${subject}', this)">
-                    <div class="flex items-center gap-3">
-                        <span class="text-base">${icon}</span>
-                        <span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span>
-                        <span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${count} soal</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa"><i class="fa-solid fa-eye text-[10px]"></i></button>
-                        <i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 arrow-mapel text-xs ml-1"></i>
-                    </div>
-                </div>
-                <div class="mapel-body hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}" id="body-mapel-${week}-${subject}"></div>
-            `;
-            containerEl.appendChild(mapelWrapper);
-        });
-    };
-
-    // =================================================================
-    // 6. LAZY FETCHING & CACHING SAAT MAPEL DI-EXPAND
-    // =================================================================
-    window.toggleMapel = async (week, subject, headerEl) => {
-        const targetBody = document.getElementById(`body-mapel-${week}-${subject}`);
-        const wrapper = targetBody.closest('.mapel-wrapper');
-        const arrow = wrapper.querySelector('.arrow-mapel');
-        const isCurrentlyHidden = targetBody.classList.contains('hidden');
-
-        // Tutup SEMUA Mapel lain di dalam Pertemuan yang sama (Exclusive)
-        const weekBody = document.getElementById(`body-week-${week}`);
-        weekBody.querySelectorAll('.mapel-body').forEach(el => {
-            el.classList.add('hidden');
-            el.closest('.mapel-wrapper').querySelector('.arrow-mapel').style.transform = '';
-        });
-
-        if (isCurrentlyHidden) {
-            targetBody.classList.remove('hidden');
-            arrow.style.transform = 'rotate(180deg)';
-            
-            const cacheKey = `${week}-${subject}`;
-            if (soalCache[cacheKey]) {
-                const qIndex = soalCache[cacheKey].findIndex(q => q.id === id);
-                if (qIndex !== -1) { 
-                    soalCache[cacheKey].splice(qIndex, 1); 
-                    // Update UI spesifik yang kebuka aja
-                    document.getElementById(`body-mapel-${week}-${subject}`).innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subject, week)).join('');
-                }
-            }
-            
-            // Cek apakah data sudah ada di Cache?
-            if (!soalCache[cacheKey]) {
-                // Tampilkan Loading
-                targetBody.innerHTML = `<div class="py-6 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i><p class="text-[10px] font-bold uppercase tracking-widest">Mengambil Soal...</p></div>`;
-                
-                try {
-                    // Fetch data HANYA untuk mapel dan minggu ini!
-                    const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}`, { 
-                        headers: { 'Authorization': `Bearer ${token}` } 
-                    });
-                    const result = await res.json();
-                    
-                    // Simpan ke memory Cache
-                    soalCache[cacheKey] = result.data || []; 
-                } catch(e) {
-                    targetBody.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Gagal memuat soal.</p>`;
-                    return;
-                }
-            }
-
-            // Render soal dari Cache
-            targetBody.innerHTML = soalCache[cacheKey].map((q, i) => renderSoalItem(q, i, subject, week)).join('');
-        }
-    };
-
-    document.getElementById('searchWeek').addEventListener('input', () => renderAllWeeks());
-    document.getElementById('btnSortWeek').addEventListener('click', () => {
-        isSortAsc = !isSortAsc;
-        document.getElementById('btnSortWeek').innerHTML = isSortAsc ? '<i class="fa-solid fa-arrow-down-1-9"></i>' : '<i class="fa-solid fa-arrow-down-9-1"></i>';
-        renderAllWeeks();
-    });
-
-    const renderAllWeeks = () => {
-        const container = document.getElementById('accordionContainer');
-        container.innerHTML = '';
-        const searchTerm = document.getElementById('searchWeek').value.trim();
-        let weeks = Object.keys(allWeeksData).map(Number);
-
-        if (searchTerm) weeks = weeks.filter(w => w.toString() === searchTerm);
-        weeks.sort((a, b) => isSortAsc ? a - b : b - a);
-        if (weeks.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200"><i class="fa-solid fa-book-open text-3xl text-gray-200 mb-3 block"></i><p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Data Tidak Ditemukan</p></div>`;
-            return;
-        }
-        weeks.forEach(week => container.appendChild(renderWeekAccordion(week, allWeeksData[week])));
-    };
-
-    const renderWeekAccordion = (week, subjectsData) => {
-        const totalQ = (subjectsData.tajwid?.length || 0) + (subjectsData.fiqih?.length || 0) + (subjectsData.tauhid?.length || 0);
-        const wrapper = document.createElement('div');
-        wrapper.className = `rounded-2xl border border-gray-200 overflow-hidden shadow-sm bg-white mb-4`;
-        
-        const header = document.createElement('div');
-        header.className = `bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors`;
-        header.innerHTML = `<div class="flex items-center gap-4"><div class="w-12 h-12 bg-white border border-gray-200 text-gray-800 rounded-xl flex items-center justify-center font-black text-xl shadow-sm">${week}</div><div><h3 class="font-black text-gray-800 uppercase text-sm tracking-wide">Pertemuan ${week}</h3><p class="text-[10px] text-gray-400 font-bold mt-0.5">${totalQ} Total Soal</p></div></div><i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 accordion-arrow"></i>`;
-        
-        const body = document.createElement('div');
-        body.className = 'accordion-body hidden bg-white p-4 space-y-3';
-        
-        // --- INJEKSI UI BULK MODE DI SINI ---
-        if (totalQ > 0) {
-            body.innerHTML = `
-                <div class="flex justify-end mb-1" id="btnBulkModeWrap-${week}">
-                    <button onclick="enterBulkMode(${week})" class="text-[10px] font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i> Bulk Action</button>
-                </div>
-                <div class="flex flex-wrap justify-between items-center bg-red-50 p-3 rounded-xl border border-red-100 mb-3 hidden gap-2" id="bulkToolbar-${week}">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="selectAll-${week}" class="w-4 h-4 accent-red-500 rounded cursor-pointer" onchange="toggleSelectAll(${week}, this.checked)">
-                        <label for="selectAll-${week}" class="text-[10px] font-bold text-red-700 cursor-pointer uppercase tracking-wider mt-0.5">Pilih Semua</label>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="cancelBulkMode(${week})" class="text-[10px] font-bold text-red-400 hover:text-red-600 px-3 py-1.5 transition-colors">Batal</button>
-                        <button onclick="executeBulkDelete(${week})" class="text-[10px] font-bold bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-trash"></i> Hapus (<span id="bulkCount-${week}">0</span>)</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        SUBJECTS.forEach(subject => {
-            const qList = subjectsData[subject];
-            if (qList && qList.length > 0) {
-                const c = SUBJECT_COLORS[subject];
-                const subjWrapper = document.createElement('div');
-                subjWrapper.className = `rounded-xl border ${c.border} overflow-hidden bg-white`;
-
-                const subjHeader = document.createElement('div');
-                subjHeader.className = `${c.bg} px-4 py-3 flex items-center justify-between cursor-pointer hover:brightness-95 transition-all`;
-                const icon = subject === 'tajwid' ? '📖' : subject === 'fiqih' ? '⚖️' : '🕌';
-                
-                subjHeader.innerHTML = `<div class="flex items-center gap-3"><span class="text-base">${icon}</span><span class="text-xs font-black ${c.text} uppercase tracking-wider">${subject}</span><span class="text-[9px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md border ${c.border} shadow-sm">${qList.length} soal</span></div><div class="flex items-center gap-2"><button onclick="previewKuesioner(event, '${subject}', ${week})" class="w-7 h-7 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors shadow-sm" title="Preview POV Siswa"><i class="fa-solid fa-eye text-[10px]"></i></button><i class="fa-solid fa-chevron-down ${c.text} transition-transform duration-200 subj-arrow text-xs ml-1"></i></div>`;
-                
-                const subjBody = document.createElement('div');
-                subjBody.className = `hidden px-4 pb-4 pt-3 space-y-3 border-t border-dashed ${c.border}`;
-                // Meneruskan parameter "week" ke renderSoalItem
-                subjBody.innerHTML = qList.map((q, i) => renderSoalItem(q, i, subject, week)).join('');
-
-                subjHeader.onclick = (e) => {
-                    e.stopPropagation();
-                    const isHidden = subjBody.classList.toggle('hidden');
-                    subjHeader.querySelector('.subj-arrow').style.transform = isHidden ? '' : 'rotate(180deg)';
-                };
-
-                subjWrapper.appendChild(subjHeader);
-                subjWrapper.appendChild(subjBody);
-                body.appendChild(subjWrapper);
-            }
-        });
-
-        header.onclick = () => {
-            const isHidden = body.classList.toggle('hidden');
-            header.querySelector('.accordion-arrow').style.transform = isHidden ? '' : 'rotate(180deg)';
-        };
-
-        wrapper.appendChild(header);
-        wrapper.appendChild(body);
-        return wrapper;
-    };
-
-    window.previewKuesioner = (e, subject, week) => {
-        e.stopPropagation();
-        window.location.href = `/consultations/fill?preview=true&subject=${subject}&week=${week}`;
-    };
-
-    const renderSoalItem = (q, index, subject, week) => { // TAMBAH PARAMETER 'week' DI SINI
-        const thumbHtml = q.image_url ? `<div class="mt-2 mb-2 w-full max-w-[120px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-white"><img src="${q.image_url}" class="w-full h-auto object-contain max-h-24" onerror="this.parentElement.remove()"></div>` : '';
-        const typeBadge = q.type === 'tf' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 border border-purple-200 uppercase tracking-widest shadow-sm">T/F</span>' : q.type === 'drag' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200 uppercase tracking-widest shadow-sm">DRAG</span>' : q.type === 'urutan' ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-600 border border-teal-200 uppercase tracking-widest shadow-sm">URUTAN</span>' : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 uppercase tracking-widest shadow-sm">PG</span>';
-        
-        let optHtml = '';
-        if (q.type === 'drag') {
-            const allOpts = Object.entries(q.options || {}).map(([k, v]) => `<span class="inline-block px-1.5 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-700 font-bold">${k}: ${v}</span>`).join(' ');
-            const answerKeys = (q.correct_answer || '').split(',');
-            let blankIndex = 0;
-            const filledSentence = (q.question || '').replace(/\[BLANK\]/g, () => {
-                const key = answerKeys[blankIndex] || '?';
-                const val = (q.options || {})[key] || key;
-                blankIndex++;
-                return `<span class="inline-block bg-green-100 text-green-700 font-black px-1.5 py-0.5 rounded border border-green-300 text-[10px]">${val}</span>`;
-            });
-            optHtml = `<div class="space-y-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Kalimat Lengkap:</p><p class="text-[11px] text-gray-700 leading-relaxed font-medium">${filledSentence}</p><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1">Pilihan Jawaban:</p><div class="flex flex-wrap gap-1">${allOpts}</div></div>`;
-        } else if (q.type === 'urutan') {
-            const arrUrutan = Array.isArray(q.options) ? q.options : [];
-            const keyArr = Array.isArray(q.correct_answer) ? q.correct_answer : []; 
-            const finalRenderArr = keyArr.length > 0 ? keyArr : arrUrutan;
-            optHtml = `<div class="space-y-1"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Urutan Benar:</p><div class="flex flex-wrap items-center gap-1.5 mt-1">${finalRenderArr.map((item) => `<span class="inline-block px-2 py-1 rounded bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[10px]">${item}</span>`).join('<i class="fa-solid fa-arrow-right text-[10px] text-gray-300"></i>')}</div></div>`;
-        } else {
-            optHtml = Object.entries(q.options || {}).map(([k, v]) => `<span class="${k === q.correct_answer ? 'text-green-600 font-bold' : 'text-gray-400'}">${k}: ${v}</span>`).join(' · ');
-        }
-        
-        const levelColor = { mudah: 'text-green-600 bg-green-50', sedang: 'text-blue-600 bg-blue-50', sulit: 'text-red-500 bg-red-50' };
-        const lc = levelColor[q.difficulty_level] || 'text-gray-500 bg-gray-50';
-
-        // --- INJEKSI UI CHECKBOX DI KIRI CARD ---
-        return `<div class="bg-gray-50 rounded-xl p-4 border border-gray-200 shadow-sm space-y-2 relative" data-soal-id="${q.id}">
-            <div class="flex items-start justify-between gap-2 border-b border-gray-100 pb-2">
-                <div class="flex items-start gap-2 flex-1">
-                    <div class="hidden bulk-checkbox-wrap week-${week} mt-0.5 shrink-0">
-                        <input type="checkbox" class="w-4 h-4 accent-red-500 rounded cursor-pointer bulk-checkbox" value="${q.id}" onchange="updateBulkCount(${week})">
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-xs font-bold text-gray-800 leading-relaxed">${index + 1}. ${q.question}</p>
-                        ${thumbHtml}
-                    </div>
-                </div>
-                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <div class="flex items-center gap-1">${typeBadge}<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border border-white shadow-sm ${lc}">${q.difficulty_level}</span></div>
-                    <div class="flex gap-1 mt-1">
-                        <button onclick="openEditSoal(${JSON.stringify(q).replace(/"/g, '&quot;')})" class="w-6 h-6 flex items-center justify-center bg-white text-blue-500 border border-blue-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="hapusSoal('${q.id}', '${subject}')" class="w-6 h-6 flex items-center justify-center bg-white text-red-500 border border-red-100 rounded-md text-[10px] shadow-sm active:scale-95 transition-all" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            </div>
-            <div class="text-[10px] leading-relaxed pt-1">${optHtml}</div>
-        </div>`;
-    };
-
-    window.hapusSoal = async (id, subject) => {
-        if (!confirm(`Hapus soal ini dari bank soal ${subject}? Tindakan tidak bisa dibatalkan.`)) return;
-        try {
-            const res = await fetch(`${API_URL}/api/onboarding/questions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) {
-                window.showToast('success', 'Terhapus', 'Soal berhasil dihapus.');
-                isSummaryCached = false; 
-                for (const week in allWeeksData) {
-                    if (allWeeksData[week][subject]) {
-                        const qIndex = allWeeksData[week][subject].findIndex(q => q.id === id);
-                        if (qIndex !== -1) { allWeeksData[week][subject].splice(qIndex, 1); break; }
-                    }
-                }
-                renderAllWeeks();
-            } else window.showToast('danger', 'Error', 'Gagal menghapus soal.');
-        } catch { window.showToast('danger', 'Error', 'Terjadi kesalahan jaringan.'); }
     };
 
     window.handleCardImgUpload = async (fileInput) => {
@@ -1356,7 +1325,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 }
                 markDirty();
             } else { window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); imgInput.value = ""; }
-        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan saat upload.'); imgInput.value = ""; }
+        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan.'); imgInput.value = ""; }
     };
 
     document.addEventListener('input', (e) => {
@@ -1378,30 +1347,21 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.handleEditImgUpload = async (fileInput) => {
         const file = fileInput.files[0];
         if (!file) return;
-        
         const imgInput = document.getElementById('editSoalImg');
         imgInput.value = "Sedang mengupload...";
         
         const formData = new FormData();
         formData.append('file', file);
-        
         try {
             const res = await fetch(`${API_URL}/api/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
             const result = await res.json();
-            
             if (res.ok) {
                 const finalImageUrl = result.data.url;
                 imgInput.value = finalImageUrl;
                 previewEditImg(finalImageUrl);
                 isDirty = true;
-            } else { 
-                window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); 
-                imgInput.value = ""; 
-            }
-        } catch (err) { 
-            window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan saat upload.');
-            imgInput.value = ""; 
-        }
+            } else { window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); imgInput.value = ""; }
+        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan.'); imgInput.value = ""; }
     };
 
     window.previewEditImg = (url) => {
@@ -1411,81 +1371,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         else { previewWrap.classList.add('hidden'); }
     };
 
-    // --- FITUR BULK ACTION ---
-    window.enterBulkMode = (week) => {
-        document.getElementById(`btnBulkModeWrap-${week}`).classList.add('hidden');
-        document.getElementById(`bulkToolbar-${week}`).classList.remove('hidden');
-        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week}`).forEach(el => el.classList.remove('hidden'));
-        updateBulkCount(week);
-    };
-
-    window.cancelBulkMode = (week) => {
-        document.getElementById(`btnBulkModeWrap-${week}`).classList.remove('hidden');
-        document.getElementById(`bulkToolbar-${week}`).classList.add('hidden');
-        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week}`).forEach(el => {
-            el.classList.add('hidden');
-            el.querySelector('input').checked = false;
-        });
-        document.getElementById(`selectAll-${week}`).checked = false;
-    };
-
-    window.toggleSelectAll = (week, isChecked) => {
-        document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]`).forEach(cb => {
-            cb.checked = isChecked;
-        });
-        updateBulkCount(week);
-    };
-
-    window.updateBulkCount = (week) => {
-        const count = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]:checked`).length;
-        document.getElementById(`bulkCount-${week}`).innerText = count;
-        
-        const total = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]`).length;
-        document.getElementById(`selectAll-${week}`).checked = (count === total && total > 0);
-    };
-
-    window.executeBulkDelete = async (week) => {
-        const checked = document.querySelectorAll(`.bulk-checkbox-wrap.week-${week} input[type="checkbox"]:checked`);
-        if (checked.length === 0) return window.showToast('warning', 'Perhatian', 'Pilih minimal 1 soal untuk dihapus.');
-        
-        if (!confirm(`Yakin ingin menghapus ${checked.length} soal terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
-
-        const idsToDelete = Array.from(checked).map(cb => cb.value);
-        const btn = document.querySelector(`#bulkToolbar-${week} button.bg-red-500`);
-        const oldText = btn.innerHTML;
-        
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
-        btn.disabled = true;
-
-        try {
-            // Mengeksekusi delete secara parallel menggunakan Promise.all agar instan!
-            const deletePromises = idsToDelete.map(id => 
-                fetch(`${API_URL}/api/onboarding/questions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
-            );
-
-            await Promise.all(deletePromises);
-
-            window.showToast('success', 'Berhasil', `${idsToDelete.length} soal berhasil dihapus.`);
-            isSummaryCached = false;
-            
-            // Hapus data yang terhapus dari local state (UI Instan)
-            idsToDelete.forEach(id => {
-                SUBJECTS.forEach(subj => {
-                    if (allWeeksData[week] && allWeeksData[week][subj]) {
-                        const qIndex = allWeeksData[week][subj].findIndex(q => q.id === id);
-                        if (qIndex !== -1) allWeeksData[week][subj].splice(qIndex, 1);
-                    }
-                });
-            });
-
-            renderAllWeeks(); // Render ulang
-        } catch (err) {
-            window.showToast('danger', 'Error', 'Terjadi kesalahan saat menghapus massal.');
-            btn.innerHTML = oldText;
-            btn.disabled = false;
-        }
-    };
-
+    // INIT
     fetchAccordion();
 </script>
 

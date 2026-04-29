@@ -387,7 +387,6 @@ import Mascot from '../../components/Mascot.astro';
     let completedWeeksForSubject = [];
     window.shouldShowExamReminder = false;
 
-    // State Peringatan Waktu Miaw
     let warned30 = false;
     let warned10 = false;
 
@@ -436,13 +435,11 @@ import Mascot from '../../components/Mascot.astro';
         return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); };
     };
 
-    // [FITUR BARU] Vignette Merah Halus layaknya Perisai Biru
     const setVignette = (active) => {
         let vig = document.getElementById('dangerVignetteOverlay');
         if (!vig) {
             vig = document.createElement('div');
             vig.id = 'dangerVignetteOverlay';
-            // Bikin layer overlay super halus pakai radial-gradient & inset box-shadow
             vig.className = 'fixed inset-0 pointer-events-none transition-opacity duration-1000 z-[75] opacity-0';
             vig.style.background = 'radial-gradient(circle, transparent 50%, rgba(239, 68, 68, 0.15) 80%, rgba(239, 68, 68, 0.35) 100%)';
             vig.style.boxShadow = 'inset 0 0 120px rgba(239,68,68,0.4)';
@@ -624,63 +621,45 @@ import Mascot from '../../components/Mascot.astro';
                         PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.2, lottieDuration: 2000 },
                         IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0 },
                         CLICK: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 1500 }
-                    },
+                        },
                     texts: { 
                         entering: () => `Haloo <strong>${currentStudentName}</strong>! Semangat ngerjain tugasnya ya!`, 
-                        
                         idleArrive: () => {
                             const menit = Math.floor(timeLeft / 60);
                             if (menit > 0) return `Miaw! Sisa waktu tinggal <strong>${menit} menit</strong> lagi! Jangan sampai kehabisan.`;
                             return `Gawat <strong>${currentStudentName}</strong>! Waktunya kurang dari semenit, buruan!`;
                         }, 
-                        
                         idlePhrases: [
                             () => {
                                 if (timeLeft <= 10) return `AYO CEPETAN <strong>${currentStudentName}</strong>!!!! Tinggal ${timeLeft} detik!`;
                                 if (timeLeft <= 30) return `Awas <strong>${currentStudentName}</strong>! Waktunya tinggal ${timeLeft} detik lagi!`;
-                                
                                 const menit = Math.floor(timeLeft / 60);
                                 if (menit > 0 && menit <= 2) return `Ayo cepetan <strong>${currentStudentName}</strong>! Waktunya sisa <strong>${menit} menitan</strong> lho!`;
                                 
                                 if (window.isDoubleScoreActive) return `Asiik! Sihir <strong>Double Poin ✨</strong> lagi aktif! Maksimalkan nilaimu <strong>${currentStudentName}</strong>!`;
                                 if (window.isShieldActive) return `Miaw! Tenang aja <strong>${currentStudentName}</strong>, <strong>Perisai 🛡️</strong> kamu siap menahan serangan!`;
                                 if (studentInventory.item_extra_life > 0) return `Kamu pegang <strong>Extra Life 💖</strong>! Santai aja <strong>${currentStudentName}</strong>, nanti bisa perbaiki 1 yang salah.`;
-                                
                                 return `Fokus <strong>${currentStudentName}</strong>! Teliti lagi jawabannya ya!`;
                             },
-                            
                             () => `Miaw! <strong>${currentStudentName}</strong>, kalau bingung dilewatin dulu aja!`,
                             () => window.isShieldActive ? `Poinmu aman <strong>${currentStudentName}</strong> karena ada <strong>Perisai 🛡️</strong>!` : `Hati-hati <strong>${currentStudentName}</strong>, koinmu bisa dicuri kalau nggak beli <strong>Perisai 🛡️</strong>!`,
-                            
                             () => {
                                 const answeredBlocks = [];
                                 document.querySelectorAll('.question-block').forEach((block, index) => {
-                                    const qId = block.dataset.id;
-                                    const type = block.dataset.type || 'pilgan';
-                                    let answerText = null;
-
+                                    const qId = block.dataset.id; const type = block.dataset.type || 'pilgan'; let answerText = null;
                                     if (type === 'pilgan' || type === 'tf') {
                                         const checked = block.querySelector(`input[name="q-${qId}"]:checked`);
-                                        if (checked) {
-                                            if (type === 'tf') { answerText = checked.value === 'A' ? 'BENAR' : 'SALAH'; } 
-                                            else { const span = checked.nextElementSibling; if (span) answerText = span.innerText; }
-                                        }
+                                        if (checked) { if (type === 'tf') answerText = checked.value === 'A' ? 'BENAR' : 'SALAH'; else { const span = checked.nextElementSibling; if (span) answerText = span.innerText; } }
                                     } else if (type === 'drag') {
-                                        const slots = block.querySelectorAll('.blank-slot'); let answered = [];
-                                        slots.forEach(s => { if (s.innerText) answered.push(s.innerText); });
-                                        if (answered.length > 0) answerText = answered.join(' ');
+                                        const slots = block.querySelectorAll('.blank-slot'); let answered = []; slots.forEach(s => { if (s.innerText) answered.push(s.innerText); }); if (answered.length > 0) answerText = answered.join(' ');
                                     } else if (type === 'urutan') {
-                                        const val = document.getElementById(`ans-${qId}`)?.value;
-                                        if (val && val !== '[]' && val !== '') answerText = "susunan puzzle yang itu";
+                                        const val = document.getElementById(`ans-${qId}`)?.value; if (val && val !== '[]' && val !== '') answerText = "susunan puzzle yang itu";
                                     }
                                     if (answerText) answeredBlocks.push({ nomor: index + 1, jawaban: answerText });
                                 });
-
                                 if (answeredBlocks.length > 0) {
                                     const randomPick = answeredBlocks[Math.floor(Math.random() * answeredBlocks.length)];
-                                    let textJawaban = randomPick.jawaban;
-                                    if (textJawaban.length > 25) textJawaban = textJawaban.substring(0, 25) + '...';
-                                    
+                                    let textJawaban = randomPick.jawaban; if (textJawaban.length > 25) textJawaban = textJawaban.substring(0, 25) + '...';
                                     const doubtPhrases = [
                                         `Hah masa nomor <strong>${randomPick.nomor}</strong> jawabannya <strong>"${textJawaban}"</strong> sih... coba cek lagi deh <strong>${currentStudentName}</strong>!`,
                                         `Miaw! Yakin nomor <strong>${randomPick.nomor}</strong> itu <strong>"${textJawaban}"</strong>? Kayaknya ada yang aneh deh...`,
@@ -921,7 +900,8 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const updateTimerUI = () => {
-        if (timeLeft <= 0 && isQuizStarted) disableAcademicSection();
+        if (timeLeft <= 0 && isQuizStarted && !isEvaluatingExtraLife) disableAcademicSection();
+        
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
         
@@ -996,7 +976,6 @@ import Mascot from '../../components/Mascot.astro';
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000); 
             updateTimerUI();
             
-            // [FITUR BARU] Tembak MASKOT secara instan pas waktu masuk detik kritis
             if (timeLeft === 30 && !warned30) {
                 warned30 = true;
                 if(window.MiawMascot) window.MiawMascot.say('large', `Awas <strong>${currentStudentName}</strong>! Waktu tinggal <strong>30 detik</strong> lagi!`, null, 'warning', 5000);
@@ -1006,7 +985,12 @@ import Mascot from '../../components/Mascot.astro';
                 if(window.MiawMascot) window.MiawMascot.say('large', `AYO CEPETAN <strong>${currentStudentName}</strong>!!!! Tinggal 10 detik!`, null, 'warning', 5000);
             }
 
-            if (timeLeft <= 0) { timeLeft = 0; finalTimeTaken = parsedWeek === 1 ? 90 : 180; clearInterval(timerInterval); disableAcademicSection(); }
+            if (timeLeft <= 0) { 
+                timeLeft = 0; 
+                finalTimeTaken = parsedWeek === 1 ? 90 : 180; 
+                clearInterval(timerInterval); 
+                if (!isEvaluatingExtraLife) disableAcademicSection(); 
+            }
         }, 1000);
     };
 
@@ -1017,7 +1001,7 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     // ==========================================
-    // 7. TOKO & GAMIFIKASI
+    // 7. TOKO & GAMIFIKASI (FIX BUGS)
     // ==========================================
     window.toggleShopDrawer = () => {
         const inner = document.getElementById('shopDrawerInner'); const icon = document.getElementById('shopDrawerIcon'); const btn = document.getElementById('btnToggleDrawer');
@@ -1070,8 +1054,7 @@ import Mascot from '../../components/Mascot.astro';
             } else {
                 await new Promise(r => setTimeout(r, 600)); studentInventory[selectedItemToBuy] += 1;
             }
-            boughtItemsThisSession[selectedItemToBuy] = true;
-            updateShopUI(); // Pastikan dipanggil lagi biar angka indikatornya langsung naik jadi "1"
+            updateShopUI(); 
             window.showToast?.('success', 'Berhasil', selectedItemToBuy === 'item_extra_life' ? 'Item otomatis aktif!' : 'Item berhasil dibeli. Klik untuk memakai!'); closeBuyModal();
         } catch (error) {
             studentWallet += price; updateShopUI(); window.showToast?.('danger', 'Gagal Beli', error.message); btn.innerText = 'Beli Sekarang'; btn.disabled = false;
@@ -1083,12 +1066,19 @@ import Mascot from '../../components/Mascot.astro';
         if (studentInventory[itemKey] > 0) {
             if (itemKey === 'item_serang') openAttackModal();
             else if (itemKey === 'item_perisai') {
-                window.showConfirm('Gunakan Perisai?', 'Gunakan Perisai sekarang?', () => {
-                    window.isShieldActive = true; studentInventory.item_perisai -= 1; updateShopUI(); window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif!');
+                window.showConfirm('Gunakan Perisai?', 'Gunakan Perisai sekarang? (Hanya berlaku sampai jam 12 malam ini)', () => {
+                    window.isShieldActive = true; 
+                    studentInventory.item_perisai -= 1; 
+                    boughtItemsThisSession.item_perisai = true; 
+                    updateShopUI(); 
+                    
+                    // [UPDATE TEXT UX]
+                    window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif hingga malam ini!');
+                    
                     if (!isPreview) fetch(`${API_URL}/api/shop/use-item`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, item_type: 'item_perisai' }) }).catch(e=>e);
                 });
             } else if (itemKey === 'item_double_score') {
-                window.isDoubleScoreActive = true; studentInventory.item_double_score -= 1; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
+                window.isDoubleScoreActive = true; studentInventory.item_double_score -= 1; boughtItemsThisSession.item_double_score = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
             }
         } else previewItem(itemKey);
     };
@@ -1127,29 +1117,91 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     window.openAttackModal = async () => {
-        const listContainer = document.getElementById('attackTargetList'); listContainer.innerHTML = '<div class="text-center p-4 text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><br>Mencari target...</div>'; document.getElementById('modalAttack').classList.replace('hidden', 'flex');
+        const listContainer = document.getElementById('attackTargetList'); 
+        listContainer.innerHTML = '<div class="text-center p-4 text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><br>Mencari target...</div>'; 
+        document.getElementById('modalAttack').classList.replace('hidden', 'flex');
+        
         try {
             let peers = [];
-            if (isPreview) { await new Promise(r => setTimeout(r, 800)); peers = [ { id: '1', name: 'Ahmad Fauzan', has_shield: false }, { id: '2', name: 'Zaskia Adya', has_shield: true } ]; } 
-            else { const res = await fetch(`${API_URL}/api/shop/peers?student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}); peers = (await res.json()).data || []; }
-            if (peers.length === 0) { listContainer.innerHTML = '<p class="text-xs text-gray-500 text-center italic mt-4">Belum ada teman yang bisa diserang.</p>'; return; }
-            listContainer.innerHTML = peers.map(p => `
-                <div class="flex items-center justify-between p-3 rounded-xl border ${p.has_shield ? 'bg-blue-50/50 border-blue-100 opacity-60' : 'bg-gray-50 border-gray-100'}">
-                    <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${p.has_shield ? 'bg-blue-200 text-blue-700' : 'bg-gray-200 text-gray-600'}">${p.name.substring(0,2).toUpperCase()}</div><div><p class="text-xs font-bold text-gray-800">${p.name}</p>${p.has_shield ? '<p class="text-[9px] font-bold text-blue-500"><i class="fa-solid fa-shield"></i> Terlindungi</p>' : '<p class="text-[9px] text-gray-400">Rentan diserang</p>'}</div></div>
-                    <button ${p.has_shield ? 'disabled' : `onclick="executeAttack('${p.id}', '${p.name}')"`} class="px-3 py-1.5 rounded-lg text-xs font-black transition-all ${p.has_shield ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-500 text-white hover:bg-red-600 active:scale-95 shadow-md shadow-red-500/30'}">${p.has_shield ? 'Aman' : 'SERANG'}</button>
-                </div>
-            `).join('');
-        } catch (e) { listContainer.innerHTML = '<p class="text-xs text-red-500 text-center mt-4">Gagal memuat daftar teman.</p>'; }
+            if (isPreview) { 
+                await new Promise(r => setTimeout(r, 800)); 
+                // Simulasi Data untuk Poin
+                peers = [ 
+                    { id: '1', name: 'Ahmad Fauzan', has_shield: false, poin: 150 }, 
+                    { id: '2', name: 'Zaskia Adya', has_shield: true, poin: 200 },
+                    { id: '3', name: 'Rudi Tabuti', has_shield: false, poin: 0 }
+                ]; 
+            } else { 
+                const res = await fetch(`${API_URL}/api/shop/peers?student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}); 
+                peers = (await res.json()).data || []; 
+            }
+
+            if (peers.length === 0) { 
+                listContainer.innerHTML = '<p class="text-xs text-gray-500 text-center italic mt-4">Belum ada teman yang bisa diserang.</p>'; 
+                return; 
+            }
+
+            // [FIX BUG RUGI BANDAR] Menampilkan jumlah poin, dan disable attack jika target miskin (0 Poin)
+            listContainer.innerHTML = peers.map(p => {
+                const targetPoints = p.poin || 0;
+                const isBroke = targetPoints <= 0;
+                const isDisabled = p.has_shield || isBroke;
+                const btnText = p.has_shield ? 'Aman 🛡️' : (isBroke ? '0 Poin 😅' : 'SERANG ⚔️');
+                const btnClass = isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-500 text-white hover:bg-red-600 active:scale-95 shadow-md shadow-red-500/30';
+                
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${isDisabled ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-red-100 shadow-sm transition-all hover:border-red-200'}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${p.has_shield ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}">
+                                ${p.name.substring(0,2).toUpperCase()}
+                            </div>
+                            <div>
+                                <p class="text-xs font-black text-gray-800">${p.name}</p>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span class="text-[9px] font-bold ${isBroke ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-600'} px-1.5 py-0.5 rounded">💰 ${targetPoints} Pts</span>
+                                    ${p.has_shield ? '<span class="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded"><i class="fa-solid fa-shield"></i> Aman</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <button ${isDisabled ? 'disabled' : `onclick="executeAttack('${p.id}', '${p.name}', this)"`} class="px-4 py-2 rounded-xl text-[10px] font-black transition-all ${btnClass}">
+                            ${btnText}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) { 
+            listContainer.innerHTML = '<p class="text-xs text-red-500 text-center mt-4">Gagal memuat daftar teman.</p>'; 
+        }
     };
 
-    window.executeAttack = (targetId, targetName) => {
+    window.executeAttack = (targetId, targetName, btnElement) => {
         window.showConfirm('Serang Teman?', `Yakin menyerang dan mencuri koin ${targetName}?`, async () => {
             document.getElementById('modalAttack').classList.replace('flex', 'hidden');
             try {
-                if (isPreview) { window.showToast?.('success', 'CRITTIICAL HIT!', `Mencuri 50 Poin dari ${targetName}!`); studentInventory.item_serang -= 1; studentWallet += 50; updateShopUI(); return; }
+                if (isPreview) { 
+                    window.showToast?.('success', 'CRITTIICAL HIT!', `Mencuri 50 Poin dari ${targetName}!`); 
+                    studentInventory.item_serang -= 1; 
+                    boughtItemsThisSession.item_serang = true; // [FIX BUG DOUBLE BUY]
+                    studentWallet += 50; 
+                    updateShopUI(); 
+                    return; 
+                }
                 const res = await fetch(`${API_URL}/api/shop/attack`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ actor_id: studentId, target_id: targetId }) });
                 const data = await res.json();
-                if(data.status === 'success') { window.showToast?.('success', 'Serangan Selesai', data.message); studentInventory.item_serang -= 1; if(data.message.includes('berhasil')) studentWallet += 50; updateShopUI(); } else throw new Error(data.message);
+                if(data.status === 'success') { 
+                    window.showToast?.('success', 'Serangan Selesai', data.message); 
+                    studentInventory.item_serang -= 1; 
+                    boughtItemsThisSession.item_serang = true; // [FIX BUG DOUBLE BUY]
+                    
+                    // Membaca poin update dari backend (Bisa disesuaikan dengan kembalian API lu)
+                    if (data.data && data.data.new_poin !== undefined) {
+                        studentWallet = data.data.new_poin;
+                    } else if (data.message.includes('berhasil')) {
+                        // Fallback jika API belum diperbarui
+                        studentWallet += 50; 
+                    }
+                    updateShopUI(); 
+                } else throw new Error(data.message);
             } catch(e) { window.showToast?.('danger', 'Serangan Gagal', e.message); }
         }, 'danger');
     };
@@ -1177,7 +1229,17 @@ import Mascot from '../../components/Mascot.astro';
     // ==========================================
     window.declineExtraLife = () => { document.getElementById('modalOfferExtraLife').classList.replace('flex', 'hidden'); isEvaluatingExtraLife = true; proceedSubmit(); };
     window.acceptExtraLife = () => {
-        document.getElementById('modalOfferExtraLife').classList.replace('flex', 'hidden'); isEvaluatingExtraLife = true; studentInventory.item_extra_life -= 1; updateShopUI();
+        document.getElementById('modalOfferExtraLife').classList.replace('flex', 'hidden'); 
+        isEvaluatingExtraLife = true; 
+        studentInventory.item_extra_life -= 1; 
+        // Note: Extra life tidak dibatasi 1 per sesi karena sifatnya dikonsumsi oleh fungsi validasi, tapi logicnya nyatu sama submit.
+        updateShopUI();
+        
+        const academicSec = document.getElementById('academicSection');
+        if (academicSec) {
+            academicSec.classList.remove('opacity-40', 'pointer-events-none', 'grayscale');
+        }
+
         window.showToast?.('info', 'Extra Life Aktif', 'Silakan Buka 1 Gembok soal untuk diperbaiki.');
         document.querySelectorAll('.question-block').forEach(block => {
             const qId = block.getAttribute('data-id'); block.style.position = 'relative';

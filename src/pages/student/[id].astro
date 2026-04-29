@@ -1217,7 +1217,7 @@ import Toast from '../../components/Toast.astro';
             const todoContainer = document.getElementById('todoContainer');
             
             // Filter: Hanya ambil tugas yang statusnya belum 'done'
-            const isLaggingOverall = lagStatus.data && Object.values(lagStatus.data).some(v => v.isLagging);
+            const isLaggingOverall = lagStatus.data && Object.values(lagStatus.data).some(v => v.missedWeeks && v.missedWeeks.length > 0);
             
             if (!isLaggingOverall) {
                 // Jika tidak ada yang tertinggal, tampilkan teks kosong
@@ -1286,7 +1286,7 @@ import Toast from '../../components/Toast.astro';
                     <div class="flex items-center gap-3 p-3 rounded-2xl border border-gray-100 ${legacyStyle}">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-gray-50 border border-gray-50 shadow-inner">${item.icon}</div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-xs font-bold text-gray-800 truncate">${item.title} ${legacyBadge}</p>
+                            <p class="text-[11px] font-medium text-gray-700 leading-snug">${item.title}</p>
                             <p class="text-[9px] text-gray-400 mt-0.5">${formatDate(item.date)}</p>
                         </div>
                         <div class="px-3 py-1.5 rounded-xl border font-black text-sm ${item.isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}">
@@ -2237,7 +2237,8 @@ doc.setFontSize(10);
 
         const SUBJECT_LABEL = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
         const laggingSubjects = Object.entries(lagData)
-            .filter(([, v]) => v.isLagging)
+            // Filter anak yang punya missedWeeks (ada tugas yg bolong/terlewat)
+            .filter(([, v]) => v.missedWeeks && v.missedWeeks.length > 0)
             .map(([subject, v]) => ({ subject, ...v }));
 
         if (laggingSubjects.length === 0) return; // Tidak ada yang tertinggal

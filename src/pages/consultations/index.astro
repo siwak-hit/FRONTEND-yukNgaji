@@ -92,6 +92,43 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <div id="modalVerifyStudent" class="fixed inset-0 bg-gray-900/70 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl text-center transform scale-95 transition-transform duration-300 relative overflow-hidden" id="modalVerifyStudentBox">
+            
+            <div class="w-full h-32 bg-indigo-500 relative">
+                <img id="verifyCoverImage" src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover mix-blend-overlay opacity-60" alt="Kids Cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            </div>
+            
+            <div class="relative -mt-12 flex justify-center z-10">
+                <div class="w-24 h-24 bg-white rounded-full border-[6px] border-white shadow-lg flex items-center justify-center text-4xl font-black text-indigo-600" id="verifyInitials">
+                    NA
+                </div>
+            </div>
+            
+            <div class="px-6 pb-6 pt-3">
+                <h3 class="text-indigo-400 font-black text-[10px] mb-1 uppercase tracking-widest">Tunggu Sebentar...</h3>
+                <h2 class="text-2xl font-black text-gray-800 mb-2 uppercase line-clamp-2 leading-tight" id="verifyName">NAMA SISWA</h2>
+                
+                <div class="bg-amber-50 border-2 border-dashed border-amber-200 p-3.5 rounded-2xl mb-6 mt-3">
+                    <p class="text-xs font-bold text-amber-700 leading-relaxed">
+                        👀 Coba dibaca lagi namanya...<br>
+                        Beneran ini kamu? Jangan sampai kamu ngerjain tugas punya temenmu lho ya! 🤭
+                    </p>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="closeVerifyStudent()" class="w-full py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl transition-all shadow-sm active:scale-95 text-xs">
+                        🙈 Eh Bukan, Salah Pencet!
+                    </button>
+                    <button id="btnProceedStudent" class="w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl transition-all cursor-not-allowed flex items-center justify-center gap-2 text-sm" disabled>
+                        <i class="fa-solid fa-hourglass-half" id="proceedLockIcon"></i>
+                        <span id="proceedText">Tahan dulu (3)...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <NavbarGuru activeMenu="chat" />
     <Toast />
 </Layout>
@@ -134,7 +171,8 @@ import Toast from '../../components/Toast.astro';
 
             // 2. Ambil Daftar Seluruh Siswa
             if (allStudents.length === 0) {
-                const stdRes = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
+                // UBAH URL INI JUGA (Tambahkan /stats/enriched)
+                const stdRes = await fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const stdData = await stdRes.json();
                 allStudents = stdData.data || [];
             }
@@ -260,7 +298,8 @@ import Toast from '../../components/Toast.astro';
             }
 
             if (allStudents.length === 0) {
-                const resStd = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // UBAH URL INI (Tambahkan /stats/enriched)
+                const resStd = await fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const students = await resStd.json();
                 allStudents = students.data || [];
             }
@@ -270,18 +309,113 @@ import Toast from '../../components/Toast.astro';
         } catch (e) { console.error("Gagal sinkronisasi data:", e); }
     };
 
+    // ================================================================
+    // LOGIKA ANTI-SALAH-KLIK (VERIFIKASI SISWA)
+    // ================================================================
+    let verifyTimer = null;
+    let pendingStudentUrl = '';
+
+    // TAMBAH PARAMETER KE-3: imageUrl
+    window.openVerifyStudent = (id, name, imageUrl) => {
+        const modal = document.getElementById('modalVerifyStudent');
+        const box = document.getElementById('modalVerifyStudentBox');
+        const coverImg = document.getElementById('verifyCoverImage');
+        
+        const fallbackImg = 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=600&auto=format&fit=crop';
+
+        // Set Data ke Modal
+        document.getElementById('verifyInitials').innerText = name.substring(0, 2).toUpperCase();
+        document.getElementById('verifyName').innerText = name;
+        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${selectedSubject}&week=${selectedWeek}`;
+        
+        // --- LOGIKA GAMBAR DINAMIS ---
+        if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null' && imageUrl.trim() !== '') {
+            coverImg.src = imageUrl;
+        } else {
+            coverImg.src = fallbackImg; // Fallback jika tidak ada URL dari DB
+        }
+
+        // Kalau ternyata URL dari database error/broken, otomatis ganti ke gambar fallback
+        coverImg.onerror = () => {
+            coverImg.src = fallbackImg;
+        };
+        // -----------------------------
+
+        // Tampilkan Modal dengan animasi
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => {
+            modal.classList.replace('opacity-0', 'opacity-100');
+            box.classList.replace('scale-95', 'scale-100');
+        }, 10);
+
+        // Reset Status Tombol (Abu-abu, Terkunci selama 3 detik)
+        const btnProceed = document.getElementById('btnProceedStudent');
+        const btnText = document.getElementById('proceedText');
+        const lockIcon = document.getElementById('proceedLockIcon');
+        
+        btnProceed.disabled = true;
+        btnProceed.className = 'w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl transition-all cursor-not-allowed flex items-center justify-center gap-2 text-sm';
+        lockIcon.className = 'fa-solid fa-hourglass-half animate-pulse';
+        
+        let timeLeft = 3;
+        btnText.innerText = `Tunggu ya (${timeLeft})...`;
+        
+        clearInterval(verifyTimer);
+        verifyTimer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+                btnText.innerText = `Tunggu ya (${timeLeft})...`;
+            } else {
+                clearInterval(verifyTimer);
+                btnProceed.disabled = false;
+                btnProceed.className = 'w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl shadow-lg shadow-green-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm';
+                lockIcon.className = 'fa-solid fa-rocket animate-bounce';
+                btnText.innerText = 'IYA BENAR, INI AKU! 🚀';
+            }
+        }, 1000);
+    };
+
+    window.closeVerifyStudent = () => {
+        const modal = document.getElementById('modalVerifyStudent');
+        const box = document.getElementById('modalVerifyStudentBox');
+        
+        modal.classList.replace('opacity-100', 'opacity-0');
+        box.classList.replace('scale-100', 'scale-95');
+        clearInterval(verifyTimer);
+        
+        setTimeout(() => {
+            modal.classList.replace('flex', 'hidden');
+        }, 300);
+    };
+
+    document.getElementById('btnProceedStudent').onclick = () => {
+        if (pendingStudentUrl) {
+            document.getElementById('btnProceedStudent').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buka Soal...';
+            window.location.href = pendingStudentUrl;
+        }
+    };
+
+    // ================================================================
+    // UPDATE RENDER GRID SISWA
+    // ================================================================
     const renderStudentGrid = (students, doneIds) => {
         const grid = document.getElementById('studentGrid');
         grid.innerHTML = '';
+        
         if (!students || students.length === 0) {
             grid.innerHTML = '<p class="col-span-2 text-center py-10 text-gray-400 text-xs italic">Nama tidak ditemukan...</p>';
             return;
         }
+        
         students.forEach(student => {
             const isFinished = doneIds.includes(student.id);
+            
+            // PERBAIKAN: Gunakan photo_url dari endpoint enriched
+            const studentPhoto = student.photo_url || '';
+
             grid.innerHTML += `
                 <div class="student-card ${isFinished ? 'opacity-40 grayscale pointer-events-none' : 'active:scale-95 cursor-pointer'} bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex flex-col items-center text-center gap-3 transition-all"
-                    ${!isFinished ? `onclick="window.location.href='/consultations/fill?id=${student.id}&subject=${selectedSubject}&week=${selectedWeek}'"` : ''}>
+                    ${!isFinished ? `onclick="openVerifyStudent('${student.id}', '${student.name.replace(/'/g, "\\'")}', '${studentPhoto}')"` : ''}>
                     <div class="relative">
                         <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-lg font-bold">
                             ${student.name.substring(0, 2).toUpperCase()}
