@@ -108,8 +108,25 @@ import Mascot from '../../components/Mascot.astro';
                 <div class="w-24 h-24 bg-green-50 text-green-600 rounded-[2rem] flex items-center justify-center text-4xl mb-6 shadow-inner border border-green-100">
                     <i class="fa-solid fa-stopwatch"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800 mb-2">Siap Mengerjakan?</h1>
-                <p id="startDescText" class="text-sm text-gray-400 mb-8 leading-relaxed">Pastikan fokus. Waktu terbatas untuk bagian akademik.</p>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2" id="startTitleText">Siap Mengerjakan?</h1>
+                <p id="startDescText" class="text-sm text-gray-400 mb-4 leading-relaxed">Pastikan fokus. Waktu terbatas untuk bagian akademik.</p>
+                
+                <!-- [BARU] TAMPILAN KHUSUS MODE PR -->
+                <div id="prSettings" class="hidden flex-col items-center w-full max-w-xs mb-6">
+                    <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl mb-3 text-left">
+                        <p class="text-[10px] text-indigo-700 font-bold leading-relaxed">
+                            <i class="fa-solid fa-circle-info mr-1"></i> Ini adalah Mode PR. Jawabanmu hanya bisa dikirim 1x. Jika keluar halaman, klik link dari Ustadz lagi ya!
+                        </p>
+                    </div>
+                    <label class="w-full flex items-center justify-between cursor-pointer bg-gray-50 border border-gray-200 p-3 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div>
+                            <span class="text-xs font-bold text-gray-700 block text-left"><i class="fa-solid fa-cat mr-1 text-gray-400"></i> Sembunyikan Miaw</span>
+                            <span class="text-[9px] font-bold text-gray-400 block text-left mt-0.5">Fokus penuh tanpa animasi</span>
+                        </div>
+                        <input type="checkbox" id="toggleHideMiaw" class="w-4 h-4 text-green-600 focus:ring-green-500 rounded border-gray-300">
+                    </label>
+                </div>
+
                 <button id="btnStart" class="w-full max-w-xs py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all text-lg">
                     Mulai Sekarang
                 </button>
@@ -309,7 +326,8 @@ import Mascot from '../../components/Mascot.astro';
                 </div>
             </div>
             
-            <button onclick="window.location.replace('/consultations')" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
+            <!-- [UPDATE] Panggil fungsi closeResult... agar bisa redirect ke Leaderboard PR -->
+            <button onclick="closeResultAndCheckReminder()" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
                 Tutup & Kembali
             </button>
         </div>
@@ -360,14 +378,45 @@ import Mascot from '../../components/Mascot.astro';
     if (mascotBtn) mascotBtn.remove();
 
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
-    const token = localStorage.getItem('token');
-    if (!token) window.location.replace('/');
-
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // --- [BARU] LOGIKA TANGKAP TOKEN PR ---
+    const paramPrToken = urlParams.get('pr_token');
+    const isPRMode = urlParams.get('pr') === 'true' || !!paramPrToken;
+    
+    let token = localStorage.getItem('token'); // Default ambil token Ustadz
+    
+    // Jika masuk dari link WA (bawa pr_token), simpan ke sessionStorage biar gak hilang pas refresh
+    if (paramPrToken) {
+        token = paramPrToken;
+        sessionStorage.setItem('temp_pr_token', paramPrToken);
+    } else if (sessionStorage.getItem('temp_pr_token')) {
+        token = sessionStorage.getItem('temp_pr_token');
+    }
+
+    const isPreview = urlParams.get('preview') === 'true'; 
+
+    // Usir kalau gak punya token Ustadz DAN gak punya token PR
+    if (!token && !isPreview) window.location.replace('/');
+
+    // Jika ini Mode PR, ganti teks tombol "Keluar" di header
+    if (isPRMode) {
+        const exitBtn = document.querySelector('a[onclick="handleBack()"]');
+        if (exitBtn) {
+            exitBtn.innerText = "Tutup";
+            exitBtn.classList.replace('text-gray-400', 'text-indigo-400');
+            exitBtn.onclick = () => window.close(); // Usaha nutup tab otomatis
+        }
+        document.getElementById('prSettings').classList.remove('hidden');
+        document.getElementById('startTitleText').innerText = "Siap Ngerjain PR?";
+        
+        // [UPDATE] Tambahkan extra padding bottom dan izin scroll vertikal biar gak mentok
+        document.getElementById('startOverlay').classList.add('pb-16', 'overflow-y-auto');
+    }
+
     const studentId = urlParams.get('id');
     const subject = urlParams.get('subject');
     const week = urlParams.get('week');
-    const isPreview = urlParams.get('preview') === 'true'; 
     const parsedWeek = parseInt(week) || 1;
 
     const timeKey = `timer_${studentId}_${subject}_${week}`;
@@ -562,7 +611,10 @@ import Mascot from '../../components/Mascot.astro';
                 const qData = await qRes.json();
                 allQuestions = Array.isArray(qData.data) ? qData.data : (qData.data[week] || []);
             } else {
-                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu 1 menit 45 detik untuk mengerjakan soal.`;
+                const menit = Math.floor(timeLeft / 60);
+                const detik = timeLeft % 60;
+                const teksWaktu = detik > 0 ? `${menit} menit ${detik} detik` : `${menit} menit`;
+                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${teksWaktu} untuk mengerjakan soal.`;
                 const [stdRes, consRes, qRes] = await Promise.all([
                     fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
                     fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
@@ -612,8 +664,8 @@ import Mascot from '../../components/Mascot.astro';
             }
 
             updateTimerUI();
-
-            if (window.MiawMascot) {
+            
+            if (window.MiawMascot){
                 await window.MiawMascot.init({
                     mode: 'peek',
                     animations: { 
@@ -949,6 +1001,15 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const startTest = (isNewSession = true) => {
+        // [UPDATE] Logika ketat per-sesi untuk menyembunyikan Miaw
+        if (isNewSession) {
+            window.isMiawHidden = document.getElementById('toggleHideMiaw')?.checked || false;
+            if (window.isMiawHidden) sessionStorage.setItem(`hide_miaw_${studentId}_${subject}_${week}`, 'true');
+        } else {
+            // Kalau murid refresh halaman, ambil statusnya dari memori sementara
+            window.isMiawHidden = sessionStorage.getItem(`hide_miaw_${studentId}_${subject}_${week}`) === 'true';
+        }
+
         const shopWrapper = document.getElementById('shopDrawerWrapper');
         if (shopWrapper) { shopWrapper.style.transform = 'translateY(100%)'; shopWrapper.style.opacity = '0'; setTimeout(() => { shopWrapper.style.display = 'none'; }, 500); }
         document.getElementById('testContent').classList.remove('hidden');
@@ -963,11 +1024,20 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('floatingTimer').classList.replace('hidden', 'flex');
 
         isQuizStarted = true; updateShopUI(); updateTimerUI();
-        
-        warned30 = false;
-        warned10 = false;
+        warned30 = false; warned10 = false;
 
-        if (window.MiawMascot) setTimeout(() => window.MiawMascot.show(), 500);
+        // [UPDATE] Eksekusi kemunculan atau penonaktifan Miaw
+        if (window.MiawMascot) {
+            if (window.isMiawHidden) {
+                // Matikan paksa fungsinya agar tidak bersuara/nongol di sesi PR ini
+                window.MiawMascot.show = () => {};
+                window.MiawMascot.say = () => {};
+                const mascotContainer = document.getElementById('mascotContainer') || document.querySelector('.mascot-wrapper');
+                if (mascotContainer) mascotContainer.style.display = 'none';
+            } else {
+                setTimeout(() => window.MiawMascot.show(), 500);
+            }
+        }
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         if (timeLeft <= 0) return;
@@ -1336,15 +1406,16 @@ import Mascot from '../../components/Mascot.astro';
         if (selfieFileToUpload) formData.append('image', selfieFileToUpload);
 
         try {
+            const maxTime = parsedWeek === 1 ? 105 : 180;
+            const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
+
             if (!isPreview) {
                 await Promise.all([
-                    fetch(`${API_URL}/api/onboarding/submit-grade`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, subject, week, student_answers: answers, is_double_score: window.isDoubleScoreActive, is_extra_life_used: isEvaluatingExtraLife }) }),
+                    fetch(`${API_URL}/api/onboarding/submit-grade`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, subject, week, student_answers: answers, is_double_score: window.isDoubleScoreActive, is_extra_life_used: isEvaluatingExtraLife, is_pr: isPRMode, time_taken: timeUsed }) }),
                     fetch(`${API_URL}/api/consultations`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData })
                 ]);
             }
             
-            const maxTime = parsedWeek === 1 ? 105 : 180;
-            const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0'); const secUsed = (timeUsed % 60).toString().padStart(2, '0');
             const avgSocial = (parseInt(document.querySelector('input[name="q_akhlak"]:checked')?.value || 0) + parseInt(document.querySelector('input[name="q_disiplin"]:checked')?.value || 0) + parseInt(document.querySelector('input[name="q_aktif"]:checked')?.value || 0)) / 3;
             let socialGrade = avgSocial >= 80 ? 'Sangat Baik' : (avgSocial >= 60 ? 'Baik' : 'Cukup');
@@ -1382,9 +1453,22 @@ import Mascot from '../../components/Mascot.astro';
 
     window.closeResultAndCheckReminder = () => {
         document.getElementById('modalResult').classList.replace('flex', 'hidden');
+        
+        // [BARU] JIKA MODE PR, ARAHKAN KE LEADERBOARD PR!
+        if (isPRMode) {
+            // [UPDATE]: Bawa parameter student_id biar leaderboard tau ini siapa
+            window.location.replace(`/leaderboard-pr?subject=${subject}&week=${week}&student_id=${studentId}`);
+            return;
+        }
+
         if (window.shouldShowExamReminder) {
-            document.getElementById('modalExamReminder').classList.replace('hidden', 'flex'); document.getElementById('examReminderSubject').innerText = subject; if (navigator.vibrate) navigator.vibrate([100, 50, 100]); setTimeout(() => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, colors: ['#4f46e5', '#818cf8', '#ffffff'] }); }, 300);
-        } else window.location.replace('/consultations');
+            document.getElementById('modalExamReminder').classList.replace('hidden', 'flex'); 
+            document.getElementById('examReminderSubject').innerText = subject; 
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+            setTimeout(() => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, colors: ['#4f46e5', '#818cf8', '#ffffff'] }); }, 300);
+        } else {
+            window.location.replace('/consultations');
+        }
     };
 
     init();

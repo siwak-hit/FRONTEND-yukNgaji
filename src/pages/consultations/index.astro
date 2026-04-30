@@ -24,7 +24,7 @@ import Toast from '../../components/Toast.astro';
             </div>
         </div>
 
-        <section class="mb-8">
+        <section id="subjectSection" class="mb-8">
             <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">1. Pilih Mata Pelajaran</h3>
             <div class="grid grid-cols-3 gap-3">
                 {['tajwid', 'fiqih', 'tauhid'].map((subject) => (
@@ -136,12 +136,50 @@ import Toast from '../../components/Toast.astro';
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
-    if (!token) window.location.replace('/');
+    const urlParamsPr = new URLSearchParams(window.location.search);
+    const isPRMode = urlParamsPr.get('pr') === 'true' || !!urlParamsPr.get('pr_token');
 
+    if (!token) window.location.replace('/');
+    
     let selectedSubject = null;
     let selectedWeek = null;
     let allStudents = [];
     let finishedStudentIds = [];
+    if (isPRMode) {
+        // Otomatis pilih mapel dan minggu dari URL
+        selectedSubject = urlParamsPr.get('subject');
+        selectedWeek = urlParamsPr.get('week');
+
+        // Ubah UI untuk Mode Murid
+        document.querySelector('header h1').innerText = "Pilih Nama Kamu";
+        document.querySelector('header p').innerText = "Pastikan klik namamu sendiri ya!";
+        
+        const btnPortal = document.getElementById('examPortalBanner');
+        if (btnPortal) btnPortal.style.display = 'none'; // Sembunyikan portal ujian
+
+        // [BARU] Sembunyikan Tahap 1 (Mapel) & Tahap 2 (Minggu)
+        const subjectSec = document.getElementById('subjectSection');
+        if (subjectSec) subjectSec.style.display = 'none';
+        
+        const weekSec = document.getElementById('weekSection');
+        if (weekSec) weekSec.style.display = 'none';
+
+        // [BARU] Ubah teks "3. Pilih Anak" biar nggak aneh karena tahap 1 & 2 hilang
+        const step3Title = document.querySelector('#studentSection h3');
+        if (step3Title) step3Title.innerText = "DAFTAR SISWA KELAS";
+
+        // [BARU] Sembunyikan Bottom Navigation (Navbar Guru)
+        const bottomNav = document.querySelector('nav') || document.querySelector('.fixed.bottom-0.w-full');
+        if (bottomNav) bottomNav.style.display = 'none';
+        
+        // Panggil fetchStudents() langsung jika subject & week sudah ada
+        if (selectedSubject && selectedWeek) {
+            // Kita kasih timeout dikit biar nunggu allStudents ke-fetch dulu
+            setTimeout(() => {
+                fetchStudents();
+            }, 500);
+        }
+    }
     
     // ================================================================
     // CACHE MEMORY SUPER KETAT
@@ -219,10 +257,12 @@ import Toast from '../../components/Toast.astro';
                 `;
             }
         } catch (e) {
-            console.error("Gagal mengecek ujian", e);
-            banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
-            banner.removeAttribute('onclick');
-            banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Gagal Memuat</h2><p class="text-[10px] font-bold">Terjadi kesalahan saat mengecek ujian.</p></div>`;
+            console.warn("API Ujian belum siap atau Server mati:", e); // Ganti console.error jadi console.warn
+            if (banner) { // Tambahin if(banner) biar aman
+                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Portal Ujian Belum Tersedia</h2><p class="text-[10px] font-bold">Fitur ujian sedang dalam tahap pengembangan.</p></div>`;
+            }
         }
     };
     checkActiveExams();
@@ -326,7 +366,16 @@ import Toast from '../../components/Toast.astro';
         // Set Data ke Modal
         document.getElementById('verifyInitials').innerText = name.substring(0, 2).toUpperCase();
         document.getElementById('verifyName').innerText = name;
-        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${selectedSubject}&week=${selectedWeek}`;
+
+        // [BARU] Bawa parameter PR Token & pr=true ke fill.astro jika ada
+        const paramPrToken = new URLSearchParams(window.location.search).get('pr_token');
+        const paramPr = new URLSearchParams(window.location.search).get('pr');
+        
+        let targetUrl = `/consultations/fill?id=${id}&subject=${selectedSubject}&week=${selectedWeek}`;
+        if (paramPrToken) targetUrl += `&pr_token=${paramPrToken}`;
+        if (paramPr) targetUrl += `&pr=${paramPr}`;
+        
+        pendingStudentUrl = targetUrl;
         
         // --- LOGIKA GAMBAR DINAMIS ---
         if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null' && imageUrl.trim() !== '') {
