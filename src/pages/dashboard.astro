@@ -293,7 +293,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     // ==============================================================
     // LOGIKA TUNGGAKAN TUGAS (GLOBAL & MODAL)
     // ==============================================================
-    
+    window.prLocksCache = {};
     const initFiltersAndTasks = async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
@@ -302,13 +302,27 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             if(res.ok) {
                 const filterData = await res.json();
                 availableTasks = filterData.data.available_tasks || [];
+                const subjectsList = filterData.data.subjects || [];
+
+                // [BARU] Ambil status Gembok PR untuk semua mapel sekaligus biar kenceng!
+                const locksPromises = subjectsList.map(s => 
+                    fetch(`${API_URL}/api/onboarding/pr-locks/${s.toLowerCase()}`, { headers })
+                    .then(r => r.json())
+                    .catch(() => ({data: []}))
+                );
+                const locksResults = await Promise.all(locksPromises);
+                
+                // Simpan ke dalam Cache
+                subjectsList.forEach((s, i) => {
+                    window.prLocksCache[s.toLowerCase()] = locksResults[i].data || [];
+                });
                 
                 const subjSelect = document.getElementById('modalFilterSubject');
                 const weekSelect = document.getElementById('modalFilterWeek');
 
                 if (subjSelect) {
                     subjSelect.innerHTML = `<option value="">Semua Pelajaran</option>` + 
-                        (filterData.data.subjects || []).map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('');
+                        subjectsList.map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('');
                 }
                 if (weekSelect) {
                     weekSelect.innerHTML = `<option value="">Semua Pertemuan</option>` + 
@@ -383,11 +397,21 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             // Tampilkan badge HANYA JIKA filter belum spesifik
             if (!subjFilter || !weekFilter) {
-                const badges = relevantMissing.slice(0, 2).map(mt => 
-                    `<span class="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-red-200">${mt.subject} (Pert ${mt.week})</span>`
-                ).join('');
+                const badges = relevantMissing.slice(0, 2).map(mt => {
+                    // [BARU] Cek apakah tugas ini adalah PR dari data Cache
+                    const isPR = window.prLocksCache[mt.subject.toLowerCase()]?.includes(mt.week);
+                    
+                    // [BARU] Desain Label PR Premium
+                    const prLabel = isPR 
+                        ? `<span class="bg-indigo-500 text-white px-1 py-0.5 rounded-[4px] ml-1 flex items-center gap-0.5 shadow-sm"><i class="fa-solid fa-house-laptop text-[6px]"></i> PR</span>` 
+                        : '';
+
+                    return `<span class="flex items-center text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-red-200">
+                        ${mt.subject} (Pert ${mt.week})${prLabel}
+                    </span>`;
+                }).join('');
                 
-                const moreCount = relevantMissing.length > 2 ? `<span class="text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200">+${relevantMissing.length - 2}</span>` : '';
+                const moreCount = relevantMissing.length > 2 ? `<span class="flex items-center text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200">+${relevantMissing.length - 2}</span>` : '';
                 
                 badgesHtml = `<div class="flex flex-wrap gap-1 mt-1.5">${badges}${moreCount}</div>`;
                 wrapperClass = 'items-start pt-0.5'; // Kalau ada badge, posisinya mulai dari atas (items-start)

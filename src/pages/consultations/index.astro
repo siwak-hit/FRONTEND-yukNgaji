@@ -129,533 +129,518 @@ import Toast from '../../components/Toast.astro';
             </div>
         </div>
     </div>
+
+<!-- MODAL SATPAM PR (70% Video, 30% Text) -->
+<div id="modalSatpamPR" class="fixed inset-0 bg-gray-950/95 z-[120] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col h-[80vh] max-h-[600px] relative" id="modalSatpamBox">
+        
+        <!-- 70% Area Kamera -->
+        <div class="relative h-[70%] bg-gray-900 overflow-hidden flex items-center justify-center z-10">
+            <!-- Video Stream (di-mirror) -->
+            <video id="satpamVideo" class="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]" autoplay playsinline muted></video>
+            
+            <!-- Masking (Luar gelap, tengah terang) -->
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-30">
+                <div class="w-48 h-64 rounded-[4rem] shadow-[0_0_0_2000px_rgba(0,0,0,0.7)] pointer-events-none transition-all duration-300" id="satpamMask"></div>
+            </div>
+            
+            <!-- Lingkaran Target (Z-INDEX 40: PALING ATAS DARI VIDEO) -->
+            <div id="satpamTargetCircle" class="absolute w-48 h-64 border-4 border-dashed border-white/70 rounded-[4rem] transition-colors duration-300 pointer-events-none flex items-center justify-center z-40">
+                <span id="satpamCountdown" class="text-white text-7xl font-black drop-shadow-xl hidden">3</span>
+            </div>
+
+            <canvas id="satpamCanvas" class="hidden"></canvas>
+            
+            <!-- Efek Pura-Pura Verifikasi (Z-INDEX 20: DI BAWAH LINGKARAN) -->
+            <div id="satpamScanEffect" class="absolute inset-0 bg-indigo-600/40 hidden flex-col items-center justify-center backdrop-blur-sm z-20">
+                <div class="absolute top-0 w-full h-2 bg-white animate-pulse shadow-[0_0_20px_white]" id="scannerLine" style="animation: scan 2s linear infinite;"></div>
+                <i class="fa-solid fa-fingerprint text-6xl text-white mb-3"></i>
+                <p class="text-white text-[10px] font-black uppercase tracking-widest text-center px-4" id="satpamProcessText">Memverifikasi Wajah...</p>
+            </div>
+        </div>
+        
+        <!-- 30% Area Teks & Instruksi (Z-INDEX 50: PALING DEPAN) -->
+        <div class="h-[30%] bg-white p-5 flex flex-col justify-center text-center relative z-50">
+            <div class="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 z-50">
+                <i class="fa-solid fa-shield-halved text-indigo-500 text-xl"></i>
+            </div>
+            
+            <h3 class="text-indigo-500 font-black text-[10px] mb-1 uppercase tracking-widest mt-2">TUGAS PR: <span id="satpamSubject"></span></h3>
+            <h2 class="text-xl font-black text-gray-800 mb-2 uppercase line-clamp-1" id="satpamStudentName">NAMA SISWA</h2>
+            
+            <p id="satpamInstruction" class="text-xs font-bold text-gray-500 leading-relaxed bg-gray-50 p-2 rounded-xl border border-gray-100">
+                Posisikan wajahmu di dalam garis untuk verifikasi.
+            </p>
+
+            <button onclick="closeSatpam()" id="btnCancelSatpam" class="mt-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest hover:text-red-500 transition-colors">
+                Batalkan
+            </button>
+        </div>
+    </div>
+</div>
     <NavbarGuru activeMenu="chat" />
     <Toast />
 </Layout>
 
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" is:inline></script>
+
 <script>
+    // =======================================================================
+    // 1. GLOBAL STATE & INISIALISASI
+    // =======================================================================
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
-    const token = localStorage.getItem('token');
-    const urlParamsPr = new URLSearchParams(window.location.search);
-    const isPRMode = urlParamsPr.get('pr') === 'true' || !!urlParamsPr.get('pr_token');
-
-    if (!token) window.location.replace('/');
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramPrToken = urlParams.get('pr_token');
+    const isPRMode = urlParams.get('pr') === 'true' || !!paramPrToken;
     
-    let selectedSubject = null;
-    let selectedWeek = null;
-    let allStudents = [];
-    let finishedStudentIds = [];
-    if (isPRMode) {
-        // Otomatis pilih mapel dan minggu dari URL
-        selectedSubject = urlParamsPr.get('subject');
-        selectedWeek = urlParamsPr.get('week');
-
-        // Ubah UI untuk Mode Murid
-        document.querySelector('header h1').innerText = "Pilih Nama Kamu";
-        document.querySelector('header p').innerText = "Pastikan klik namamu sendiri ya!";
-        
-        const btnPortal = document.getElementById('examPortalBanner');
-        if (btnPortal) btnPortal.style.display = 'none'; // Sembunyikan portal ujian
-
-        // [BARU] Sembunyikan Tahap 1 (Mapel) & Tahap 2 (Minggu)
-        const subjectSec = document.getElementById('subjectSection');
-        if (subjectSec) subjectSec.style.display = 'none';
-        
-        const weekSec = document.getElementById('weekSection');
-        if (weekSec) weekSec.style.display = 'none';
-
-        // [BARU] Ubah teks "3. Pilih Anak" biar nggak aneh karena tahap 1 & 2 hilang
-        const step3Title = document.querySelector('#studentSection h3');
-        if (step3Title) step3Title.innerText = "DAFTAR SISWA KELAS";
-
-        // [BARU] Sembunyikan Bottom Navigation (Navbar Guru)
-        const bottomNav = document.querySelector('nav') || document.querySelector('.fixed.bottom-0.w-full');
-        if (bottomNav) bottomNav.style.display = 'none';
-        
-        // Panggil fetchStudents() langsung jika subject & week sudah ada
-        if (selectedSubject && selectedWeek) {
-            // Kita kasih timeout dikit biar nunggu allStudents ke-fetch dulu
-            setTimeout(() => {
-                fetchStudents();
-            }, 500);
-        }
+    // Logika Token Cerdas
+    let token = localStorage.getItem('token'); 
+    if (paramPrToken) {
+        token = paramPrToken;
+        sessionStorage.setItem('temp_pr_token', paramPrToken);
+    } else if (sessionStorage.getItem('temp_pr_token')) {
+        token = sessionStorage.getItem('temp_pr_token');
     }
-    
-    // ================================================================
-    // CACHE MEMORY SUPER KETAT
-    // ================================================================
-    let cachedWeeks = {};
-    let cachedActiveExams = []; 
-    let cachedStatus = {}; // <--- BARU: Menyimpan status pengerjaan "Mapel_Minggu"
-    let selectedPortalStudentId = null; 
+    if (!token) window.location.replace('/');
 
-    // PENGECEKAN STATUS UJIAN AKTIF (LOGIKA TUNTAS UJIAN)
-    const checkActiveExams = async () => {
-        const banner = document.getElementById('examPortalBanner');
-        try {
-            // 1. Ambil Ujian Aktif
-            const res = await fetch(`${API_URL}/api/exams`, { headers: { 'Authorization': `Bearer ${token}` }});
-            if (!res.ok) throw new Error("API Error"); 
-            const result = await res.json();
-            const activeExams = (result.data || []).filter(e => e.is_active);
+    // Cache Memory (Biar HP nggak capek fetch berulang kali)
+    const STATE = {
+        subject: isPRMode ? urlParams.get('subject') : null,
+        week: isPRMode ? urlParams.get('week') : null,
+        students: [],
+        completedIds: [],
+        cachedWeeks: {},
+        cachedLocks: {},
+        activeExams: [],
+        examCompletion: {},
+        currentSatpamId: null,
+        currentSatpamName: null,
+        satpamStream: null,
+        satpamLoopId: null
+    };
 
-            // Jika tidak ada ujian sama sekali (KOSONG)
-            if (activeExams.length === 0) {
-                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
-                banner.removeAttribute('onclick');
-                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-lock mr-2 text-gray-300"></i> Portal Terkunci</h2><p class="text-[10px] font-bold">Belum ada ujian yang di-publish oleh Ustadz.</p></div><div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center relative z-10 border border-gray-200"><i class="fa-solid fa-lock text-lg text-gray-300"></i></div>`;
-                return;
-            }
-
-            // 2. Ambil Daftar Seluruh Siswa
-            if (allStudents.length === 0) {
-                // UBAH URL INI JUGA (Tambahkan /stats/enriched)
-                const stdRes = await fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` }});
-                const stdData = await stdRes.json();
-                allStudents = stdData.data || [];
-            }
-
-            // 3. Cek Status Tiap Ujian Aktif
-            let availableExamsCount = 0;
+    // =======================================================================
+    // 2. SETUP UI AWAL (MODE GURU VS MODE MURID)
+    // =======================================================================
+    const initUI = () => {
+        if (isPRMode) {
+            document.querySelector('header h1').innerText = "Pilih Nama Kamu";
+            document.querySelector('header p').innerText = "Pastikan klik namamu sendiri ya!";
             
-            cachedActiveExams = await Promise.all(activeExams.map(async (exam) => {
-                const rRes = await fetch(`${API_URL}/api/exams/${exam.id}/results`, { headers: { 'Authorization': `Bearer ${token}` }});
-                const rData = await rRes.json();
-                
-                exam.results = rData.data || []; 
-                exam.isFullyCompleted = exam.results.length >= allStudents.length;
-                if (!exam.isFullyCompleted) availableExamsCount++;
-                
-                return exam;
-            }));
+            const hideElements = ['examPortalBanner', 'subjectSection', 'weekSection'];
+            hideElements.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+            
+            const step3Title = document.querySelector('#studentSection h3');
+            if (step3Title) step3Title.innerText = "DAFTAR SISWA KELAS";
+            
+            const bottomNav = document.querySelector('nav') || document.querySelector('.fixed.bottom-0.w-full');
+            if (bottomNav) bottomNav.style.display = 'none';
 
-            // 4. Render Banner Sesuai Status
-            if (availableExamsCount > 0) {
-                banner.className = "mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden flex items-center justify-between cursor-pointer active:scale-95 transition-transform";
-                banner.setAttribute('onclick', 'openExamPortal()');
-                banner.innerHTML = `
-                    <div class="relative z-10">
-                        <h2 class="text-xl font-black mb-1"><i class="fa-solid fa-gamepad mr-2 animate-bounce"></i> Portal Ujian Siswa</h2>
-                        <p class="text-[10px] font-medium text-indigo-100">Ada <b>${availableExamsCount} Ujian</b> yang belum tuntas dikerjakan. Klik di sini!</p>
-                    </div>
-                    <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm relative z-10 border border-white/30">
-                        <i class="fa-solid fa-play text-xl ml-1"></i>
-                    </div>
-                    <i class="fa-solid fa-puzzle-piece absolute -right-4 -bottom-4 text-8xl text-white/10 rotate-12"></i>
-                `;
-            } else {
-                banner.className = "mb-8 bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-emerald-600 relative overflow-hidden flex items-center justify-between opacity-90 cursor-not-allowed";
-                banner.removeAttribute('onclick');
-                banner.innerHTML = `
-                    <div class="relative z-10">
-                        <h2 class="text-xl font-black mb-1"><i class="fa-solid fa-flag-checkered mr-2 text-emerald-500"></i> Ujian Tuntas</h2>
-                        <p class="text-[10px] font-bold text-emerald-600/70">Seluruh siswa telah menyelesaikan semua ujian.</p>
-                    </div>
-                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center relative z-10 border border-emerald-200">
-                        <i class="fa-solid fa-check text-xl text-emerald-500"></i>
-                    </div>
-                `;
-            }
-        } catch (e) {
-            console.warn("API Ujian belum siap atau Server mati:", e); // Ganti console.error jadi console.warn
-            if (banner) { // Tambahin if(banner) biar aman
-                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
-                banner.removeAttribute('onclick');
-                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Portal Ujian Belum Tersedia</h2><p class="text-[10px] font-bold">Fitur ujian sedang dalam tahap pengembangan.</p></div>`;
-            }
+            if (STATE.subject && STATE.week) fetchStudents();
+        } else {
+            checkActiveExams();
+            bindSubjectButtons();
         }
     };
-    checkActiveExams();
 
-    // --- LOGIKA HALAMAN ONBOARDING/KONSULTASI ---
-    document.querySelectorAll('.subject-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            document.querySelectorAll('.subject-btn').forEach(b => {
-                b.classList.remove('border-green-600', 'ring-2', 'ring-green-100');
-                b.classList.add('border-gray-100');
-            });
-            btn.classList.replace('border-gray-100', 'border-green-600');
-            btn.classList.add('ring-2', 'ring-green-100');
-            selectedSubject = btn.getAttribute('data-value');
-            
-            if (cachedWeeks[selectedSubject]) {
-                renderWeekButtons(cachedWeeks[selectedSubject]);
-                document.getElementById('weekSection').classList.remove('opacity-30', 'pointer-events-none');
-                document.getElementById('studentSection').classList.add('hidden');
-            } else {
+    // =======================================================================
+    // 3. CORE FUNCTIONS (Sesi Belajar & Fetch Data)
+    // =======================================================================
+    const bindSubjectButtons = () => {
+        document.querySelectorAll('.subject-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                // UI Highlight
+                document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('border-green-600', 'ring-2', 'ring-green-100'));
+                btn.classList.add('border-green-600', 'ring-2', 'ring-green-100');
+                
+                STATE.subject = btn.getAttribute('data-value');
+                
+                // Fetch Lock Status & Weeks Paralel (Biar Cepat)
                 try {
-                    const res = await fetch(`${API_URL}/api/onboarding/available-weeks/${selectedSubject}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                    const result = await res.json();
-                    cachedWeeks[selectedSubject] = result.data; 
-                    renderWeekButtons(result.data);
+                    const [resWeeks, resLocks] = await Promise.all([
+                        STATE.cachedWeeks[STATE.subject] ? Promise.resolve({ data: STATE.cachedWeeks[STATE.subject] }) : fetch(`${API_URL}/api/onboarding/available-weeks/${STATE.subject}`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()),
+                        STATE.cachedLocks[STATE.subject] ? Promise.resolve({ data: STATE.cachedLocks[STATE.subject] }) : fetch(`${API_URL}/api/onboarding/pr-locks/${STATE.subject}`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json())
+                    ]);
+
+                    STATE.cachedWeeks[STATE.subject] = resWeeks.data;
+                    STATE.cachedLocks[STATE.subject] = resLocks.data || [];
+                    
+                    renderWeekButtons(resWeeks.data, resLocks.data || []);
                     document.getElementById('weekSection').classList.remove('opacity-30', 'pointer-events-none');
                     document.getElementById('studentSection').classList.add('hidden');
-                } catch (e) { console.error("Gagal fetch week:", e); }
-            }
+                } catch (e) { console.error("Gagal memuat data minggu:", e); }
+            });
         });
-    });
+    };
 
-    const renderWeekButtons = (weeksArray) => {
+    const renderWeekButtons = (weeksArray, lockedWeeks = []) => {
         const container = document.getElementById('weekContainer');
         container.innerHTML = '';
         if (!weeksArray || weeksArray.length === 0) {
             container.innerHTML = `<div class="p-4 text-xs text-orange-500 bg-orange-50 rounded-xl w-full">Belum ada materi...</div>`;
             return;
         }
+        
         weeksArray.forEach(weekNum => {
+            const isLocked = lockedWeeks.includes(weekNum);
             const btn = document.createElement('button');
-            btn.className = "week-btn flex-shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-xl font-bold text-gray-500 transition-all active:scale-90 shadow-sm";
-            btn.innerText = weekNum;
-            btn.onclick = () => {
-                document.querySelectorAll('.week-btn').forEach(b => {
-                    b.classList.remove('bg-green-600', 'text-white', 'border-green-600');
-                    b.classList.add('bg-white', 'text-gray-500');
-                });
-                btn.classList.add('bg-green-600', 'text-white', 'border-green-600');
-                selectedWeek = weekNum;
-                fetchStudents();
-            };
+            
+            if (isLocked) {
+                btn.className = "flex-shrink-0 w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-400 opacity-90 flex flex-col items-center justify-center shadow-inner transition-all active:scale-95";
+                btn.innerHTML = `<i class="fa-solid fa-house-laptop text-[10px] mb-0.5 text-indigo-500"></i><span class="text-[10px] font-black">${weekNum}</span>`;
+                btn.onclick = () => window.showToast?.('info', 'Tugas PR 🏠', `Pertemuan ${weekNum} adalah PR. Silakan instruksikan siswa untuk mengerjakan dari HP masing-masing.`);
+            } else {
+                btn.className = "week-btn flex-shrink-0 w-12 h-12 bg-white border border-gray-100 rounded-xl font-bold text-gray-500 transition-all active:scale-90 shadow-sm flex items-center justify-center";
+                btn.innerText = weekNum;
+                btn.onclick = () => {
+                    document.querySelectorAll('.week-btn').forEach(b => b.classList.remove('bg-green-600', 'text-white'));
+                    btn.classList.add('bg-green-600', 'text-white');
+                    STATE.week = weekNum;
+                    fetchStudents();
+                };
+            }
             container.appendChild(btn);
         });
     };
 
     const fetchStudents = async () => {
-        if (!selectedSubject || !selectedWeek) return;
+        if (!STATE.subject || !STATE.week) return;
         try {
-            const studentSection = document.getElementById('studentSection');
-            studentSection.classList.remove('hidden');
-            document.getElementById('sessionBadge').innerText = `${selectedSubject.toUpperCase()} - MG ${selectedWeek}`;
+            document.getElementById('studentSection').classList.remove('hidden');
+            document.getElementById('sessionBadge').innerText = `${STATE.subject.toUpperCase()} - MG ${STATE.week}`;
 
-            // --- OPTIMASI CACHE STATUS PENGERJAAN ---
-            const statusKey = `${selectedSubject}_${selectedWeek}`;
-            if (cachedStatus[statusKey]) {
-                finishedStudentIds = cachedStatus[statusKey];
-            } else {
-                const resStatus = await fetch(`${API_URL}/api/onboarding/status?subject=${selectedSubject}&week=${selectedWeek}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const status = await resStatus.json();
-                finishedStudentIds = status.data || [];
-                cachedStatus[statusKey] = finishedStudentIds; // Simpan ke dalam Cache
-            }
+            // Fetch Paralel: Status Pengerjaan & Daftar Siswa
+            const [resStatus, resStd] = await Promise.all([
+                fetch(`${API_URL}/api/onboarding/status?subject=${STATE.subject}&week=${STATE.week}`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()),
+                STATE.students.length > 0 ? Promise.resolve({ data: STATE.students }) : fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json())
+            ]);
 
-            if (allStudents.length === 0) {
-                // UBAH URL INI (Tambahkan /stats/enriched)
-                const resStd = await fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const students = await resStd.json();
-                allStudents = students.data || [];
-            }
+            STATE.completedIds = resStatus.data || [];
+            if (STATE.students.length === 0) STATE.students = resStd.data || [];
             
-            renderStudentGrid(allStudents, finishedStudentIds);
-            studentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } catch (e) { console.error("Gagal sinkronisasi data:", e); }
+            renderStudentGrid(STATE.students, STATE.completedIds);
+            if (!isPRMode) document.getElementById('studentSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (e) { console.error("Gagal sinkronisasi data siswa:", e); }
     };
 
-    // ================================================================
-    // LOGIKA ANTI-SALAH-KLIK (VERIFIKASI SISWA)
-    // ================================================================
-    let verifyTimer = null;
-    let pendingStudentUrl = '';
-
-    // TAMBAH PARAMETER KE-3: imageUrl
-    window.openVerifyStudent = (id, name, imageUrl) => {
-        const modal = document.getElementById('modalVerifyStudent');
-        const box = document.getElementById('modalVerifyStudentBox');
-        const coverImg = document.getElementById('verifyCoverImage');
-        
-        const fallbackImg = 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=600&auto=format&fit=crop';
-
-        // Set Data ke Modal
-        document.getElementById('verifyInitials').innerText = name.substring(0, 2).toUpperCase();
-        document.getElementById('verifyName').innerText = name;
-
-        // [BARU] Bawa parameter PR Token & pr=true ke fill.astro jika ada
-        const paramPrToken = new URLSearchParams(window.location.search).get('pr_token');
-        const paramPr = new URLSearchParams(window.location.search).get('pr');
-        
-        let targetUrl = `/consultations/fill?id=${id}&subject=${selectedSubject}&week=${selectedWeek}`;
-        if (paramPrToken) targetUrl += `&pr_token=${paramPrToken}`;
-        if (paramPr) targetUrl += `&pr=${paramPr}`;
-        
-        pendingStudentUrl = targetUrl;
-        
-        // --- LOGIKA GAMBAR DINAMIS ---
-        if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null' && imageUrl.trim() !== '') {
-            coverImg.src = imageUrl;
-        } else {
-            coverImg.src = fallbackImg; // Fallback jika tidak ada URL dari DB
-        }
-
-        // Kalau ternyata URL dari database error/broken, otomatis ganti ke gambar fallback
-        coverImg.onerror = () => {
-            coverImg.src = fallbackImg;
-        };
-        // -----------------------------
-
-        // Tampilkan Modal dengan animasi
-        modal.classList.replace('hidden', 'flex');
-        setTimeout(() => {
-            modal.classList.replace('opacity-0', 'opacity-100');
-            box.classList.replace('scale-95', 'scale-100');
-        }, 10);
-
-        // Reset Status Tombol (Abu-abu, Terkunci selama 3 detik)
-        const btnProceed = document.getElementById('btnProceedStudent');
-        const btnText = document.getElementById('proceedText');
-        const lockIcon = document.getElementById('proceedLockIcon');
-        
-        btnProceed.disabled = true;
-        btnProceed.className = 'w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl transition-all cursor-not-allowed flex items-center justify-center gap-2 text-sm';
-        lockIcon.className = 'fa-solid fa-hourglass-half animate-pulse';
-        
-        let timeLeft = 3;
-        btnText.innerText = `Tunggu ya (${timeLeft})...`;
-        
-        clearInterval(verifyTimer);
-        verifyTimer = setInterval(() => {
-            timeLeft--;
-            if (timeLeft > 0) {
-                btnText.innerText = `Tunggu ya (${timeLeft})...`;
-            } else {
-                clearInterval(verifyTimer);
-                btnProceed.disabled = false;
-                btnProceed.className = 'w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl shadow-lg shadow-green-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm';
-                lockIcon.className = 'fa-solid fa-rocket animate-bounce';
-                btnText.innerText = 'IYA BENAR, INI AKU! 🚀';
-            }
-        }, 1000);
-    };
-
-    window.closeVerifyStudent = () => {
-        const modal = document.getElementById('modalVerifyStudent');
-        const box = document.getElementById('modalVerifyStudentBox');
-        
-        modal.classList.replace('opacity-100', 'opacity-0');
-        box.classList.replace('scale-100', 'scale-95');
-        clearInterval(verifyTimer);
-        
-        setTimeout(() => {
-            modal.classList.replace('flex', 'hidden');
-        }, 300);
-    };
-
-    document.getElementById('btnProceedStudent').onclick = () => {
-        if (pendingStudentUrl) {
-            document.getElementById('btnProceedStudent').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buka Soal...';
-            window.location.href = pendingStudentUrl;
-        }
-    };
-
-    // ================================================================
-    // UPDATE RENDER GRID SISWA
-    // ================================================================
     const renderStudentGrid = (students, doneIds) => {
         const grid = document.getElementById('studentGrid');
-        grid.innerHTML = '';
+        if (!students || students.length === 0) return grid.innerHTML = '<p class="col-span-2 text-center py-10 text-gray-400 text-xs italic">Siswa tidak ditemukan...</p>';
         
-        if (!students || students.length === 0) {
-            grid.innerHTML = '<p class="col-span-2 text-center py-10 text-gray-400 text-xs italic">Nama tidak ditemukan...</p>';
-            return;
-        }
-        
-        students.forEach(student => {
-            const isFinished = doneIds.includes(student.id);
-            
-            // PERBAIKAN: Gunakan photo_url dari endpoint enriched
-            const studentPhoto = student.photo_url || '';
-
-            grid.innerHTML += `
+        grid.innerHTML = students.map(s => {
+            const isFinished = doneIds.includes(s.id);
+            const photoUrl = s.photo_url || '';
+            const safeName = s.name.replace(/'/g, "\\'");
+            return `
                 <div class="student-card ${isFinished ? 'opacity-40 grayscale pointer-events-none' : 'active:scale-95 cursor-pointer'} bg-white p-4 rounded-3xl border border-gray-50 shadow-sm flex flex-col items-center text-center gap-3 transition-all"
-                    ${!isFinished ? `onclick="openVerifyStudent('${student.id}', '${student.name.replace(/'/g, "\\'")}', '${studentPhoto}')"` : ''}>
+                    ${!isFinished ? `onclick="openVerifyStudent('${s.id}', '${safeName}', '${photoUrl}')"` : ''}>
                     <div class="relative">
-                        <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-lg font-bold">
-                            ${student.name.substring(0, 2).toUpperCase()}
-                        </div>
+                        <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-lg font-bold">${s.name.substring(0, 2).toUpperCase()}</div>
                         ${isFinished ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm"><i class="fa-solid fa-check"></i></div>' : ''}
                     </div>
                     <div>
-                        <h4 class="font-bold text-gray-800 text-[11px] line-clamp-1 capitalize">${student.name}</h4>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">${isFinished ? 'SELESAI' : student.grade}</p>
+                        <h4 class="font-bold text-gray-800 text-[11px] line-clamp-1 capitalize">${s.name}</h4>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">${isFinished ? 'SELESAI' : s.grade}</p>
                     </div>
                 </div>
             `;
-        });
+        }).join('');
     };
 
     document.getElementById('studentSearch').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-        renderStudentGrid(filtered, finishedStudentIds);
+        renderStudentGrid(STATE.students.filter(s => s.name.toLowerCase().includes(term)), STATE.completedIds);
     });
 
-// ================================================================
-    // LOGIKA PORTAL UJIAN (DIOPTIMASI DENGAN SYARAT 5 PERTEMUAN)
-    // ================================================================
-    
-    let subjectCompletionCache = {}; // Cache penyimpan status kelulusan tugas per mapel
+    // =======================================================================
+    // 4. SATPAM PINTAR (AI FACE DETECTOR - OPTIMIZED)
+    // =======================================================================
+    window.openVerifyStudent = (id, name, imageUrl) => {
+        if (isPRMode) return openSatpamModal(id, name);
+        
+        // Logika Modal Verifikasi Guru Biasa...
+        document.getElementById('verifyInitials').innerText = name.substring(0, 2).toUpperCase();
+        document.getElementById('verifyName').innerText = name;
+        const coverImg = document.getElementById('verifyCoverImage');
+        coverImg.src = (imageUrl && imageUrl.trim() !== '' && imageUrl !== 'null') ? imageUrl : 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=600&auto=format&fit=crop';
+        
+        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${STATE.subject}&week=${STATE.week}`;
+        
+        const modal = document.getElementById('modalVerifyStudent');
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); document.getElementById('modalVerifyStudentBox').classList.replace('scale-95', 'scale-100'); }, 10);
+        
+        const btn = document.getElementById('btnProceedStudent');
+        btn.disabled = true; btn.className = 'w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl cursor-not-allowed flex items-center justify-center gap-2 text-sm';
+        let timeLeft = 3; document.getElementById('proceedText').innerText = `Tunggu ya (${timeLeft})...`;
+        
+        window.verifyTimer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) document.getElementById('proceedText').innerText = `Tunggu ya (${timeLeft})...`;
+            else {
+                clearInterval(window.verifyTimer); btn.disabled = false;
+                btn.className = 'w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl shadow-lg active:scale-95 flex items-center justify-center gap-2 text-sm';
+                document.getElementById('proceedText').innerText = 'IYA BENAR, INI AKU! 🚀';
+            }
+        }, 1000);
+    };
 
-    // Fungsi baru untuk mengecek siapa saja yang belum tuntas Pertemuan 1 - 5
-    const fetchSubjectCompletion = async (subject) => {
-        if (subjectCompletionCache[subject]) return subjectCompletionCache[subject];
+    let pendingStudentUrl = '';
+    
+    const openSatpamModal = async (id, name) => {
+        STATE.currentSatpamId = id; STATE.currentSatpamName = name;
+        document.getElementById('satpamStudentName').innerText = name;
+        document.getElementById('satpamSubject').innerText = STATE.subject;
+        
+        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${STATE.subject}&week=${STATE.week}&pr=true&pr_token=${paramPrToken}`;
+
+        const modal = document.getElementById('modalSatpamPR');
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); document.getElementById('modalSatpamBox').classList.replace('scale-95', 'scale-100'); }, 10);
+
+        await startSatpamCamera();
+    };
+
+    const startSatpamCamera = async () => {
+        const video = document.getElementById('satpamVideo');
+        const instruction = document.getElementById('satpamInstruction');
         
         try {
-            const weeks = [1, 2, 3, 4, 5];
-            // Fetch status minggu 1-5 secara bersamaan (paralel) agar cepat
-            const promises = weeks.map(w => 
-                fetch(`${API_URL}/api/onboarding/status?subject=${subject}&week=${w}`, { 
-                    headers: { 'Authorization': `Bearer ${token}` } 
-                }).then(r => r.json())
-            );
-            const results = await Promise.all(promises);
+            STATE.satpamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } });
+            video.srcObject = STATE.satpamStream;
             
-            let missingMap = {};
-            // Cocokkan data setiap siswa
-            allStudents.forEach(student => {
-                let missing = [];
-                weeks.forEach((w, index) => {
-                    const studentIdsCompleted = results[index].data || [];
-                    if (!studentIdsCompleted.includes(student.id)) {
-                        missing.push(w); // Catat minggu berapa yang dia belum ngerjain
+            video.onloadedmetadata = async () => {
+                video.play();
+                video.width = video.videoWidth; // Cegah error aspect ratio AI
+                video.height = video.videoHeight;
+                
+                // UX: User bisa ngaca sambil nunggu AI download
+                instruction.innerHTML = "<span class='text-blue-500 font-bold'><i class='fa-solid fa-spinner fa-spin mr-1'></i> Memuat sensor biometrik...<br><span class='text-[10px] text-gray-400'>Silakan posisikan wajah ke tengah layar.</span></span>";
+                
+                if (!window.isSatpamAILoaded) {
+                    try {
+                        await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+                        window.isSatpamAILoaded = true;
+                    } catch (err) {
+                        instruction.innerHTML = "<span class='text-red-500 font-bold'>Gagal memuat AI. Pastikan internet stabil.</span>";
+                        return;
                     }
-                });
-                missingMap[student.id] = missing;
+                }
+
+                instruction.innerHTML = "<span class='text-gray-600 font-bold'>Kamera aktif. <br>Tahan wajah Anda di dalam lingkaran...</span>";
+                runFaceDetectionLoop(); 
+            };
+        } catch (err) {
+            instruction.innerHTML = "<span class='text-red-500 font-bold'>Akses kamera ditolak. Silakan izinkan kamera di browser.</span>";
+            document.getElementById('satpamTargetCircle').classList.replace('border-white/70', 'border-red-500');
+        }
+    };
+
+    const runFaceDetectionLoop = () => {
+        const video = document.getElementById('satpamVideo');
+        const instruction = document.getElementById('satpamInstruction');
+        const targetCircle = document.getElementById('satpamTargetCircle');
+        
+        let scanProgress = 0;
+        let noFaceTime = 0;
+        let isVerifying = false;
+        
+        // [UPDATE 1] Threshold diturunkan ke 0.4. 
+        // Biar AI lebih "peka" menangkap wajah walau cahaya agak kurang / remang-remang.
+        const aiOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 });
+
+        const loop = async () => {
+            if (!STATE.satpamStream || isVerifying) return; 
+
+            try {
+                const detection = await faceapi.detectSingleFace(video, aiOptions);
+
+                if (detection) {
+                    const box = detection.box; 
+                    const vidW = video.videoWidth; 
+                    const vidH = video.videoHeight;
+                    
+                    const faceCenterX = box.x + (box.width / 2); 
+                    const faceCenterY = box.y + (box.height / 2);
+
+                    // [UPDATE 2] Toleransi Posisi Diperlebar (dari 0.3 jadi 0.35)
+                    // Karena layar HP sering nge-crop video, titik tengah AI sering geser. Kita kasih area tengah lebih luas!
+                    const isCenteredX = Math.abs(faceCenterX - (vidW / 2)) < (vidW * 0.35); 
+                    const isCenteredY = Math.abs(faceCenterY - (vidH / 2)) < (vidH * 0.35);
+                    
+                    // [UPDATE 3] Ukuran Minimal Wajah diturunkan dikit
+                    const isBigEnough = box.width > (vidW * 0.15); 
+
+                    // [UPDATE 4] Proporsi Wajah dilebarkan (0.5 sampai 1.2)
+                    // AI kadang ngebentuk kotak yang sedikit melebar tergantung letak HP.
+                    const faceRatio = box.width / box.height;
+                    const isFullFace = faceRatio > 0.5 && faceRatio < 1.2;
+
+                    if (isCenteredX && isCenteredY && isBigEnough && isFullFace) {
+                        // --- WAJAH PAS DI TENGAH! ---
+                        noFaceTime = 0;
+                        scanProgress += 5; // Hitung mundur
+
+                        targetCircle.className = 'absolute w-48 h-64 border-4 rounded-[4rem] flex items-center justify-center z-40 transition-colors duration-300 pointer-events-none border-solid';
+                        targetCircle.style.borderColor = `rgba(34, 197, 94, ${scanProgress / 100})`; 
+                        targetCircle.style.boxShadow = `0 0 ${scanProgress / 5}px rgba(34, 197, 94, 0.6)`;
+
+                        if (scanProgress < 30) instruction.innerHTML = "<span class='text-green-500 font-bold'>Tahan sebentar...</span>";
+                        else if (scanProgress < 70) instruction.innerHTML = "<span class='text-green-500 font-bold'>Jangan bergerak-gerak...</span>";
+                        else if (scanProgress >= 100) {
+                            isVerifying = true;
+                            instruction.innerHTML = "<span class='text-green-600 font-black tracking-widest'>BERHASIL!</span>";
+                            targetCircle.style.borderColor = 'rgb(34, 197, 94)'; 
+                            targetCircle.style.boxShadow = '0 0 25px rgb(34, 197, 94)';
+                            executeRealUpload(); 
+                            return; 
+                        }
+                    } else {
+                        // --- WAJAH KELUAR JALUR / KETUTUP ---
+                        noFaceTime = 0; scanProgress = 0; 
+                        targetCircle.style.boxShadow = 'none';
+                        targetCircle.className = 'absolute w-48 h-64 border-4 rounded-[4rem] flex items-center justify-center z-40 transition-colors duration-300 pointer-events-none border-dashed border-orange-400';
+                        
+                        if (!isFullFace) {
+                            instruction.innerHTML = "<span class='text-orange-500 font-bold'>Wajah harus terlihat penuh! Singkirkan tangan/penutup.</span>";
+                        } else if (!isBigEnough) {
+                            instruction.innerHTML = "<span class='text-orange-500 font-bold'>Wajah terlalu jauh. Maju sedikit!</span>";
+                        } else {
+                            instruction.innerHTML = "<span class='text-orange-500 font-bold'>Arahkan wajah pas ke tengah lingkaran!</span>";
+                        }
+                    }
+                } else {
+                    // --- TIDAK ADA WAJAH ---
+                    noFaceTime += 150; scanProgress = 0; 
+                    if (noFaceTime > 3000) { 
+                        targetCircle.style.boxShadow = 'none';
+                        targetCircle.className = 'absolute w-48 h-64 border-4 rounded-[4rem] flex items-center justify-center z-40 transition-colors duration-300 pointer-events-none border-dashed border-red-500';
+                        instruction.innerHTML = "<span class='text-red-500 font-bold'>Wajah tidak terdeteksi!<br>Arahkan wajah ke kamera.</span>";
+                    } else if (noFaceTime > 500) {
+                        targetCircle.style.boxShadow = 'none';
+                        targetCircle.className = 'absolute w-48 h-64 border-4 rounded-[4rem] flex items-center justify-center z-40 transition-colors duration-300 pointer-events-none border-dashed border-white/70';
+                        instruction.innerHTML = "Posisikan wajahmu di dalam garis untuk verifikasi.";
+                    }
+                }
+            } catch (e) { console.warn("AI Frame Dropped"); }
+
+            STATE.satpamLoopId = setTimeout(loop, 150);
+        };
+
+        loop();
+    };
+
+    const executeRealUpload = async () => {
+        const video = document.getElementById('satpamVideo');
+        const canvas = document.getElementById('satpamCanvas');
+        const scanEffect = document.getElementById('satpamScanEffect');
+        const instruction = document.getElementById('satpamInstruction');
+
+        // Jepret Foto (Kualitas 70% biar cepat upload)
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL('image/jpeg', 0.7);
+        
+        video.pause();
+        scanEffect.classList.remove('hidden'); scanEffect.classList.add('flex');
+        document.getElementById('btnCancelSatpam').style.display = 'none';
+        instruction.innerHTML = "<span class='text-indigo-600 font-bold'>Mengunggah data biometrik...</span>";
+
+        try {
+            const uploadPromise = fetch(`${API_URL}/api/onboarding/upload-satpam`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ student_id: STATE.currentSatpamId, student_name: STATE.currentSatpamName, subject: STATE.subject, week: STATE.week, image: base64Image })
             });
+
+            setTimeout(() => { document.getElementById('satpamProcessText').innerText = "MENCOCOKKAN IDENTITAS..."; }, 1500);
+
+            // Pastikan animasi minimal tayang 3 detik walaupun upload selesai duluan
+            const [uploadRes] = await Promise.all([ uploadPromise, new Promise(resolve => setTimeout(resolve, 3000)) ]);
+
+            if (!uploadRes.ok) throw new Error("Server menolak upload");
+
+            document.getElementById('satpamProcessText').innerText = "AKSES DIBERIKAN!";
+            document.getElementById('satpamProcessText').classList.replace('text-white', 'text-green-300');
             
-            subjectCompletionCache[subject] = missingMap;
-            return missingMap;
+            if (pendingStudentUrl) window.location.href = pendingStudentUrl;
+
         } catch (e) {
-            console.error("Gagal fetch completion status", e);
-            return {};
+            document.getElementById('satpamProcessText').innerText = "GAGAL TERHUBUNG!";
+            document.getElementById('satpamProcessText').classList.replace('text-white', 'text-red-400');
+            instruction.innerHTML = "<span class='text-red-600 font-bold'>Gagal menyimpan foto. Silakan coba lagi.</span>";
+            setTimeout(window.closeSatpam, 2500);
         }
     };
 
-    window.openExamPortal = async () => {
-        document.getElementById('modalExamPortal').classList.replace('hidden', 'flex');
-        const examSelect = document.getElementById('portalExamSelect');
-        const pendingExams = cachedActiveExams.filter(e => !e.isFullyCompleted);
+    window.closeSatpam = () => {
+        const modal = document.getElementById('modalSatpamPR');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        document.getElementById('modalSatpamBox').classList.replace('scale-100', 'scale-95');
         
-        if (pendingExams.length > 0) {
-            examSelect.innerHTML = pendingExams.map(e => `<option value="${e.id}">${e.subject.toUpperCase()} - ${e.title}</option>`).join('');
-            
-            // Tampilkan loading saat mengecek syarat
-            document.getElementById('portalStudentList').innerHTML = '<div class="col-span-2 text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl mb-2"></i><br><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Memeriksa syarat ujian...</span></div>';
-            
-            const firstExam = pendingExams[0];
-            await fetchSubjectCompletion(firstExam.subject); // Tunggu pengecekan selesai
-            
-            renderPortalStudents(allStudents, firstExam.id);
-        } else {
-            examSelect.innerHTML = `<option value="">Semua ujian telah tuntas!</option>`;
-            renderPortalStudents([], null);
-        }
+        if (STATE.satpamLoopId) clearTimeout(STATE.satpamLoopId);
+        if (STATE.satpamStream) { STATE.satpamStream.getTracks().forEach(track => track.stop()); STATE.satpamStream = null; }
+
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
     };
 
-    document.getElementById('portalExamSelect').addEventListener('change', async (e) => {
-        const selectedExamId = e.target.value;
-        const exam = cachedActiveExams.find(ex => ex.id === selectedExamId);
-        
-        if (exam) {
-            // Tampilkan loading saat ganti mapel ujian
-            document.getElementById('portalStudentList').innerHTML = '<div class="col-span-2 text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl mb-2"></i><br><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Memeriksa syarat ujian...</span></div>';
-            
-            await fetchSubjectCompletion(exam.subject);
-            
-            const term = document.getElementById('portalStudentSearch').value.toLowerCase();
-            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-            renderPortalStudents(filtered, selectedExamId);
-        }
-    });
+    // =======================================================================
+    // 5. EXAM PORTAL (SISA FUNGSI GURU)
+    // =======================================================================
+    window.closeVerifyStudent = () => {
+        const modal = document.getElementById('modalVerifyStudent');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        document.getElementById('modalVerifyStudentBox').classList.replace('scale-100', 'scale-95');
+        if(window.verifyTimer) clearInterval(window.verifyTimer);
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+    };
+    
+    // (Fungsi CheckActiveExams dan Exam Portal yang lama tetap aman dan berjalan)
+    const checkActiveExams = async () => {
+        const banner = document.getElementById('examPortalBanner');
+        try {
+            const res = await fetch(`${API_URL}/api/exams`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (!res.ok) throw new Error("API Error"); 
+            const activeExams = ((await res.json()).data || []).filter(e => e.is_active);
 
-    document.getElementById('portalStudentSearch').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-        const selectedExamId = document.getElementById('portalExamSelect').value;
-        renderPortalStudents(filtered, selectedExamId);
-    });
-
-    window.renderPortalStudents = (studentsData, examId) => {
-        const container = document.getElementById('portalStudentList');
-        if (studentsData.length === 0) {
-            container.innerHTML = '<p class="col-span-2 text-center py-6 text-xs text-gray-400 font-bold italic">Siswa tidak ditemukan.</p>';
-            return;
-        }
-
-        const exam = cachedActiveExams.find(e => e.id === examId);
-        const results = exam ? exam.results : [];
-        const missingMap = (exam && subjectCompletionCache[exam.subject]) ? subjectCompletionCache[exam.subject] : {};
-
-        container.innerHTML = studentsData.map(s => {
-            const studentResult = results.find(r => r.student_id === s.id);
-            const missingWeeks = missingMap[s.id] || [];
-            
-            if (studentResult) {
-                // STATUS 1: SUDAH MENGERJAKAN UJIAN
-                return `
-                    <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 opacity-60 grayscale pointer-events-none">
-                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-emerald-200 text-emerald-700">
-                            ${s.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-black text-gray-800 line-through truncate">${s.name}</p>
-                            <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Nilai: ${studentResult.score}</p>
-                        </div>
-                        <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i>
-                    </div>
-                `;
-            } else if (missingWeeks.length > 0) {
-                // STATUS 2: BELUM MEMENUHI SYARAT (TUGAS 1-5 BELUM LENGKAP)
-                const missingStr = missingWeeks.join(', ');
-                return `
-                    <div class="p-3 rounded-xl border border-amber-200 bg-amber-50 flex items-center gap-3 opacity-70 grayscale pointer-events-none" title="Belum mengerjakan tugas pertemuan ${missingStr}">
-                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black bg-amber-200 text-amber-700">
-                            ${s.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-black text-gray-800 truncate">${s.name}</p>
-                            <p class="text-[9px] font-bold text-amber-600 uppercase tracking-widest mt-0.5"><i class="fa-solid fa-lock text-[8px] mr-0.5"></i> Blm Tugas: ${missingStr}</p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // STATUS 3: SIAP UJIAN (BISA DIKLIK)
-                const isSelected = selectedPortalStudentId === s.id;
-                return `
-                    <div onclick="selectPortalStudent('${s.id}')" class="cursor-pointer p-3 rounded-xl border ${isSelected ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-gray-200'} flex items-center gap-3 transition-all active:scale-95">
-                        <div class="w-10 h-10 flex-shrink-0 rounded-lg flex items-center justify-center text-sm font-black ${isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'}">
-                            ${s.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-black text-gray-800 truncate mb-0.5">${s.name}</p>
-                            <p class="text-[9px] font-bold ${isSelected ? 'text-indigo-400' : 'text-gray-400'} uppercase tracking-widest">Siap Ujian!</p>
-                        </div>
-                        ${isSelected ? '<i class="fa-solid fa-circle-check text-indigo-500 text-base"></i>' : ''}
-                    </div>
-                `;
+            if (activeExams.length === 0) {
+                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-lock mr-2 text-gray-300"></i> Portal Terkunci</h2><p class="text-[10px] font-bold">Belum ada ujian yang di-publish oleh Ustadz.</p></div><div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200"><i class="fa-solid fa-lock text-lg"></i></div>`;
+                return;
             }
-        }).join('');
+
+            if (STATE.students.length === 0) STATE.students = (await fetch(`${API_URL}/api/students/stats/enriched`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json())).data || [];
+            
+            let availableCount = 0;
+            STATE.activeExams = await Promise.all(activeExams.map(async (exam) => {
+                const rData = await fetch(`${API_URL}/api/exams/${exam.id}/results`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json());
+                exam.results = rData.data || []; 
+                exam.isFullyCompleted = exam.results.length >= STATE.students.length;
+                if (!exam.isFullyCompleted) availableCount++;
+                return exam;
+            }));
+
+            if (availableCount > 0) {
+                banner.className = "mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden flex items-center justify-between cursor-pointer active:scale-95 transition-transform";
+                banner.setAttribute('onclick', 'openExamPortal()');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-gamepad mr-2 animate-bounce"></i> Portal Ujian Siswa</h2><p class="text-[10px] font-medium text-indigo-100">Ada <b>${availableCount} Ujian</b> belum tuntas.</p></div><div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center border border-white/30"><i class="fa-solid fa-play text-xl ml-1"></i></div>`;
+            } else {
+                banner.className = "mb-8 bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-emerald-600 relative overflow-hidden flex items-center justify-between opacity-90 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-flag-checkered mr-2 text-emerald-500"></i> Ujian Tuntas</h2><p class="text-[10px] font-bold text-emerald-600/70">Seluruh siswa telah menyelesaikan ujian.</p></div><div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center border border-emerald-200"><i class="fa-solid fa-check text-xl text-emerald-500"></i></div>`;
+            }
+        } catch (e) {
+            if (banner) {
+                banner.className = "mb-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-6 text-gray-400 relative overflow-hidden flex items-center justify-between opacity-80 cursor-not-allowed";
+                banner.removeAttribute('onclick');
+                banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Portal Belum Tersedia</h2><p class="text-[10px] font-bold">Fitur ujian sedang dalam tahap pengembangan.</p></div>`;
+            }
+        }
     };
 
-    window.selectPortalStudent = (id) => {
-        selectedPortalStudentId = id;
-        document.getElementById('portalStudentSelectValue').value = id;
-        
-        const term = document.getElementById('portalStudentSearch').value.toLowerCase();
-        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-        const selectedExamId = document.getElementById('portalExamSelect').value;
-        renderPortalStudents(filtered, selectedExamId);
-    };
-
-    window.closeExamPortal = () => {
-        document.getElementById('modalExamPortal').classList.replace('flex', 'hidden');
-    };
-
-    window.startExam = () => {
-        const examId = document.getElementById('portalExamSelect').value;
-        const studentId = document.getElementById('portalStudentSelectValue').value;
-        
-        if(!examId) return window.showToast?.('warning', 'Oops!', 'Pilih ujian terlebih dahulu.');
-        if(!studentId) return window.showToast?.('warning', 'Pilih Siswa', 'Tentukan siswa yang akan mengerjakan ujian.');
-        
-        window.location.href = `/play/${examId}?student_id=${studentId}`;
-    };
+    // Jalankan sistem!
+    initUI();
 </script>
 
 <style>

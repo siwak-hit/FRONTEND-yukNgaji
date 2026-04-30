@@ -370,6 +370,7 @@ import Mascot from '../../components/Mascot.astro';
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js" is:inline></script>
 
+
 <script>
     // ==========================================
     // 1. CONFIG & GLOBAL STATE 
@@ -380,17 +381,20 @@ import Mascot from '../../components/Mascot.astro';
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const urlParams = new URLSearchParams(window.location.search);
     
-    // --- [BARU] LOGIKA TANGKAP TOKEN PR ---
-    const paramPrToken = urlParams.get('pr_token');
+    // --- [FIX BUG 401] LOGIKA TANGKAP TOKEN PR ---
+    const rawPrToken = urlParams.get('pr_token');
+    // Cegah Javascript membaca string "null" sebagai token asli
+    const paramPrToken = (rawPrToken && rawPrToken !== 'null') ? rawPrToken : null; 
+    
     const isPRMode = urlParams.get('pr') === 'true' || !!paramPrToken;
     
-    let token = localStorage.getItem('token'); // Default ambil token Ustadz
+    let token = localStorage.getItem('token');
     
     // Jika masuk dari link WA (bawa pr_token), simpan ke sessionStorage biar gak hilang pas refresh
     if (paramPrToken) {
         token = paramPrToken;
         sessionStorage.setItem('temp_pr_token', paramPrToken);
-    } else if (sessionStorage.getItem('temp_pr_token')) {
+    } else if (sessionStorage.getItem('temp_pr_token') && sessionStorage.getItem('temp_pr_token') !== 'null') {
         token = sessionStorage.getItem('temp_pr_token');
     }
 
@@ -624,6 +628,12 @@ import Mascot from '../../components/Mascot.astro';
                 const student = await stdRes.json();
                 const consData = await consRes.json();
                 const qData = await qRes.json();
+
+                if (!student || !student.data) {
+                    window.showToast?.('danger', 'Akses Ditolak', 'Sesi telah berakhir atau Anda tidak memiliki akses ke ujian ini.');
+                    setTimeout(() => window.location.replace('/'), 2000);
+                    return; // Hentikan script di sini agar tidak error ke bawah
+                }
 
                 currentStudentName = student.data.name?.split(' ')[0] || "Anak Baik";
                 if (consData.data) {

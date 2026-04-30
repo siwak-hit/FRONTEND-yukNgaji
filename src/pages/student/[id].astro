@@ -1158,6 +1158,15 @@ import Toast from '../../components/Toast.astro';
             const raports  = await rapRes.json();
             const attendance = await attRes.json();
             const lagStatus  = await lagRes.json();
+            const subjectsList = ['tajwid', 'fiqih', 'tauhid'];
+            const locksPromises = subjectsList.map(s => 
+                fetch(`${API_URL}/api/onboarding/pr-locks/${s}`, { headers })
+                .then(r => r.json())
+                .catch(() => ({data: []}))
+            );
+            const locksResults = await Promise.all(locksPromises);
+            window.prLocksCache = {};
+            subjectsList.forEach((s, i) => window.prLocksCache[s] = locksResults[i].data || []);
 
             // Render banner tertinggal di tab Todo
             if (lagStatus.data) renderLagBanner(lagStatus.data);
@@ -1425,8 +1434,8 @@ import Toast from '../../components/Toast.astro';
         img.src = url;
     });
 
-// ================================================================
-    // AKSI FOTO MODAL (Update: Konsultasi + Ujian + Galeri Bebas)
+    // ================================================================
+    // AKSI FOTO MODAL (Update: Konsultasi + Ujian + Galeri Bebas + SATPAM LOGS)
     // ================================================================
     window.acakFotoRaport = async () => {
         const btn         = document.getElementById('btnAcakFoto');
@@ -1438,53 +1447,46 @@ import Toast from '../../components/Toast.astro';
         btn.disabled = true;
 
         try {
-            // 1. Kumpulkan URL foto dari sesi Konsultasi
-            const fotoKonsul = (globalConsultations?.data || [])
-                .filter(c => c.image_url)
-                .map(c => c.image_url);
+            // 1. Kumpulkan dari Konsultasi
+            const fotoKonsul = (globalConsultations?.data || []).filter(c => c.image_url).map(c => c.image_url);
 
-            // 2. Kumpulkan URL foto dari jepretan Ujian (Anti-Cheat)
-            // Asumsi studentExamResults sudah dideklarasikan sebelumnya
-            const fotoUjian = (typeof studentExamResults !== 'undefined' ? studentExamResults : [])
-                .filter(e => e.capture_url)
-                .map(e => e.capture_url);
+            // 2. Kumpulkan dari Jepretan Ujian Anti-Cheat
+            const fotoUjian = (typeof studentExamResults !== 'undefined' ? studentExamResults : []).filter(e => e.capture_url).map(e => e.capture_url);
 
-            // 3. Kumpulkan URL foto dari Galeri Gaya Bebas (Fetch langsung)
+            // 3. Kumpulkan dari Galeri Gaya Bebas
             let fotoGaleri = [];
             try {
-                const resGaleri = await fetch(`${API_URL}/api/students/${studentId}/gallery`, { 
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (resGaleri.ok) {
-                    const galData = await resGaleri.json();
-                    fotoGaleri = (galData.data || []).map(g => g.image_url);
-                }
-            } catch (err) {
-                console.log("Gagal mengambil galeri untuk diacak", err);
-            }
+                const resGaleri = await fetch(`${API_URL}/api/students/${studentId}/gallery`, { headers: { 'Authorization': `Bearer ${token}` }});
+                if (resGaleri.ok) fotoGaleri = ((await resGaleri.json()).data || []).map(g => g.image_url);
+            } catch (err) {}
 
-            // 4. Gabungkan ketiga sumber foto menjadi satu array
-            const semuaFotoUrl = [...fotoKonsul, ...fotoUjian, ...fotoGaleri];
+            // 4. [BARU] Kumpulkan dari Kamera Satpam PR
+            let fotoSatpam = [];
+            try {
+                const resSatpam = await fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` }});
+                if (resSatpam.ok) fotoSatpam = ((await resSatpam.json()).data || []).map(s => s.photo_url);
+            } catch (err) {}
+
+            // 5. Gabungkan keempat sumber foto
+            const semuaFotoUrl = [...fotoKonsul, ...fotoUjian, ...fotoGaleri, ...fotoSatpam];
 
             if (semuaFotoUrl.length === 0) {
-                statusText.innerText = 'Belum ada foto dari kuesioner, ujian, maupun galeri.';
+                statusText.innerText = 'Belum ada foto sama sekali.';
                 btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Acak Foto';
                 btn.disabled = false;
                 return;
             }
 
-            // 5. Pilih 1 URL secara acak dari total gabungan
+            // 6. Pilih Acak & Render
             selectedFotoUrl = semuaFotoUrl[Math.floor(Math.random() * semuaFotoUrl.length)];
-            
             selectedFotoBase64 = await urlToBase64(selectedFotoUrl);
+            
             previewImg.src = selectedFotoBase64;
             previewImg.classList.remove('hidden');
             placeholder.classList.add('hidden');
-            
-            const btnHapus = document.getElementById('btnHapusFoto');
-            if(btnHapus) btnHapus.classList.remove('hidden');
-            
+            document.getElementById('btnHapusFoto')?.classList.remove('hidden');
             statusText.innerText = 'Foto berhasil diacak & dipilih!';
+            
         } catch (e) {
             console.error('Foto gagal diload:', e);
             statusText.innerText = 'Gagal memuat foto. Coba lagi.';
@@ -2232,25 +2234,46 @@ doc.setFontSize(10);
     // DETEKSI ANAK TERTINGGAL — Banner di Tab Tugas AI
     // ================================================================
     const renderLagBanner = (lagData) => {
-        // Hapus banner lama jika ada
         document.getElementById('lagBanner')?.remove();
 
         const SUBJECT_LABEL = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
         const laggingSubjects = Object.entries(lagData)
-            // Filter anak yang punya missedWeeks (ada tugas yg bolong/terlewat)
             .filter(([, v]) => v.missedWeeks && v.missedWeeks.length > 0)
             .map(([subject, v]) => ({ subject, ...v }));
 
-        if (laggingSubjects.length === 0) return; // Tidak ada yang tertinggal
+        if (laggingSubjects.length === 0) return;
 
-        // Buat banner HTML
         const banner = document.createElement('div');
         banner.id = 'lagBanner';
-        banner.className = 'mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3';
+        banner.className = 'mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3 shadow-sm';
 
         const itemsHtml = laggingSubjects.map(({ subject, classWeek, studentWeek, missedWeeks }) => {
             const missedLabel = missedWeeks.slice(0, 3).map(w => `Mg-${w}`).join(', ');
             const moreCount   = missedWeeks.length > 3 ? ` +${missedWeeks.length - 3} lagi` : '';
+            
+            const targetWeek = missedWeeks[0];
+            const isPR = window.prLocksCache[subject]?.includes(targetWeek);
+
+            // [BARU] Logika Pembeda Ujian Kelas & PR Rumah
+            let actionHtml = '';
+            if (isPR) {
+                actionHtml = `
+                    <div class="mt-2 w-full p-2 bg-indigo-50 border border-indigo-100 rounded-lg flex items-start gap-2 shadow-sm">
+                        <div class="w-6 h-6 rounded-md bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-house-laptop text-[10px]"></i>
+                        </div>
+                        <p class="text-[9px] text-indigo-700 font-bold leading-relaxed">
+                            Tugas Mg-${targetWeek} adalah <span class="bg-indigo-500 text-white px-1 py-0.5 rounded shadow-sm uppercase tracking-widest text-[7px]">PR 🏠</span>. Siswa harus mengerjakannya sendiri melalui link yang ada di grup WA.
+                        </p>
+                    </div>`;
+            } else {
+                actionHtml = `
+                    <button onclick="openSusulanModal('${subject}', ${JSON.stringify(missedWeeks)})"
+                        class="mt-2 w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg active:scale-95 transition-all shadow-sm">
+                        <i class="fa-solid fa-graduation-cap mr-1"></i> Berikan Ujian Susulan Mg-${targetWeek}
+                    </button>`;
+            }
+
             return `
                 <div class="bg-white rounded-xl p-3 border border-amber-100">
                     <div class="flex items-center justify-between mb-1">
@@ -2262,10 +2285,7 @@ doc.setFontSize(10);
                     <p class="text-[10px] text-gray-600 leading-relaxed">
                         Belum ujian pertemuan: <b class="text-amber-700">${missedLabel}${moreCount}</b>
                     </p>
-                    <button onclick="openSusulanModal('${subject}', ${JSON.stringify(missedWeeks)})"
-                        class="mt-2 w-full py-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-lg active:scale-95 transition-all">
-                        <i class="fa-solid fa-graduation-cap mr-1"></i> Berikan Ujian Susulan Mg-${missedWeeks[0]}
-                    </button>
+                    ${actionHtml}
                 </div>`;
         }).join('');
 
@@ -2276,7 +2296,6 @@ doc.setFontSize(10);
             </div>
             ${itemsHtml}`;
 
-        // Sisipkan di atas todoContainer
         const todoContainer = document.getElementById('todoContainer');
         todoContainer.parentElement.insertBefore(banner, todoContainer);
     };
