@@ -14,9 +14,16 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <p class="text-xs text-gray-500 font-medium" id="welcomeMsg">Assalamu'alaikum, Ustadz!</p>
             </div>
         
-            <button id="btnLogout" class="text-red-500 bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform">
-                <i class="fa-solid fa-power-off"></i>
-            </button>
+            <div class="flex items-center gap-3">
+                <!-- [BARU] Tombol Notifikasi -->
+                <button onclick="openNotifModal()" class="relative text-indigo-500 bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-sm">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="notifBadge" class="hidden absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white">0</span>
+                </button>
+                <button id="btnLogout" class="text-red-500 bg-red-50 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-sm">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
         </header>
 
         <section class="mb-16">
@@ -225,6 +232,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
+    <!-- MODAL TUNGGAKAN -->
     <div id="modalNotDone" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[85vh] animate-slide-up">
             <div class="text-center mb-3">
@@ -253,6 +261,33 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL NOTIFIKASI PR -->
+    <div id="modalNotif" class="fixed inset-0 bg-black/60 z-[200] hidden items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity opacity-0">
+        <div class="bg-white w-full sm:max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[75vh] sm:h-[80vh] transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="notifBox">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <h3 class="font-black text-gray-800 text-lg">Notifikasi PR</h3>
+                </div>
+                <button onclick="closeNotifModal()" class="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><span id="notifCountText">0</span> Pesan Baru</p>
+                <button onclick="clearAllNotifs()" class="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-colors">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua
+                </button>
+            </div>
+
+            <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-6">
+                <!-- List notif masuk kesini -->
+                <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500"></i></div>
+            </div>
+        </div>
+    </div>
+
     <Toast />
     <ModalAlert />
     <NavbarGuru activeMenu="home" />
@@ -264,7 +299,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     
     let enrichedStudents = [];    
-    let availableTasks = []; // Menyimpan master data {subject, week} dari backend
+    let availableTasks = []; 
 
     if (!token) window.location.replace('/');
 
@@ -291,6 +326,108 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     };
 
     // ==============================================================
+    // [BARU] LOGIKA NOTIFIKASI PR (FETCH, RENDER, DELETE)
+    // ==============================================================
+    let notifications = [];
+
+    const loadNotifications = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const result = await res.json();
+            notifications = result.data || [];
+            
+            const badge = document.getElementById('notifBadge');
+            const countText = document.getElementById('notifCountText');
+            
+            if (notifications.length > 0) {
+                badge.innerText = notifications.length;
+                badge.classList.remove('hidden');
+                if (countText) countText.innerText = notifications.length;
+            } else {
+                badge.classList.add('hidden');
+                if (countText) countText.innerText = '0';
+            }
+            renderNotifications();
+        } catch (e) { console.error("Gagal load notif", e); }
+    };
+
+    const renderNotifications = () => {
+        const container = document.getElementById('notifListContainer');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 flex flex-col items-center justify-center opacity-50"><i class="fa-regular fa-bell-slash text-5xl text-gray-300 mb-3"></i><p class="text-xs text-gray-500 font-bold">Belum ada notifikasi baru.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = notifications.map(notif => {
+            const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            
+            return `
+            <div class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group">
+                <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0 font-black text-xs border border-indigo-50">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="flex-1 min-w-0 pr-6">
+                    <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
+                    <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${dateStr}, ${timeStr}</p>
+                </div>
+                <button onclick="deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            `;
+        }).join('');
+    };
+
+    window.openNotifModal = () => {
+        const modal = document.getElementById('modalNotif');
+        const box = document.getElementById('notifBox');
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { 
+            modal.classList.replace('opacity-0', 'opacity-100'); 
+            box.classList.replace('translate-y-full', 'translate-y-0'); 
+        }, 10);
+        loadNotifications(); // Refresh setiap dibuka
+    };
+
+    window.closeNotifModal = () => {
+        const modal = document.getElementById('modalNotif');
+        const box = document.getElementById('notifBox');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        if (window.innerWidth < 640) box.classList.replace('translate-y-0', 'translate-y-full');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+    };
+
+    window.deleteNotif = async (id) => {
+        // Hapus langsung dari memori UI biar kerasa cepat tanpa nunggu loading API
+        notifications = notifications.filter(n => n.id !== id);
+        renderNotifications();
+        
+        const badge = document.getElementById('notifBadge');
+        if (notifications.length > 0) badge.innerText = notifications.length;
+        else badge.classList.add('hidden');
+        document.getElementById('notifCountText').innerText = notifications.length;
+
+        try { await fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+    };
+
+    window.clearAllNotifs = async () => {
+        if (notifications.length === 0) return;
+        if (!confirm('Hapus semua notifikasi?')) return;
+        
+        // Hapus langsung dari memori UI
+        notifications = [];
+        renderNotifications();
+        document.getElementById('notifBadge').classList.add('hidden');
+        document.getElementById('notifCountText').innerText = '0';
+
+        try { await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+    };
+
+
+    // ==============================================================
     // LOGIKA TUNGGAKAN TUGAS (GLOBAL & MODAL)
     // ==============================================================
     window.prLocksCache = {};
@@ -304,7 +441,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 availableTasks = filterData.data.available_tasks || [];
                 const subjectsList = filterData.data.subjects || [];
 
-                // [BARU] Ambil status Gembok PR untuk semua mapel sekaligus biar kenceng!
                 const locksPromises = subjectsList.map(s => 
                     fetch(`${API_URL}/api/onboarding/pr-locks/${s.toLowerCase()}`, { headers })
                     .then(r => r.json())
@@ -312,7 +448,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 );
                 const locksResults = await Promise.all(locksPromises);
                 
-                // Simpan ke dalam Cache
                 subjectsList.forEach((s, i) => {
                     window.prLocksCache[s.toLowerCase()] = locksResults[i].data || [];
                 });
@@ -329,36 +464,27 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         (filterData.data.weeks || []).map(w => `<option value="${w}">Pert. ${w}</option>`).join('');
                 }
 
-                // Event Listeners untuk Filter Modal
                 subjSelect?.addEventListener('change', renderNotDoneModalList);
                 weekSelect?.addEventListener('change', renderNotDoneModalList);
             }
             
             calculateGlobalMissingTasks();
-        } catch (e) {
-            console.error("Gagal memuat filter dan task", e);
-        }
+        } catch (e) { console.error("Gagal memuat filter dan task", e); }
     };
 
-    // Kalkulasi untuk Angka di Dashboard (Semua Anak yang punya minimal 1 tunggakan)
     const calculateGlobalMissingTasks = () => {
         enrichedStudents.forEach(student => {
             const completed = student.completed_tasks || [];
-            
-            // Bandingkan task yang tersedia vs task yang sudah dikerjakan anak
             student.missing_tasks = availableTasks.filter(available => 
                 !completed.some(done => done.subject === available.subject && done.week === available.week)
             );
         });
 
-        // Hitung total anak yang punya tunggakan
         const laggingStudents = enrichedStudents.filter(s => s.missing_tasks.length > 0);
-        
         const notDoneCountEl = document.getElementById('notDoneCount');
         if (notDoneCountEl) notDoneCountEl.innerText = laggingStudents.length;
     };
 
-    // Kalkulasi untuk List di dalam Modal berdasarkan Filter
     const renderNotDoneModalList = () => {
         const subjFilter = document.getElementById('modalFilterSubject')?.value;
         const weekFilter = parseInt(document.getElementById('modalFilterWeek')?.value);
@@ -366,11 +492,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
         if (!container) return;
 
-        // Saring anak yang missing task-nya cocok dengan kriteria filter saat ini
         const filteredStudents = enrichedStudents.filter(student => {
             if (!student.missing_tasks || student.missing_tasks.length === 0) return false;
-            
-            // Cek apakah anak ini punya missing_task yang sesuai filter
             return student.missing_tasks.some(mt => {
                 const matchSubj = subjFilter ? mt.subject.toLowerCase() === subjFilter : true;
                 const matchWeek = weekFilter ? mt.week === weekFilter : true;
@@ -384,24 +507,18 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         }
 
         container.innerHTML = filteredStudents.map(student => {
-            // Ambil missing task anak yang RELEVAN dengan filter saat ini
             const relevantMissing = student.missing_tasks.filter(mt => {
                 const matchSubj = subjFilter ? mt.subject.toLowerCase() === subjFilter : true;
                 const matchWeek = weekFilter ? mt.week === weekFilter : true;
                 return matchSubj && matchWeek;
             });
 
-            // Logika Indikator Badge & Posisi
             let badgesHtml = '';
-            let wrapperClass = 'items-center'; // DEFAULT: Nama ada presisi di tengah (Vertical Center)
+            let wrapperClass = 'items-center';
 
-            // Tampilkan badge HANYA JIKA filter belum spesifik
             if (!subjFilter || !weekFilter) {
                 const badges = relevantMissing.slice(0, 2).map(mt => {
-                    // [BARU] Cek apakah tugas ini adalah PR dari data Cache
                     const isPR = window.prLocksCache[mt.subject.toLowerCase()]?.includes(mt.week);
-                    
-                    // [BARU] Desain Label PR Premium
                     const prLabel = isPR 
                         ? `<span class="bg-indigo-500 text-white px-1 py-0.5 rounded-[4px] ml-1 flex items-center gap-0.5 shadow-sm"><i class="fa-solid fa-house-laptop text-[6px]"></i> PR</span>` 
                         : '';
@@ -414,7 +531,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 const moreCount = relevantMissing.length > 2 ? `<span class="flex items-center text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200">+${relevantMissing.length - 2}</span>` : '';
                 
                 badgesHtml = `<div class="flex flex-wrap gap-1 mt-1.5">${badges}${moreCount}</div>`;
-                wrapperClass = 'items-start pt-0.5'; // Kalau ada badge, posisinya mulai dari atas (items-start)
+                wrapperClass = 'items-start pt-0.5';
             }
 
             return `
@@ -437,8 +554,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.openNotDoneModal = () => {
         const modal = document.getElementById('modalNotDone');
         if (modal) modal.classList.replace('hidden', 'flex');
-        
-        // Render list pertama kali modal dibuka
         renderNotDoneModalList();
     };
 
@@ -474,20 +589,18 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             renderStudentList();
             renderLeaderboard();
-            
-            // Panggil filter setelah data murid masuk
             await initFiltersAndTasks();
+            
+            // [BARU] Panggil loadNotifications pas dashboard dimuat
+            loadNotifications();
 
         } catch (error) {
-            console.error(error);
             if (window.showToast) window.showToast('danger', 'Error', 'Gagal memuat data dashboard.');
-            
             document.getElementById('studentList').innerHTML = '<div class="text-center py-6 text-red-500 text-xs font-bold">Gagal memuat.</div>';
             document.getElementById('podiumContainer').innerHTML = '<div class="text-center w-full text-red-500 text-xs font-bold">Gagal memuat.</div>';
         }
     };
 
-    // --- RENDER TAB: DAFTAR ANAK (TOP 5 BERDASARKAN FILTER) ---
     const renderStudentList = () => {
         const filterEl = document.getElementById('filterList');
         if (!filterEl) return;
@@ -511,9 +624,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         const top5 = sorted.slice(0, 5);
         container.innerHTML = top5.map((student, idx) => {
             const initials = student.name.substring(0, 2).toUpperCase();
-            const avatarHtml = student.photo_url 
-                ? `<img src="${student.photo_url}" class="w-full h-full object-cover" alt="${student.name}" />` 
-                : initials;
+            const avatarHtml = student.photo_url ? `<img src="${student.photo_url}" class="w-full h-full object-cover" alt="${student.name}" />` : initials;
             
             let detailBadge = '';
             if (filter === 'nilai') detailBadge = `<span class="bg-amber-100 text-amber-600 px-2 py-0.5 rounded text-[9px] font-bold ml-2"><i class="fa-solid fa-star text-[8px]"></i> Rata: ${student.finalScore}</span>`;
@@ -556,7 +667,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const filterListEl = document.getElementById('filterList');
     if (filterListEl) filterListEl.addEventListener('change', renderStudentList);
 
-    // --- RENDER TAB: LEADERBOARD PANGGUNG JUARA ---
     const renderLeaderboard = () => {
         const podiumContainer = document.getElementById('podiumContainer');
         const tableBody = document.getElementById('leaderboardTable');
@@ -735,7 +845,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
-    /* Scrollbar minimalis khusus untuk di dalam list Modal */
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #fee2e2; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
