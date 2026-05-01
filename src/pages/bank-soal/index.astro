@@ -1438,8 +1438,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.copyPRLink = (subject, week) => {
         const frontendUrl = window.location.origin; // Otomatis ngambil http://localhost:1234 atau domain asli
         
-        // Link diarahkan ke halaman awal konsultasi agar murid bisa pilih nama dulu
-        const link = `${frontendUrl}/consultations?subject=${subject}&week=${week}&pr=true`;
+        // [FIX BUG] Sisipkan variabel "token" ustadz ke dalam parameter pr_token
+        const link = `${frontendUrl}/consultations?subject=${subject}&week=${week}&pr=true&pr_token=${token}`;
         
         // Coba salin ke Clipboard bawaan device
         navigator.clipboard.writeText(link).then(() => {

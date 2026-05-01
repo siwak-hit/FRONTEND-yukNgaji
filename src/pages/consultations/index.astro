@@ -190,18 +190,26 @@ import Toast from '../../components/Toast.astro';
     // =======================================================================
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const urlParams = new URLSearchParams(window.location.search);
-    const paramPrToken = urlParams.get('pr_token');
+    
+    // [FIX] Tangkap raw token dan cegah string "null" merusak sistem
+    const rawPrToken = urlParams.get('pr_token');
+    const paramPrToken = (rawPrToken && rawPrToken !== 'null') ? rawPrToken : null;
     const isPRMode = urlParams.get('pr') === 'true' || !!paramPrToken;
     
-    // Logika Token Cerdas
+    // Logika Token Cerdas (Gabungan Guru & Murid)
     let token = localStorage.getItem('token'); 
     if (paramPrToken) {
         token = paramPrToken;
         sessionStorage.setItem('temp_pr_token', paramPrToken);
-    } else if (sessionStorage.getItem('temp_pr_token')) {
+    } else if (sessionStorage.getItem('temp_pr_token') && sessionStorage.getItem('temp_pr_token') !== 'null') {
         token = sessionStorage.getItem('temp_pr_token');
     }
-    if (!token) window.location.replace('/');
+    
+    // Kalau bener-bener gak ada token, baru tendang
+    if (!token) {
+        window.location.replace('/');
+        throw new Error("Akses ditolak: Token tidak ditemukan.");
+    }
 
     // Cache Memory (Biar HP nggak capek fetch berulang kali)
     const STATE = {

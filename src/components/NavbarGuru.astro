@@ -23,3 +23,21 @@ const { activeMenu = 'home' } = Astro.props;
         <span class="text-[10px] font-medium">Konsul</span>
     </a>
 </nav>
+
+<script>
+    // [UPDATE] Cek localStorage (untuk Guru) ATAU sessionStorage (untuk Murid yang lagi PR)
+    const tokenGuru = localStorage.getItem('token');
+    const tokenMurid = sessionStorage.getItem('temp_pr_token');
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenDariUrl = urlParams.get('pr_token');
+
+    // Cek apakah ada salah satu token yang valid (bukan string "null")
+    const isTokenValid = (tokenGuru && tokenGuru !== 'null') || 
+                         (tokenMurid && tokenMurid !== 'null') || 
+                         (tokenDariUrl && tokenDariUrl !== 'null');
+
+    if (!isTokenValid) {
+        // Jika tidak ada akses sama sekali, tendang ke halaman login
+        window.location.replace('/');
+    }
+</script>
