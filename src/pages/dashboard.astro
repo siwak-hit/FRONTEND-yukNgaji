@@ -288,6 +288,21 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL KONFIRMASI CUSTOM NOTIFIKASI -->
+    <div id="modalConfirmNotif" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-indigo-400" id="modalConfirmNotifBox">
+            <div id="confirmNotifIconBox" class="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-bell-slash"></i>
+            </div>
+            <h3 id="confirmNotifTitle" class="font-black text-gray-800 text-xl mb-2">Hapus Notifikasi?</h3>
+            <p id="confirmNotifMessage" class="text-sm text-gray-600 mb-6 leading-relaxed font-medium">Apakah Anda yakin?</p>
+            <div class="flex gap-3">
+                <button id="btnConfirmNotifCancel" class="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
+                <button id="btnConfirmNotifYes" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
     <Toast />
     <ModalAlert />
     <NavbarGuru activeMenu="home" />
@@ -326,30 +341,80 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     };
 
     // ==============================================================
-    // [BARU] LOGIKA NOTIFIKASI PR (FETCH, RENDER, DELETE)
+    // [UPDATE] LOGIKA NOTIFIKASI PR (GROUPING & AUTO-DELETE)
     // ==============================================================
     let notifications = [];
 
-    const loadNotifications = async () => {
+    // Fungsi Helper untuk Grouping Waktu
+    const getTimeCategory = (dateString) => {
+        const notifDate = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - notifDate;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+        if (diffDays === 0 && now.getDate() === notifDate.getDate()) {
+            if (diffHours < 12 && notifDate.getHours() < 12) return "Pagi Ini";
+            if (diffHours < 12 && notifDate.getHours() >= 12 && notifDate.getHours() < 15) return "Siang Ini";
+            if (diffHours < 12 && notifDate.getHours() >= 15 && notifDate.getHours() < 18) return "Sore Ini";
+            if (diffHours < 12 && notifDate.getHours() >= 18) return "Malam Ini";
+            return "Hari Ini";
+        }
+        if (diffDays === 1) return "Kemarin";
+        if (diffDays > 1 && diffDays <= 7) return "Minggu Ini";
+        return "Beberapa Minggu Lalu";
+    };
+
+    const loadNotifications = async (isFirstLoad = false) => {
         try {
             const res = await fetch(`${API_URL}/api/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
             notifications = result.data || [];
             
-            const badge = document.getElementById('notifBadge');
-            const countText = document.getElementById('notifCountText');
-            
-            if (notifications.length > 0) {
-                badge.innerText = notifications.length;
-                badge.classList.remove('hidden');
-                if (countText) countText.innerText = notifications.length;
-            } else {
-                badge.classList.add('hidden');
-                if (countText) countText.innerText = '0';
+            // Logika Auto-Delete (Hanya jalan pas baru buka laci)
+            if (!isFirstLoad) {
+                const oldNotifs = notifications.filter(n => {
+                    const diffDays = Math.floor((new Date() - new Date(n.created_at)) / (1000 * 60 * 60 * 24));
+                    return diffDays > 7;
+                });
+
+                if (oldNotifs.length > 0) {
+                    showConfirmNotif(
+                        "Bersih-bersih Laci",
+                        `Terdapat ${oldNotifs.length} notif yang sudah lewat dari seminggu. Mau dihapus biar laci rapi?`,
+                        async () => {
+                            // Hapus dari UI dulu
+                            const oldIds = oldNotifs.map(n => n.id);
+                            notifications = notifications.filter(n => !oldIds.includes(n.id));
+                            updateNotifBadge();
+                            renderNotifications();
+                            // Hapus dari DB (asumsi lu bikin API bulk delete)
+                            try {
+                                await Promise.all(oldIds.map(id => fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }})));
+                            } catch(e) {}
+                        },
+                        true // true = Kasih tau jangan dihapus kalau dia pencet Batal
+                    );
+                }
             }
+
+            updateNotifBadge();
             renderNotifications();
         } catch (e) { console.error("Gagal load notif", e); }
     };
+
+    const updateNotifBadge = () => {
+        const badge = document.getElementById('notifBadge');
+        const countText = document.getElementById('notifCountText');
+        if (notifications.length > 0) {
+            badge.innerText = notifications.length;
+            badge.classList.remove('hidden');
+            if (countText) countText.innerText = notifications.length;
+        } else {
+            badge.classList.add('hidden');
+            if (countText) countText.innerText = '0';
+        }
+    }
 
     const renderNotifications = () => {
         const container = document.getElementById('notifListContainer');
@@ -360,23 +425,45 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             return;
         }
 
-        container.innerHTML = notifications.map(notif => {
-            const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            const dateStr = new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        // Grouping
+        const grouped = {};
+        notifications.forEach(notif => {
+            const cat = getTimeCategory(notif.created_at);
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(notif);
+        });
+
+        // Urutan render kategori
+        const catOrder = ["Pagi Ini", "Siang Ini", "Sore Ini", "Malam Ini", "Hari Ini", "Kemarin", "Minggu Ini", "Beberapa Minggu Lalu"];
+
+        container.innerHTML = catOrder.map(cat => {
+            if (!grouped[cat] || grouped[cat].length === 0) return '';
             
+            const listHtml = grouped[cat].map(notif => {
+                const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                return `
+                <div class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group">
+                    <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0 font-black text-xs border border-indigo-50">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <div class="flex-1 min-w-0 pr-6">
+                        <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
+                        <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
+                    </div>
+                    <button onclick="deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                `;
+            }).join('');
+
             return `
-            <div class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group">
-                <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0 font-black text-xs border border-indigo-50">
-                    <i class="fa-solid fa-check"></i>
+                <div class="mb-4">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 pl-1 border-b border-gray-100 pb-1">${cat}</h4>
+                    <div class="space-y-2">
+                        ${listHtml}
+                    </div>
                 </div>
-                <div class="flex-1 min-w-0 pr-6">
-                    <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
-                    <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${dateStr}, ${timeStr}</p>
-                </div>
-                <button onclick="deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
             `;
         }).join('');
     };
@@ -389,7 +476,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             modal.classList.replace('opacity-0', 'opacity-100'); 
             box.classList.replace('translate-y-full', 'translate-y-0'); 
         }, 10);
-        loadNotifications(); // Refresh setiap dibuka
+        loadNotifications(false); // isFirstLoad = false (Cek auto-delete)
     };
 
     window.closeNotifModal = () => {
@@ -400,30 +487,55 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
     };
 
-    window.deleteNotif = async (id) => {
-        // Hapus langsung dari memori UI biar kerasa cepat tanpa nunggu loading API
-        notifications = notifications.filter(n => n.id !== id);
-        renderNotifications();
-        
-        const badge = document.getElementById('notifBadge');
-        if (notifications.length > 0) badge.innerText = notifications.length;
-        else badge.classList.add('hidden');
-        document.getElementById('notifCountText').innerText = notifications.length;
+    // --- MODAL KONFIRMASI CUSTOM NOTIF ---
+    let notifConfirmCallback = null;
+    let keepIfCancel = false;
 
-        try { await fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+    const showConfirmNotif = (title, message, onConfirm, warnIfCancel = false) => {
+        document.getElementById('confirmNotifTitle').innerText = title;
+        document.getElementById('confirmNotifMessage').innerText = message;
+        notifConfirmCallback = onConfirm;
+        keepIfCancel = warnIfCancel;
+        
+        const modal = document.getElementById('modalConfirmNotif');
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => modal.classList.replace('opacity-0', 'opacity-100'), 10);
     };
 
-    window.clearAllNotifs = async () => {
-        if (notifications.length === 0) return;
-        if (!confirm('Hapus semua notifikasi?')) return;
-        
-        // Hapus langsung dari memori UI
-        notifications = [];
-        renderNotifications();
-        document.getElementById('notifBadge').classList.add('hidden');
-        document.getElementById('notifCountText').innerText = '0';
+    document.getElementById('btnConfirmNotifCancel').onclick = () => {
+        const modal = document.getElementById('modalConfirmNotif');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        notifConfirmCallback = null;
+        if (keepIfCancel) {
+            window.showToast?.('info', 'Notif Disimpan', 'Notif lama dipindahkan ke "Beberapa Minggu Lalu".');
+        }
+    };
 
-        try { await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+    document.getElementById('btnConfirmNotifYes').onclick = () => {
+        const modal = document.getElementById('modalConfirmNotif');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        if (notifConfirmCallback) notifConfirmCallback();
+    };
+
+    window.deleteNotif = (id) => {
+        showConfirmNotif('Hapus Notifikasi?', 'Notif ini akan dihapus permanen dari laci.', async () => {
+            notifications = notifications.filter(n => n.id !== id);
+            updateNotifBadge();
+            renderNotifications();
+            try { await fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+        });
+    };
+
+    window.clearAllNotifs = () => {
+        if (notifications.length === 0) return;
+        showConfirmNotif('Hapus Semua?', 'Yakin mau hapus semua notifikasi? Laci akan kembali kosong.', async () => {
+            notifications = [];
+            updateNotifBadge();
+            renderNotifications();
+            try { await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
+        });
     };
 
 
@@ -592,7 +704,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             await initFiltersAndTasks();
             
             // [BARU] Panggil loadNotifications pas dashboard dimuat
-            loadNotifications();
+            loadNotifications(true);
 
         } catch (error) {
             if (window.showToast) window.showToast('danger', 'Error', 'Gagal memuat data dashboard.');

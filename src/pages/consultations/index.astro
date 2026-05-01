@@ -414,34 +414,52 @@ import Toast from '../../components/Toast.astro';
         const instruction = document.getElementById('satpamInstruction');
         
         try {
-            STATE.satpamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } });
-            video.srcObject = STATE.satpamStream;
-            
-            video.onloadedmetadata = async () => {
-                video.play();
-                video.width = video.videoWidth; // Cegah error aspect ratio AI
-                video.height = video.videoHeight;
+            // [TAHAP 1] Coba request kamera depan dengan resolusi ideal
+            STATE.satpamStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } 
+            });
+        } catch (err1) {
+            try {
+                // [TAHAP 2] Fallback: Minta SEMBARANG kamera pokoknya nyala!
+                STATE.satpamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            } catch (err2) {
+                // [TAHAP 3] Penjelasan UX kalau beneran gagal/ditolak/dikunci aplikasi lain
+                instruction.innerHTML = `
+                    <span class='text-red-500 font-bold text-[10px]'>
+                        <i class="fa-solid fa-triangle-exclamation"></i> Kamera gagal diakses.<br>
+                        Pastikan tidak ada aplikasi lain (WA/Kamera) yang sedang terbuka di background. Tutup lalu <b>Refresh</b> halaman.
+                    </span>`;
+                const targetCircle = document.getElementById('satpamTargetCircle');
+                if (targetCircle) targetCircle.classList.replace('border-white/70', 'border-red-500');
                 
-                // UX: User bisa ngaca sambil nunggu AI download
-                instruction.innerHTML = "<span class='text-blue-500 font-bold'><i class='fa-solid fa-spinner fa-spin mr-1'></i> Memuat sensor biometrik...<br><span class='text-[10px] text-gray-400'>Silakan posisikan wajah ke tengah layar.</span></span>";
-                
-                if (!window.isSatpamAILoaded) {
-                    try {
-                        await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
-                        window.isSatpamAILoaded = true;
-                    } catch (err) {
-                        instruction.innerHTML = "<span class='text-red-500 font-bold'>Gagal memuat AI. Pastikan internet stabil.</span>";
-                        return;
-                    }
-                }
-
-                instruction.innerHTML = "<span class='text-gray-600 font-bold'>Kamera aktif. <br>Tahan wajah Anda di dalam lingkaran...</span>";
-                runFaceDetectionLoop(); 
-            };
-        } catch (err) {
-            instruction.innerHTML = "<span class='text-red-500 font-bold'>Akses kamera ditolak. Silakan izinkan kamera di browser.</span>";
-            document.getElementById('satpamTargetCircle').classList.replace('border-white/70', 'border-red-500');
+                return; // STOP DI SINI! Jangan lanjut baca metadata video
+            }
         }
+
+        // Kalau berhasil tembus (dari Tahap 1 atau 2), masukin stream-nya ke elemen video
+        video.srcObject = STATE.satpamStream;
+            
+        video.onloadedmetadata = async () => {
+            video.play();
+            video.width = video.videoWidth; // Cegah error aspect ratio AI
+            video.height = video.videoHeight;
+            
+            // UX: User bisa ngaca sambil nunggu AI download
+            instruction.innerHTML = "<span class='text-blue-500 font-bold'><i class='fa-solid fa-spinner fa-spin mr-1'></i> Memuat sensor biometrik...<br><span class='text-[10px] text-gray-400'>Silakan posisikan wajah ke tengah layar.</span></span>";
+            
+            if (!window.isSatpamAILoaded) {
+                try {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
+                    window.isSatpamAILoaded = true;
+                } catch (err) {
+                    instruction.innerHTML = "<span class='text-red-500 font-bold'>Gagal memuat AI. Pastikan internet stabil.</span>";
+                    return;
+                }
+            }
+
+            instruction.innerHTML = "<span class='text-gray-600 font-bold'>Kamera aktif. <br>Tahan wajah Anda di dalam lingkaran...</span>";
+            runFaceDetectionLoop(); 
+        };
     };
 
     const runFaceDetectionLoop = () => {

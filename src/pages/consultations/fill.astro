@@ -127,8 +127,9 @@ import Mascot from '../../components/Mascot.astro';
                     </label>
                 </div>
 
-                <button id="btnStart" class="w-full max-w-xs py-4 bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all text-lg">
-                    Mulai Sekarang
+                <!-- [UX BARU] Tombol Mulai Dimatikan Default -->
+                <button id="btnStart" disabled class="w-full max-w-xs py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Data...
                 </button>
             </div>
 
@@ -173,7 +174,14 @@ import Mascot from '../../components/Mascot.astro';
                     </div>
                 </section>
 
-                <button id="btnSubmit" disabled class="w-full py-5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg shadow-sm mb-12">
+                <div id="reviewCheckboxContainer" class="hidden mb-4 bg-orange-50 p-4 rounded-2xl border border-orange-200 transition-all transform opacity-0 translate-y-4">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="checkReview" class="mt-0.5 w-5 h-5 text-orange-600 focus:ring-orange-500 rounded border-orange-300 cursor-pointer">
+                        <span class="text-xs font-bold text-orange-800 leading-relaxed">Aku sudah membaca dan mengecek semua jawabanku dengan teliti.</span>
+                    </label>
+                </div>
+
+                <button id="btnSubmit" disabled class="w-full py-5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg shadow-sm mb-12 relative overflow-hidden">
                     Kirim Semua Jawaban
                 </button>
             </div>
@@ -203,7 +211,7 @@ import Mascot from '../../components/Mascot.astro';
             <p class="text-sm text-gray-500 mb-6 leading-relaxed">Yakin ingin mengunci bagian akademik sekarang? Sisa waktu Anda akan dihanguskan.</p>
             <div class="flex gap-3">
                 <button onclick="closeEarlyFinishModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">Batal</button>
-                <button onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">Ya, Kunci</button>
+                <button id="btnConfirmEarlyFinish" onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">Ya, Kunci</button>
             </div>
         </div>
     </div>
@@ -296,8 +304,8 @@ import Mascot from '../../components/Mascot.astro';
                 <h3 class="font-black text-gray-950 text-2xl mb-1 uppercase tracking-widest relative z-10">SIX SEVEN!!</h3>
                 <p class="text-[10px] font-bold text-purple-800 mb-5 leading-relaxed relative z-10 px-2">Wah! Nilai kamu pas banget 67! Dapet salam perayaan dari MIAW!</p>
                 <div class="text-6xl font-black text-purple-600 mb-6 drop-shadow-sm animate-pulse relative z-10">67</div>
-                <button onclick="closeResultAndCheckReminder()" class="w-full py-4 bg-gray-950 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all relative z-10 uppercase tracking-widest">
-                    Tutup & Kembali
+                <button id="btnMemeClose" onclick="closeResultAndCheckReminder()" disabled class="w-full py-4 bg-gray-800 text-gray-500 font-bold rounded-2xl text-xs cursor-not-allowed transition-all relative z-10 uppercase tracking-widest">
+                    Tunggu (5)...
                 </button>
             </div>
         </div>
@@ -601,6 +609,22 @@ import Mascot from '../../components/Mascot.astro';
             setupKuesionerSosial();
             let allQuestions = [];
 
+            // [FIX UX] Tampilkan Spinner Animasi dan Gembok Tombol Submit
+            const qListContainer = document.getElementById('questionsList');
+            if (qListContainer) {
+                qListContainer.innerHTML = `
+                    <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-spinner fa-spin text-5xl text-green-500 mb-4"></i>
+                        <h3 class="font-black text-gray-800 text-lg mb-1">Tunggu Sebentar...</h3>
+                        <p class="text-xs text-gray-400 font-bold">Mempersiapkan soal dari Ustadz!</p>
+                    </div>
+                `;
+            }
+            if (btnSubmitGlobal) {
+                btnSubmitGlobal.disabled = true;
+                btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Ujian...';
+            }
+
             if (isPreview) {
                 localStorage.removeItem(timeKey); localStorage.removeItem(ansKey);
                 localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
@@ -742,8 +766,25 @@ import Mascot from '../../components/Mascot.astro';
             updateShopUI();
             if (!isPreview) checkRealNotifications();
 
+            validate();
+
+            const btnStartLobby = document.getElementById('btnStart');
+            if (btnStartLobby) {
+                btnStartLobby.disabled = false;
+                btnStartLobby.innerHTML = 'Mulai Sekarang <i class="fa-solid fa-rocket ml-1"></i>';
+                btnStartLobby.className = 'w-full max-w-xs py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-2xl shadow-lg shadow-green-600/30 active:scale-95 transition-all text-lg flex items-center justify-center gap-2';
+            }
+
         } catch (e) {
-            console.error(e); window.showToast?.('danger', 'Error', 'Gagal memuat ujian.');
+            console.error(e); 
+            window.showToast?.('danger', 'Error', 'Gagal memuat Tugas.');
+            // Kalau gagal fetch data, ganti teks tombol jadi error biar anak tau
+            const btnStartLobby = document.getElementById('btnStart');
+            if (btnStartLobby) {
+                btnStartLobby.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Gagal Memuat Data';
+                btnStartLobby.classList.replace('text-gray-400', 'text-red-500');
+                btnStartLobby.classList.replace('bg-gray-200', 'bg-red-100');
+            }
         }
     };
 
@@ -870,8 +911,8 @@ import Mascot from '../../components/Mascot.astro';
         executeAutoSave();
     };
 
-    // ==========================================
-    // 5. VALIDATION & AUTO-SAVE
+// ==========================================
+    // 5. VALIDATION & AUTO-SAVE (UX UPDATED)
     // ==========================================
     const validate = () => {
         const totalQs = questions.length + 3; let answered = 0;
@@ -889,17 +930,93 @@ import Mascot from '../../components/Mascot.astro';
         
         if(elProgressBar) elProgressBar.style.width = `${totalQs > 0 ? (answered / totalQs) * 100 : 0}%`;
 
-        if (document.querySelector('input[name="q_akhlak"]:checked') && document.querySelector('input[name="q_disiplin"]:checked') && document.querySelector('input[name="q_aktif"]:checked')) {
-            btnSubmitGlobal.disabled = false;
-            if (!isEvaluatingExtraLife) {
-                btnSubmitGlobal.classList.replace('bg-gray-200', 'bg-green-600'); btnSubmitGlobal.classList.replace('text-gray-400', 'text-white'); btnSubmitGlobal.classList.remove('cursor-not-allowed');
+        // [UX BARU] Logika Validasi Bertingkat (Anti Asal Kirim)
+        const isAllAnswered = answered >= totalQs;
+        const reviewContainer = document.getElementById('reviewCheckboxContainer');
+        const checkReview = document.getElementById('checkReview');
+
+        if (isAllAnswered) {
+            // 1. Soal beres? Munculin Kotak Janji
+            if (reviewContainer.classList.contains('hidden')) {
+                reviewContainer.classList.remove('hidden');
+                setTimeout(() => reviewContainer.classList.remove('opacity-0', 'translate-y-4'), 10);
+            }
+            
+            // 2. Tombol Kirim HANYA nyala kalau kotak janji dicentang
+            if (checkReview && checkReview.checked) {
+                btnSubmitGlobal.disabled = false;
+                // [FIX BUG] Kembalikan teks tombol ke kondisi semula, buang spinnernya!
+                btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
+                if (!isEvaluatingExtraLife) {
+                    btnSubmitGlobal.classList.replace('bg-gray-200', 'bg-green-600'); 
+                    btnSubmitGlobal.classList.replace('text-gray-400', 'text-white'); 
+                    btnSubmitGlobal.classList.remove('cursor-not-allowed');
+                }
+            } else {
+                btnSubmitGlobal.disabled = true;
+                // [FIX BUG] Ubah teks biar jelas kenapa belum bisa diklik
+                btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Centang Janji di Atas';
+                if (!isEvaluatingExtraLife) {
+                    btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
+                    btnSubmitGlobal.classList.replace('text-white', 'text-gray-400'); 
+                    btnSubmitGlobal.classList.add('cursor-not-allowed');
+                }
             }
         } else {
+            // Kalau ada jawaban yang mendadak dikosongin lagi, tarik balik kotaknya
+            reviewContainer.classList.add('opacity-0', 'translate-y-4');
+            setTimeout(() => reviewContainer.classList.add('hidden'), 300);
+            if (checkReview) checkReview.checked = false; // Reset centangnya
+            
             btnSubmitGlobal.disabled = true;
+            // [FIX BUG] Teks saat masih ada soal yang kosong
+            btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
             if (!isEvaluatingExtraLife) {
-                btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); btnSubmitGlobal.classList.replace('text-white', 'text-gray-400'); btnSubmitGlobal.classList.add('cursor-not-allowed');
+                btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
+                btnSubmitGlobal.classList.replace('text-white', 'text-gray-400'); 
+                btnSubmitGlobal.classList.add('cursor-not-allowed');
             }
         }
+    };
+
+    // Dengarkan saat anak menceklis/un-ceklis kotak janji
+    document.getElementById('checkReview')?.addEventListener('change', validate);
+
+    // [UX BARU] Delay Konfirmasi agar anak tidak double tap
+    document.getElementById('btnEarlyFinish').onclick = () => {
+        document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
+        const btnConfirm = document.getElementById('btnConfirmEarlyFinish');
+        let count = 3;
+        
+        btnConfirm.disabled = true;
+        btnConfirm.className = 'flex-1 py-3.5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all';
+        btnConfirm.innerText = `Tunggu (${count})`;
+        
+        window.earlyFinishInterval = setInterval(() => {
+            count--;
+            if(count > 0) {
+                btnConfirm.innerText = `Tunggu (${count})`;
+            } else {
+                clearInterval(window.earlyFinishInterval);
+                btnConfirm.disabled = false;
+                btnConfirm.innerText = 'Ya, Kunci';
+                btnConfirm.className = 'flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all';
+            }
+        }, 1000);
+    };
+
+    window.closeEarlyFinishModal = () => {
+        clearInterval(window.earlyFinishInterval);
+        document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
+    };
+
+    window.confirmEarlyFinish = () => {
+        finalTimeTaken = (parsedWeek === 1 ? 105 : 180) - timeLeft; 
+        timeLeft = 0; 
+        updateTimerUI(); 
+        clearInterval(timerInterval); 
+        disableAcademicSection(); 
+        closeEarlyFinishModal();
     };
 
     const _saveDraftAnswers = () => {
@@ -1074,11 +1191,6 @@ import Mascot from '../../components/Mascot.astro';
         }, 1000);
     };
 
-    document.getElementById('btnEarlyFinish').onclick = () => document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
-    window.closeEarlyFinishModal = () => document.getElementById('modalEarlyFinish').classList.replace('flex', 'hidden');
-    window.confirmEarlyFinish = () => {
-        finalTimeTaken = 105 - timeLeft; timeLeft = 0; updateTimerUI(); clearInterval(timerInterval); disableAcademicSection(); closeEarlyFinishModal();
-    };
 
     // ==========================================
     // 7. TOKO & GAMIFIKASI (FIX BUGS)
@@ -1438,9 +1550,39 @@ import Mascot from '../../components/Mascot.astro';
             else bonusEl.classList.add('hidden');
 
             if (finalScore === 67) {
-                normalView.classList.replace('flex', 'hidden'); memeView.classList.replace('hidden', 'block');
-                const vid = document.getElementById('meme67Video'); if (vid) { vid.currentTime = 0; vid.muted = true; vid.play().then(() => { vid.muted = false; vid.volume = 0.6; }).catch(() => { vid.muted = true; vid.play(); }); }
+                normalView.classList.replace('flex', 'hidden'); 
+                memeView.classList.replace('hidden', 'block');
+                
+                const vid = document.getElementById('meme67Video'); 
+                if (vid) { 
+                    vid.currentTime = 0; 
+                    vid.muted = true; 
+                    vid.play().then(() => { vid.muted = false; vid.volume = 0.6; }).catch(() => { vid.muted = true; vid.play(); }); 
+                }
                 emojiEl.innerText = '🔥';
+
+                // [UX BARU] Bikin bocil terpaksa nonton meme selama 5 detik!
+                const btnMeme = document.getElementById('btnMemeClose');
+                if (btnMeme) {
+                    btnMeme.disabled = true;
+                    btnMeme.className = 'w-full py-4 bg-gray-800 text-gray-500 font-bold rounded-2xl text-xs cursor-not-allowed transition-all relative z-10 uppercase tracking-widest';
+                    
+                    let memeCount = 5;
+                    btnMeme.innerText = `Tunggu (${memeCount})...`;
+                    
+                    const memeInterval = setInterval(() => {
+                        memeCount--;
+                        if (memeCount > 0) {
+                            btnMeme.innerText = `Tunggu (${memeCount})...`;
+                        } else {
+                            clearInterval(memeInterval);
+                            btnMeme.disabled = false;
+                            btnMeme.innerText = 'Tutup & Kembali';
+                            btnMeme.className = 'w-full py-4 bg-gray-950 text-white font-bold rounded-2xl text-xs active:scale-95 cursor-pointer transition-all relative z-10 uppercase tracking-widest shadow-lg shadow-gray-900/50';
+                        }
+                    }, 1000);
+                }
+
             } else {
                 normalView.classList.replace('hidden', 'flex'); memeView.classList.replace('block', 'hidden'); scoreEl.innerText = finalScore; scoreEl.className = 'text-5xl font-black leading-none transition-all duration-700';
                 if (finalScore >= 80) { emojiEl.innerText = '🏆'; titleEl.innerText = 'Luar Biasa!'; msgEl.innerText = 'Alhamdulillah, nilaimu sangat bagus! Jangan sombong ya.'; scoreEl.classList.add('text-green-600'); setTimeout(() => { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }, 300); } 
