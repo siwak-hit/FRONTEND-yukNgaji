@@ -130,6 +130,32 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL PR TERLAMBAT (DEADLINE HABIS) -->
+    <div id="modalPRLate" class="fixed inset-0 bg-black/80 z-[200] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl text-center transform scale-95 transition-transform duration-300 relative overflow-hidden p-6 border-4 border-red-500" id="modalPRLateBox">
+            
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg relative z-10">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            
+            <h2 class="text-2xl font-black text-gray-800 mb-1 uppercase tracking-tight">Yahh, Kamu Telat!</h2>
+            <p class="text-xs text-gray-500 font-bold mb-4">Waktu pengerjaan tugas PR ini sudah habis.</p>
+            
+            <div class="bg-red-50 border border-red-100 rounded-2xl p-4 mb-6">
+                <p class="text-[10px] font-black text-red-800 uppercase tracking-widest mb-1">Batas Waktu Sebelumnya:</p>
+                <p id="lateDeadlineText" class="text-sm font-bold text-red-600">--</p>
+            </div>
+
+            <p class="text-[11px] text-gray-600 font-medium leading-relaxed mb-6 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Silakan hubungi <b>Kak Aziz (Ustadz)</b> untuk meminta perpanjangan waktu (dispensasi).
+            </p>
+
+            <button onclick="closePRLateModal()" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest">
+                Saya Mengerti
+            </button>
+        </div>
+    </div>
+
 <!-- MODAL SATPAM PR (70% Video, 30% Text) -->
 <div id="modalSatpamPR" class="fixed inset-0 bg-gray-950/95 z-[120] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
     <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col h-[80vh] max-h-[600px] relative" id="modalSatpamBox">
@@ -363,10 +389,72 @@ import Toast from '../../components/Toast.astro';
     // =======================================================================
     // 4. SATPAM PINTAR (AI FACE DETECTOR - OPTIMIZED)
     // =======================================================================
-    window.openVerifyStudent = (id, name, imageUrl) => {
-        if (isPRMode) return openSatpamModal(id, name);
+    window.openVerifyStudent = async (id, name, imageUrl) => {
+        // [BARU] LOGIKA PENGECEKAN DEADLINE PR (FIXED FAIL-OPEN BUG)
+        if (isPRMode) {
+            try {
+                // Fetch detail PR lock dari backend
+                const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${STATE.subject}&week=${STATE.week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const prDetail = await res.json();
+                
+                const prData = Array.isArray(prDetail.data) ? prDetail.data[0] : prDetail.data;
+
+                if (prData) {
+                    const now = new Date();
+                    
+                    // Parse JSONB dengan super aman (Looping kalau stringified berkali-kali)
+                    let extendedList = prData.extended_students;
+                    try {
+                        while (typeof extendedList === 'string') {
+                            extendedList = JSON.parse(extendedList);
+                        }
+                    } catch(e) {}
+
+                    if (!Array.isArray(extendedList)) extendedList = [];
+
+                    const extRecord = extendedList.find(ext => ext.student_id === id);
+
+                    if (extRecord) {
+                        // KASUS 1: PUNYA DISPENSASI
+                        const extDeadline = new Date(extRecord.until);
+                        
+                        console.log("⏱️ Cek Waktu Dispensasi:");
+                        console.log("Sekarang:", now.toLocaleString());
+                        console.log("Batas Dispensasi:", extDeadline.toLocaleString());
+
+                        if (now > extDeadline) {
+                            openPRLateModal(extRecord.until);
+                            return; // STOP MUTLAK! Jangan buka kamera!
+                        }
+                        window.showToast?.('info', 'Dispensasi Aktif', 'Akses perpanjangan berhasil. Ingat, nilaimu dipotong 10%!');
+                        
+                    } else if (prData.deadline_at) {
+                        // KASUS 2: GAK PUNYA DISPENSASI
+                        const originalDeadline = new Date(prData.deadline_at);
+
+                        console.log("⏱️ Cek Waktu Normal:");
+                        console.log("Sekarang:", now.toLocaleString());
+                        console.log("Batas Normal:", originalDeadline.toLocaleString());
+
+                        if (now > originalDeadline) {
+                            openPRLateModal(prData.deadline_at);
+                            return; // STOP MUTLAK! Jangan buka kamera!
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("Gagal ngecek deadline:", e);
+                window.showToast?.('danger', 'Error', 'Gagal memverifikasi waktu dengan server.');
+                return; // STOP MUTLAK! Kalau server error, fail-closed biar aman.
+            }
+
+            // Kalau BENAR-BENAR lolos semua penjagaan di atas, baru buka Satpam!
+            return openSatpamModal(id, name);
+        }
         
-        // Logika Modal Verifikasi Guru Biasa...
+        // ==========================================
+        // Logika Modal Verifikasi Guru Biasa (Bukan PR)
+        // ==========================================
         document.getElementById('verifyInitials').innerText = name.substring(0, 2).toUpperCase();
         document.getElementById('verifyName').innerText = name;
         const coverImg = document.getElementById('verifyCoverImage');
@@ -663,6 +751,30 @@ import Toast from '../../components/Toast.astro';
                 banner.innerHTML = `<div class="relative z-10"><h2 class="text-xl font-black mb-1"><i class="fa-solid fa-triangle-exclamation mr-2 text-gray-300"></i> Portal Belum Tersedia</h2><p class="text-[10px] font-bold">Fitur ujian sedang dalam tahap pengembangan.</p></div>`;
             }
         }
+    };
+
+    window.openPRLateModal = (deadlineString) => {
+        const modal = document.getElementById('modalPRLate');
+        const box = document.getElementById('modalPRLateBox');
+        
+        // Format tanggal biar enak dibaca anak-anak
+        const d = new Date(deadlineString);
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('lateDeadlineText').innerText = d.toLocaleDateString('id-ID', options);
+
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { 
+            modal.classList.replace('opacity-0', 'opacity-100'); 
+            box.classList.replace('scale-95', 'scale-100'); 
+        }, 10);
+    };
+
+    window.closePRLateModal = () => {
+        const modal = document.getElementById('modalPRLate');
+        const box = document.getElementById('modalPRLateBox');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        box.classList.replace('scale-100', 'scale-95');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
     };
 
     // Jalankan sistem!

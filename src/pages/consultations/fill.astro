@@ -911,7 +911,7 @@ import Mascot from '../../components/Mascot.astro';
         executeAutoSave();
     };
 
-// ==========================================
+    // ==========================================
     // 5. VALIDATION & AUTO-SAVE (UX UPDATED)
     // ==========================================
     const validate = () => {
@@ -945,7 +945,7 @@ import Mascot from '../../components/Mascot.astro';
             // 2. Tombol Kirim HANYA nyala kalau kotak janji dicentang
             if (checkReview && checkReview.checked) {
                 btnSubmitGlobal.disabled = false;
-                // [FIX BUG] Kembalikan teks tombol ke kondisi semula, buang spinnernya!
+                // [FIX BUG] Kembalikan teks tombol ke kondisi semula pas dicentang
                 btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
                 if (!isEvaluatingExtraLife) {
                     btnSubmitGlobal.classList.replace('bg-gray-200', 'bg-green-600'); 
@@ -954,7 +954,7 @@ import Mascot from '../../components/Mascot.astro';
                 }
             } else {
                 btnSubmitGlobal.disabled = true;
-                // [FIX BUG] Ubah teks biar jelas kenapa belum bisa diklik
+                // [FIX BUG] Ubah teks pas belum dicentang (Hapus spinner!)
                 btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Centang Janji di Atas';
                 if (!isEvaluatingExtraLife) {
                     btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
@@ -969,7 +969,7 @@ import Mascot from '../../components/Mascot.astro';
             if (checkReview) checkReview.checked = false; // Reset centangnya
             
             btnSubmitGlobal.disabled = true;
-            // [FIX BUG] Teks saat masih ada soal yang kosong
+            // [FIX BUG] Balikin teks ke default pas ada soal kosong (Hapus spinner!)
             btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
             if (!isEvaluatingExtraLife) {
                 btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
@@ -1128,6 +1128,30 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const startTest = (isNewSession = true) => {
+
+        if (isPRMode && isNewSession) {
+            try {
+                // Fetch detail PR (Lu bisa bikin endpoint get pr_locks detail, atau cek dari data /status)
+                const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const prDetail = await res.json();
+                
+                if (prDetail.data && prDetail.data.deadline_at) {
+                    const now = new Date();
+                    const deadline = new Date(prDetail.data.deadline_at);
+                    
+                    if (now > deadline) {
+                        const hasExt = prDetail.data.extended_students?.includes(studentId);
+                        if (!hasExt) {
+                            window.showConfirm('Waktu Habis!', 'Batas waktu PR ini sudah lewat. Minta dispensasi ke Kak Aziz dulu ya!', () => window.close(), 'danger');
+                            return; // STOP! Gak bisa mulai.
+                        } else {
+                            window.showToast?.('info', 'Dispensasi Aktif', 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!');
+                        }
+                    }
+                }
+            } catch(e) { console.log("Gagal cek deadline"); }
+        }
+
         // [UPDATE] Logika ketat per-sesi untuk menyembunyikan Miaw
         if (isNewSession) {
             window.isMiawHidden = document.getElementById('toggleHideMiaw')?.checked || false;
