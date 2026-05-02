@@ -1127,7 +1127,7 @@ import Mascot from '../../components/Mascot.astro';
         const intv = setInterval(() => { count--; if(count>0) text.innerText = count; else { clearInterval(intv); document.getElementById('countdownOverlay').classList.add('hidden'); startTest(true); } }, 1000);
     };
 
-    const startTest = (isNewSession = true) => {
+    const startTest = async (isNewSession = true) => {
 
         if (isPRMode && isNewSession) {
             try {
