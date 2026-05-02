@@ -149,10 +149,17 @@ import Toast from '../../components/Toast.astro';
                         <i class="fa-solid fa-ellipsis-vertical"></i> Lainnya
                     </button>
                     
-                    <div id="hafalanMenu" class="hidden absolute right-0 bottom-12 bg-white border border-gray-100 rounded-2xl shadow-xl w-48 z-50">
+                    <div id="hafalanMenu" class="hidden absolute right-0 bottom-12 bg-white border border-gray-100 rounded-2xl shadow-xl w-48 z-50 overflow-hidden">
+        
+                        <!-- [BARU] Tombol Mode Murojaah -->
+                        <button onclick="openMurojaahDrawer()"
+                            class="w-full flex items-center gap-2 px-4 py-3 text-xs text-blue-600 font-bold hover:bg-blue-50 transition-colors border-b border-gray-50">
+                            <i class="fa-solid fa-rotate-left"></i> Mode Murojaah
+                        </button>
+                
                         <button onclick="confirmResetHafalan()"
-                            class="w-full flex items-center gap-2 px-4 py-3 text-xs text-red-500 font-bold hover:bg-red-50 transition-colors rounded-2xl">
-                            <i class="fa-solid fa-rotate-left"></i> Reset Hafalan
+                            class="w-full flex items-center gap-2 px-4 py-3 text-xs text-red-500 font-bold hover:bg-red-50 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i> Reset Hafalan
                         </button>
                     </div>
                 </div>
@@ -329,6 +336,55 @@ import Toast from '../../components/Toast.astro';
                     <i class="fa-solid fa-save"></i> <span>Simpan & Buka PDF</span>
                 </button>
             </form>
+        </div>
+    </div>
+
+<!-- ============================================================ -->
+    <!-- DRAWER MUROJAAH KHUSUS (DENGAN SISTEM LEVEL) -->
+    <!-- ============================================================ -->
+    <div id="drawerMurojaah" class="fixed inset-0 bg-black/60 z-[120] hidden items-end justify-center p-0 backdrop-blur-sm transition-all">
+        <div class="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col animate-slide-up-drawer relative overflow-hidden pb-8">
+            
+            <!-- Handle atas -->
+            <div class="w-full flex justify-center pt-3 pb-1 bg-white z-20">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+
+            <!-- Header Drawer -->
+            <div class="px-6 pt-4 pb-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                <div>
+                    <h3 class="font-black text-gray-800 text-lg"><i class="fa-solid fa-rotate-left text-blue-500 mr-2"></i> Misi Murojaah</h3>
+                    <p class="text-[10px] text-gray-500 font-bold mt-1">Setor Putaran Surat Pilihan</p>
+                </div>
+                <button onclick="closeMurojaahDrawer()" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Konten -->
+            <div class="p-6 overflow-y-auto no-scrollbar">
+                
+                <!-- [BARU] Pilih Paket / Level Murojaah -->
+                <label class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2 block">Pilih Tingkatan Level</label>
+                <div class="relative mb-4">
+                    <select id="murojaahLevelSelect" onchange="renderMurojaahSurahs()" class="w-full bg-blue-50 border-2 border-blue-100 text-blue-800 text-xs font-bold rounded-xl pl-4 pr-10 py-3 outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer">
+                        <!-- Diisi via JS -->
+                    </select>
+                    <i class="fa-solid fa-layer-group absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none"></i>
+                </div>
+
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Pilih Surat Target</label>
+                <div class="relative mb-8">
+                    <select id="murojaahSurahSelect" class="w-full bg-white border-2 border-gray-200 text-gray-700 text-sm font-bold rounded-xl pl-4 pr-10 py-3.5 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer">
+                        <option value="">Memuat data surat...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+
+                <button onclick="submitMurojaah()" id="btnSubmitMurojaah" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg shadow-blue-500/30 active:translate-y-[2px] transition-all flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-check-double"></i> Simpan Hasil Setoran
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2334,6 +2390,137 @@ doc.setFontSize(10);
         if (pendingSusulanUrl) window.location.href = pendingSusulanUrl;
     };
 
+// ================================================================
+    // LOGIKA MUROJAAH KHUSUS (Sistem Level & Filter Surat)
+    // ================================================================
+    
+    // Kita bagi jadi beberapa paket/level
+    const MUROJAAH_PACKAGES = [
+        {
+            id: 1,
+            name: "Level 1 (An-Nas - Al-Qari'ah)",
+            targets: ["Al-Qari'ah", "At-Takasur", "Al-'Asr", "Al-Humazah", "Al-Fil", "Quraisy", "Al-Ma'un", "Al-Kausar", "Al-Kafirun", "An-Nasr", "Al-Masad", "Al-Ikhlas", "Al-Falaq", "An-Nas", "Al-Insyirah"]
+        },
+        {
+            id: 2,
+            name: "Level 2 (Ad-Duha - Al-Gasyiyah)",
+            targets: ["Ad-Duha", "Al-Lail", "Asy-Syams", "Al-Balad", "Al-Fajr", "Al-Gasyiyah"]
+        },
+        {
+            id: 3,
+            name: "Level 3 (Al-A'la - An-Naba')",
+            targets: ["Al-A'la", "At-Tariq", "Al-Buruj", "Al-Insyiqaq", "Al-Mutaffifin", "Al-Infitar", "At-Takwir", "Abasa", "An-Nazi'at", "An-Naba'"]
+        }
+    ];
+
+    // Simpan data riwayat hafalan secara global buat dipakai pas ganti level
+    let globalCompletedMurojaah = [];
+
+    window.openMurojaahDrawer = async () => {
+        document.getElementById('hafalanMenu').classList.add('hidden');
+        
+        const drawer = document.getElementById('drawerMurojaah');
+        const selectSurah = document.getElementById('murojaahSurahSelect');
+        const selectLevel = document.getElementById('murojaahLevelSelect');
+        
+        drawer.classList.replace('hidden', 'flex');
+
+        selectSurah.innerHTML = '<option value="">⏳ Mengecek riwayat hafalan...</option>';
+        selectSurah.disabled = true;
+
+        try {
+            // Isi Dropdown Level
+            selectLevel.innerHTML = MUROJAAH_PACKAGES.map(pkg => 
+                `<option value="${pkg.id}">${pkg.name}</option>`
+            ).join('');
+
+            // Ambil riwayat dari Backend
+            const res = await fetch(`${API_URL}/api/students/${studentId}/memorization-logs`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json();
+            const logs = json.data || [];
+
+            // Simpan ke variabel global
+            globalCompletedMurojaah = logs.map(log => log.surah_name);
+
+            // Render opsi surat berdasarkan level 1 (default)
+            renderMurojaahSurahs();
+
+        } catch (e) {
+            console.error(e);
+            selectSurah.innerHTML = '<option value="">Gagal memuat riwayat.</option>';
+        }
+    };
+
+    // Fungsi untuk merender ulang opsi surat tiap kali level diganti
+    window.renderMurojaahSurahs = () => {
+        const selectLevel = document.getElementById('murojaahLevelSelect');
+        const selectSurah = document.getElementById('murojaahSurahSelect');
+        
+        const activePackage = MUROJAAH_PACKAGES.find(pkg => pkg.id === parseInt(selectLevel.value));
+        
+        selectSurah.innerHTML = '<option value="" disabled selected>-- Ketuk untuk Memilih Surat --</option>';
+        selectSurah.disabled = false;
+
+        activePackage.targets.forEach(surah => {
+            const isDone = globalCompletedMurojaah.includes(surah);
+            
+            if (isDone) {
+                selectSurah.innerHTML += `<option value="${surah}" disabled class="bg-gray-100 text-gray-400 italic">✅ ${surah} (Selesai)</option>`;
+            } else {
+                selectSurah.innerHTML += `<option value="${surah}" class="text-gray-800 font-bold">📖 ${surah}</option>`;
+            }
+        });
+    };
+
+    window.closeMurojaahDrawer = () => {
+        document.getElementById('drawerMurojaah').classList.replace('flex', 'hidden');
+    };
+
+    window.submitMurojaah = async () => {
+        const select = document.getElementById('murojaahSurahSelect');
+        const surah = select.value;
+
+        if (!surah) {
+            window.showToast?.('warning', 'Pilih Surat', 'Silakan pilih target suratnya dulu ustadz.');
+            return;
+        }
+
+        const targetSurahObj = JUZ_AMMA.find(s => s.name === surah);
+        const totalAyahs = targetSurahObj ? targetSurahObj.ayahs : 1;
+
+        const btn = document.getElementById('btnSubmitMurojaah');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/murojaah`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    surah_name: surah,
+                    total_ayahs: totalAyahs
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || 'Gagal simpan');
+            }
+
+            window.showToast?.('success', 'Berhasil', `Murojaah surat ${surah} berhasil dicatat!`);
+            closeMurojaahDrawer();
+            fetchData();
+
+        } catch(e) {
+            window.showToast?.('danger', 'Error', e.message);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
     fetchData(); // Pastikan ini tetap ada di paling bawah
 </script>
 

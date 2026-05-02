@@ -76,6 +76,32 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         <option value="true">Published (Bisa diakses siswa)</option>
                     </select>
                 </div>
+
+                <!-- [BARU] TOGGLE MODE DARING -->
+                <div class="pt-2 border-t border-gray-100">
+                    <div class="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <div>
+                            <p class="text-[10px] font-bold text-indigo-800 uppercase tracking-widest">Jadikan Ujian Daring</p>
+                            <p class="text-[9px] text-indigo-600 font-medium mt-0.5">Siswa kerjakan dari rumah pakai link.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="editIsDaring" class="sr-only peer" onchange="toggleDaringMode(this.checked)">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- [BARU] PANEL DEADLINE & LINK (MUNCUL KALAU DARING ON) -->
+                <div id="daringActionPanel" class="hidden w-full space-y-3 animate-slide-up">
+                    <button type="button" onclick="copyExamLink()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-4 py-3 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-copy"></i> Salin Link Ujian Daring ke WA
+                    </button>
+                    <div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/50">
+                        <label class="text-[10px] font-black text-indigo-800 uppercase tracking-widest block mb-1">Batas Waktu (Deadline)</label>
+                        <input type="datetime-local" id="editDeadline" class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                    </div>
+                </div>
+
                 <button type="submit" id="btnSubmitEdit" class="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
                     Simpan Pengaturan
                 </button>
@@ -166,61 +192,88 @@ import ModalAlert from '../../components/ModalAlert.astro';
         }
     };
 
-    // --- LOGIKA EDIT PENGATURAN (DENGAN CACHE) ---
+// [BARU] Logika UI Daring
+window.toggleDaringMode = (isChecked) => {
+        const panel = document.getElementById('daringActionPanel');
+        if (isChecked) panel.classList.replace('hidden', 'block');
+        else panel.classList.replace('block', 'hidden');
+    };
+
+// [BARU] Fungsi Salin Link dengan 'Pinjaman' Token Guru
+window.copyExamLink = () => {
+        const frontendUrl = window.location.origin; // Otomatis baca localhost atau domain lu
+        
+        // Bikin rute dinamis /play/[id] dan titipkan token guru di parameternya
+        const link = `${frontendUrl}/play/${currentEditExamId}?token=${token}`; 
+        
+        // Eksekusi copy ke clipboard
+        navigator.clipboard.writeText(link).then(() => {
+            window.showToast?.('success', 'Link Disalin!', `Link Ujian berhasil disalin. Silakan paste di Grup WA.`);
+        }).catch(err => {
+            // Fallback kalau browser ngeblokir auto-copy
+            prompt('Copy link ini manual:', link);
+        });
+    };
+
+    // UPDATE openEditModal biar nampilin data daring yang bener
     window.openEditModal = async (id) => {
         document.getElementById('modalEditExam').classList.replace('hidden', 'flex');
         const btn = document.getElementById('btnSubmitEdit');
 
-        // 1. Cek apakah detail ujian ini sudah ada di Cache
         if (cachedExamDetails[id]) {
             const data = cachedExamDetails[id];
-            currentEditExamId = data.id;
-            currentEditQuestions = data.questions || [];
-            
+            currentEditExamId = data.id; currentEditQuestions = data.questions || [];
             document.getElementById('editTitle').value = data.title;
             document.getElementById('editDuration').value = data.duration_minutes;
             document.getElementById('editStatus').value = data.is_active ? 'true' : 'false';
             
+            // [BARU] Setup Mode Daring
+            document.getElementById('editIsDaring').checked = data.is_daring;
+            if (data.deadline_at) {
+                const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+                document.getElementById('editDeadline').value = new Date(new Date(data.deadline_at) - tzoffset).toISOString().slice(0, 16);
+            } else {
+                document.getElementById('editDeadline').value = '';
+            }
+            toggleDaringMode(data.is_daring);
+
             btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
-            return; // Berhenti di sini, tidak perlu fetch ke server!
+            return; 
         }
 
-        // 2. Jika belum ada di cache, Fetch dari Server
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat Data...'; btn.disabled = true;
-
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...'; btn.disabled = true;
         try {
             const res = await fetch(`${API_URL}/api/exams/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
-            
             if (res.ok) {
-                cachedExamDetails[id] = result.data; // Simpan ke Cache
-
-                currentEditExamId = result.data.id;
-                currentEditQuestions = result.data.questions || [];
-                
+                cachedExamDetails[id] = result.data; 
+                currentEditExamId = result.data.id; currentEditQuestions = result.data.questions || [];
                 document.getElementById('editTitle').value = result.data.title;
                 document.getElementById('editDuration').value = result.data.duration_minutes;
                 document.getElementById('editStatus').value = result.data.is_active ? 'true' : 'false';
                 
+                // [BARU] Setup Mode Daring
+                document.getElementById('editIsDaring').checked = result.data.is_daring;
+                if (result.data.deadline_at) {
+                    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+                    document.getElementById('editDeadline').value = new Date(new Date(result.data.deadline_at) - tzoffset).toISOString().slice(0, 16);
+                }
+                toggleDaringMode(result.data.is_daring);
+
                 btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
             }
-        } catch (e) {
-            window.showToast?.('danger', 'Error', 'Gagal memuat detail ujian.');
-            closeEditModal();
-        }
+        } catch (e) { window.showToast?.('danger', 'Error', 'Gagal memuat.'); closeEditModal(); }
     };
-    
-    window.closeEditModal = () => document.getElementById('modalEditExam').classList.replace('flex', 'hidden');
 
+    // UPDATE formEditExam.onsubmit biar nge-submit payload yang baru
     document.getElementById('formEditExam').onsubmit = async (e) => {
         e.preventDefault();
-        
         const isPublishing = document.getElementById('editStatus').value === 'true';
-        
-        if (isPublishing && currentEditQuestions.length < 10) {
-            window.showToast?.('warning', 'Gagal', 'Ujian tidak bisa di-publish karena memiliki kurang dari 10 soal.');
-            return;
-        }
+        const isDaring = document.getElementById('editIsDaring').checked;
+        const deadlineVal = document.getElementById('editDeadline').value;
+
+        if (isPublishing && currentEditQuestions.length < 10) return window.showToast?.('warning', 'Gagal', 'Minimal 10 soal untuk publish!');
+        if (isDaring && !deadlineVal) return window.showToast?.('warning', 'Peringatan', 'Silakan tentukan batas waktu deadline!');
 
         const btn = document.getElementById('btnSubmitEdit');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.disabled = true;
@@ -229,6 +282,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
             title: document.getElementById('editTitle').value,
             duration_minutes: parseInt(document.getElementById('editDuration').value),
             is_active: isPublishing,
+            is_daring: isDaring,
+            deadline_at: isDaring ? deadlineVal : null,
             questions: currentEditQuestions 
         };
 
@@ -236,22 +291,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
             const res = await fetch(`${API_URL}/api/exams/${currentEditExamId}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (res.ok) {
                 window.showToast?.('success', 'Berhasil', 'Pengaturan ujian diperbarui.');
-                
-                // Update Cache agar selalu sinkron dengan data terbaru
                 if (cachedExamDetails[currentEditExamId]) {
-                    cachedExamDetails[currentEditExamId].title = payload.title;
-                    cachedExamDetails[currentEditExamId].duration_minutes = payload.duration_minutes;
-                    cachedExamDetails[currentEditExamId].is_active = payload.is_active;
+                    cachedExamDetails[currentEditExamId] = { ...cachedExamDetails[currentEditExamId], ...payload };
                 }
-
-                closeEditModal();
-                fetchExams();
+                closeEditModal(); fetchExams();
             } else throw new Error((await res.json()).message);
-        } catch (error) {
-            window.showToast?.('danger', 'Gagal', error.message);
-            btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
-        }
+        } catch (error) { window.showToast?.('danger', 'Gagal', error.message); btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false; }
     };
+
+    window.closeEditModal = () => document.getElementById('modalEditExam').classList.replace('flex', 'hidden');
 
     // --- LOGIKA HAPUS UJIAN ---
     window.confirmDelete = (id, title) => {
