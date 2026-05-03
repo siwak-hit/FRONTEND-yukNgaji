@@ -5,173 +5,328 @@ import Toast from '../../components/Toast.astro';
 ---
 
 <Layout title="Catatan Ngajiku - yukNgaji">
-  <!-- Container Utama (Target Download Keseluruhan) -->
-  <div class="fixed inset-0 bg-slate-50 overflow-hidden flex flex-col font-sans select-none pattern-grid" id="wrappedContainer">
+  <!-- Audio Elements -->
+  <audio id="bgMusic" loop preload="auto">
+      <source src="/backsound.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="userAudio" preload="auto"></audio>
+
+  <!-- Container Utama -->
+  <div class="fixed inset-0 bg-slate-50 overflow-hidden flex flex-col font-sans select-none pattern-grid text-slate-800" id="wrappedContainer">
     
-    <!-- Elemen Dekoratif Mengambang -->
+    <!-- Floating Ornaments -->
     <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div class="absolute top-10 left-10 w-24 h-24 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
-        <div class="absolute top-40 right-10 w-32 h-32 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style="animation-delay: 2s;"></div>
-        <div class="absolute -bottom-10 left-20 w-40 h-40 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style="animation-delay: 4s;"></div>
+        <div class="absolute top-40 right-10 w-32 h-32 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style="animation-delay: 2s;"></div>
+        <div class="absolute -bottom-10 left-20 w-40 h-40 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float" style="animation-delay: 4s;"></div>
     </div>
 
-    <!-- Header UI (Progress Bar & Action Buttons) -->
-    <div class="absolute top-4 inset-x-4 z-50 flex flex-col gap-3" id="headerUI">
-        <!-- Progress Bar -->
-        <div class="flex gap-1.5 w-full transition-opacity duration-300" id="progressContainer"></div>
-        
-        <!-- Tombol Aksi -->
-        <div class="flex justify-between items-center px-1" id="actionContainer">
-            <button onclick="closeWrapped()" class="w-8 h-8 bg-white/90 backdrop-blur border border-slate-200 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors shadow-sm">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <button onclick="downloadCurrentSlide()" class="hidden bg-white/90 backdrop-blur border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-colors shadow-sm items-center gap-1.5" id="btnDownload">
-                <i class="fa-solid fa-download"></i> Simpan
-            </button>
-        </div>
+    <!-- Global Progress Bar (Top) -->
+    <div class="absolute top-0 inset-x-0 h-1.5 bg-slate-200 z-50">
+        <div id="scrollProgress" class="h-full bg-indigo-500 w-0 transition-all duration-150"></div>
     </div>
 
-    <!-- Area Klik Tersembunyi (Prev/Next) -->
-    <div class="absolute inset-y-0 left-0 w-1/3 z-30 cursor-pointer" onclick="prevSlide()" id="clickPrev"></div>
-    <div class="absolute inset-y-0 right-0 w-2/3 z-30 cursor-pointer" onclick="nextSlide()" id="clickNext"></div>
+    <!-- Header Actions (Silang Disembunyikan Awalnya) -->
+    <div class="absolute top-5 inset-x-5 z-50 flex justify-between items-center pointer-events-none" id="headerUI">
+        <button onclick="closeWrapped()" id="btnCloseHeader" class="pointer-events-auto hidden w-10 h-10 bg-slate-900/80 backdrop-blur border border-slate-700 rounded-full items-center justify-center text-white hover:bg-slate-800 transition-colors shadow-lg animate-pop-in">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <button onclick="downloadCurrentSlide()" class="pointer-events-auto hidden bg-white/90 backdrop-blur border border-indigo-200 text-indigo-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider hover:bg-indigo-50 transition-colors shadow-sm items-center gap-2" id="btnDownload">
+            <i class="fa-solid fa-download"></i> Simpan
+        </button>
+    </div>
 
-    <!-- WRAPPED SLIDES -->
-    <div id="slidesWrapper" class="relative w-full h-full flex items-center justify-center p-6 z-20 pt-20 pb-20">
+    <!-- SLIDES WRAPPER -->
+    <div id="slidesWrapper" class="relative w-full h-full z-20">
         
-        <!-- SLIDE 0: INTRO -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="0">
-            <div class="bg-white/70 backdrop-blur-md border-2 border-indigo-100 p-8 rounded-[2rem] w-full shadow-xl relative animate-fade-in-up">
-                <div class="absolute -top-6 -right-6 text-5xl animate-bounce" style="animation-duration: 2s;">🎒</div>
-                <div class="absolute -bottom-4 -left-4 text-4xl animate-bounce" style="animation-duration: 2.5s; animation-delay: 0.5s;">✏️</div>
-                <h2 id="s0_greeting" class="text-sm font-black text-indigo-400 mb-2 tracking-widest uppercase">Halo...</h2>
-                <h1 id="s0_name" class="text-4xl font-black text-slate-800 mb-6 capitalize leading-tight">Nama Siswa</h1>
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 inline-block">
-                    <p id="s0_title" class="text-lg font-black text-indigo-600">Ini Perjalanan Ngajimu!</p>
-                </div>
-            </div>
-            <p class="mt-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Ketuk untuk mulai <i class="fa-solid fa-hand-pointer ml-1"></i></p>
+        <!-- SLIDE 0: SPLASH SCREEN -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col items-center justify-center text-center p-6 bg-slate-50 z-30" id="slide-0">
+            <div class="text-6xl mb-6 animate-bounce">🎁</div>
+            <h1 class="text-3xl font-black text-slate-800 mb-2">Catatan Ngajiku</h1>
+            <p class="text-sm text-slate-500 mb-8 font-bold">Siap melihat perjalananmu?</p>
+            <button onclick="startExperience()" class="bg-indigo-600 text-white font-black px-8 py-4 rounded-full shadow-[0_6px_0_#4f46e5] active:translate-y-[6px] active:shadow-none transition-all">
+                Mulai Petualangan <i class="fa-solid fa-play ml-2"></i>
+            </button>
         </div>
 
-        <!-- SLIDE 1: NARASI 1 (Waktu Cepat Berlalu) -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="1">
-            <div class="text-6xl mb-6 animate-pop-in">⏳</div>
-            <h2 id="s1_title" class="text-3xl font-black text-slate-800 mb-4 animate-fade-in-up">Gak Kerasa Ya...</h2>
-            <p id="s1_desc1" class="text-lg text-slate-600 font-bold leading-relaxed animate-fade-in-up" style="animation-delay: 0.3s">Waktu cepet banget berlalunya.</p>
-            <p id="s1_desc2" class="text-lg text-slate-600 font-bold leading-relaxed mt-2 animate-fade-in-up" style="animation-delay: 0.6s">Kemarin rasanya baru mulai belajar iqro...</p>
-        </div>
-
-        <!-- SLIDE 2: NARASI 2 (Perjuangan) -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="2">
-            <div class="text-6xl mb-6 animate-pop-in">💪</div>
-            <h2 id="s2_title" class="text-3xl font-black text-slate-800 mb-4 animate-fade-in-up">Ujian Udah Beres!</h2>
-            <p id="s2_desc1" class="text-base text-slate-600 font-bold leading-relaxed bg-white/60 p-6 rounded-3xl border border-slate-200 animate-fade-in-up shadow-sm" style="animation-delay: 0.3s">
-                Pasti capek ya ngerjain tugas, ngapalin ayat, nahan ngantuk pas subuh. Tapi kamu hebat banget bisa lewatin semuanya!
-            </p>
-        </div>
-
-        <!-- SLIDE 3: NARASI 3 (Pesan Guru) -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="3">
-            <div class="text-6xl mb-6 animate-pop-in">💌</div>
-            <h2 id="s3_title" class="text-3xl font-black text-slate-800 mb-4 animate-fade-in-up">Pesan Ustadz/ah</h2>
-            <p id="s3_desc1" class="text-base text-indigo-700 font-black leading-relaxed bg-indigo-100 p-6 rounded-3xl border border-indigo-200 animate-fade-in-up shadow-sm" style="animation-delay: 0.3s">
-                "Terima kasih sudah berjuang keras! Ilmu yang kamu pelajari ini bakal jadi penerang jalanmu nanti."
-            </p>
-            <p class="mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-fade-in-up" style="animation-delay: 0.9s">Mari kita lihat rapormu! <i class="fa-solid fa-arrow-right ml-1"></i></p>
-        </div>
-
-        <!-- SLIDE 4: ABSENSI -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="4">
-            <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner animate-pop-in border-4 border-white">
-                <i class="fa-solid fa-calendar-check"></i>
-            </div>
-            <h2 id="s4_title" class="text-2xl font-black text-slate-800 mb-2 animate-fade-in-up" style="animation-delay: 0.2s">Si Paling Rajin!</h2>
-            <p id="s4_desc1" class="text-xs text-slate-500 font-bold mb-6 animate-fade-in-up" style="animation-delay: 0.3s">Kamu sudah hadir sebanyak</p>
-            <div class="bg-white border-4 border-amber-200 p-8 rounded-[2rem] w-full shadow-lg transform rotate-2 animate-fade-in-up relative" style="animation-delay: 0.4s">
-                <div class="absolute -top-3 -left-3 w-6 h-6 bg-amber-400 rounded-full shadow-sm"></div>
-                <p class="text-7xl font-black text-amber-500 mb-2 leading-none"><span id="s4_hadir">0</span><span class="text-3xl text-amber-300 ml-1">x</span></p>
-                <p id="s4_desc2" class="text-[11px] text-amber-700 font-bold">Luar biasa! Pertahankan terus ya!</p>
-            </div>
-        </div>
-
-        <!-- SLIDE 5: HAFALAN -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="5">
-            <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner animate-pop-in border-4 border-white">
-                <i class="fa-solid fa-book-open"></i>
-            </div>
-            <h2 id="s5_title" class="text-2xl font-black text-slate-800 mb-2 animate-fade-in-up" style="animation-delay: 0.2s">Penghafal Quran!</h2>
-            <p id="s5_desc1" class="text-xs text-slate-500 font-bold mb-6 animate-fade-in-up" style="animation-delay: 0.3s">Setoran hafalanmu sudah sampai di:</p>
-            <div class="bg-emerald-500 text-white p-8 rounded-[2rem] w-full shadow-xl transform -rotate-1 animate-fade-in-up relative" style="animation-delay: 0.4s">
-                <div class="absolute -bottom-3 -right-3 w-8 h-8 bg-emerald-300 rounded-full shadow-sm opacity-50"></div>
-                <p id="s5_surah" class="text-3xl font-black mb-1">Juz 30</p>
-                <div class="inline-block bg-white/20 px-3 py-1 rounded-lg mt-2">
-                    <p id="s5_ayah" class="text-sm font-bold uppercase tracking-widest text-emerald-50">Ayat 0</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- SLIDE 6: GAMIFIKASI -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="6">
-            <div class="w-full bg-white border-2 border-indigo-100 p-6 rounded-[2rem] shadow-xl animate-fade-in-up" id="gamificationContainer">
-                <h2 id="s6_title" class="text-2xl font-black text-slate-800 mb-1">Si Sultan Koin!</h2>
-                <p id="s6_desc1" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-4">Total Kekayaanmu:</p>
-                
-                <div class="flex items-center justify-center gap-3 mb-6 animate-pop-in" style="animation-delay: 0.2s">
-                    <i class="fa-solid fa-coins text-4xl text-yellow-500"></i>
-                    <span id="s6_poin" class="text-6xl font-black text-indigo-600">0</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3 animate-fade-in-up" style="animation-delay: 0.4s">
-                    <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-2xl flex flex-col items-center">
-                        <i class="fa-solid fa-cart-shopping text-indigo-400 text-xl mb-1"></i>
-                        <p class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Item Favorit</p>
-                        <p id="s6_fav_item" class="text-xs font-black text-indigo-700 leading-tight mt-1">Perisai 🛡️</p>
+        <!-- SLIDE 1: INTRO & PROFILE FLIP -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-1">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-24 pb-32 no-scrollbar" onscroll="handleScroll(this)">
+                <div class="max-w-sm mx-auto flex flex-col items-center min-h-[120%]">
+                    
+                    <div class="flip-card w-32 h-32 mb-[-3rem] z-10 cursor-pointer group" onclick="this.classList.toggle('flipped')">
+                        <div class="flip-card-inner shadow-xl rounded-full">
+                            <div class="flip-card-front bg-white rounded-full border-4 border-white overflow-hidden">
+                                <img id="s1_photo" src="" class="w-full h-full object-cover" alt="Profile" crossorigin="anonymous">
+                            </div>
+                            <div class="flip-card-back bg-indigo-600 rounded-full border-4 border-white flex items-center justify-center text-white text-4xl font-black">
+                                <span id="s1_initial">--</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-red-50 border border-red-100 p-3 rounded-2xl flex flex-col items-center">
-                        <i class="fa-solid fa-crosshairs text-red-400 text-xl mb-1"></i>
-                        <p class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Korban Serangan</p>
-                        <p id="s6_fav_target" class="text-xs font-black text-red-700 leading-tight mt-1 capitalize line-clamp-1">Teman</p>
+
+                    <div class="bg-white/80 backdrop-blur-xl border border-indigo-100 p-8 pt-16 rounded-[2rem] w-full shadow-lg text-center">
+                        <h2 class="text-sm font-black text-indigo-400 mb-1 tracking-widest uppercase">HALO</h2>
+                        <h1 id="s1_name" class="text-3xl font-black text-slate-800 mb-4 capitalize">Nama Siswa</h1>
+                        <p class="text-lg font-bold text-slate-600">Cek perjalanan ngajimu yuk!</p>
+                    </div>
+
+                    <div class="mt-auto pt-20 text-center text-slate-400 animate-bounce">
+                        <p class="text-[10px] font-bold uppercase tracking-widest mb-2">Scroll ke bawah</p>
+                        <i class="fa-solid fa-chevron-down"></i>
                     </div>
                 </div>
             </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
         </div>
 
-        <!-- SLIDE 7: GALERI BENTO -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center w-full max-w-sm h-full relative" data-index="7">
-            <div class="text-center w-full mb-4">
-                <h2 id="s7_title" class="text-2xl font-black text-slate-800 mb-1 animate-fade-in-up">Wajah Bersejarah</h2>
-                <p id="s7_desc1" class="text-xs text-slate-500 font-bold animate-fade-in-up" style="animation-delay: 0.2s">Rekaman diam-diam ustadz! 📸</p>
+        <!-- SLIDE 2: NARRATIVE (GSAP TYPING + FULL SCREEN) -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-2">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 no-scrollbar" onscroll="handleScroll(this)" id="scroller-2">
+                <div class="max-w-sm mx-auto">
+                    
+                    <!-- Card 1 -->
+                    <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20 pt-10">
+                        <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-slate-50">⏳</div>
+                        <h2 class="text-3xl font-black text-slate-800 mb-6">Waktu Berlalu...</h2>
+                        <p class="type-target text-base font-bold text-slate-600 leading-relaxed bg-white/60 p-6 rounded-3xl border border-slate-200 shadow-sm" 
+                           data-text="Tidak terasa, kita sudah melewati puluhan hari penuh perjuangan. Mengulang ayat, menahan kantuk di pagi buta, dan melawan rasa malas yang terus menggoda. Tapi lihatlah dirimu sekarang..."></p>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20">
+                        <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-indigo-50">💪</div>
+                        <h2 class="text-3xl font-black text-indigo-900 mb-6">Kamu Berhasil!</h2>
+                        <p class="type-target text-base font-bold text-indigo-800 leading-relaxed bg-indigo-50/80 backdrop-blur p-6 rounded-3xl border border-indigo-200 shadow-sm" 
+                           data-text="Ujian demi ujian telah diselesaikan dengan sabar. Setiap tetes keringat saat belajar akan menjadi saksi indah di akhirat kelak. Kamu benar-benar luar biasa!"></p>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20">
+                        <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-amber-50">💌</div>
+                        <h2 class="text-3xl font-black text-amber-900 mb-6">Pesan dari Ustad</h2>
+                        <p class="type-target text-base font-bold text-amber-800 leading-relaxed bg-amber-50/80 backdrop-blur p-6 rounded-3xl border border-amber-200 shadow-sm" 
+                           data-text="Terima kasih telah bertahan dan tidak menyerah. Jadikan Al-Quran sebagai sahabat sejatimu di manapun kamu berada. Kami sangat bangga padamu!"></p>
+                    </div>
+
+                </div>
             </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Mari Lihat Rapormu <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: ATTENDANCE (PRIMARY/SECONDARY THEME) -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-3">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
+                <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
+                    
+                    <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Rekap Kehadiran</h2>
+                    
+                    <!-- Utama (Primary) -->
+                    <div class="bg-indigo-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-4 transform transition-all animate-pop-in">
+                        <p class="text-[10px] font-black uppercase tracking-widest mb-2 text-indigo-200">Total Kehadiran</p>
+                        <p class="text-6xl font-black"><span id="s3_hadir">0</span><span class="text-2xl ml-2 text-indigo-300">Hari</span></p>
+                    </div>
+
+                    <!-- Sekunder (Overlay Dashed) -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="bg-indigo-50/80 backdrop-blur border-2 border-dashed border-indigo-200 text-indigo-700 p-5 rounded-3xl text-center animate-fade-in-up" style="animation-delay: 0.2s">
+                            <p class="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">Izin/Sakit</p>
+                            <p class="text-4xl font-black" id="s3_izin">0</p>
+                        </div>
+                        <div class="bg-indigo-50/80 backdrop-blur border-2 border-dashed border-indigo-200 text-indigo-700 p-5 rounded-3xl text-center animate-fade-in-up" style="animation-delay: 0.3s">
+                            <p class="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">Alpa</p>
+                            <p class="text-4xl font-black" id="s3_alpa">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Details List -->
+                    <div class="space-y-3 animate-fade-in-up" style="animation-delay: 0.5s" id="s3_details">
+                    </div>
+
+                </div>
+            </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: MEMORIZATION (TIMELINE UI) -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-4">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
+                <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
+                    
+                    <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Rekap Hafalan</h2>
+                    
+                    <!-- Utama (Primary) -->
+                    <div class="bg-emerald-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-6 relative overflow-hidden animate-pop-in">
+                        <div class="absolute -right-4 -bottom-4 text-7xl opacity-10">📖</div>
+                        <p class="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-2">Pencapaian Surat</p>
+                        <div class="flex items-baseline justify-center gap-2">
+                            <p class="text-6xl font-black" id="s4_count">0</p>
+                            <p class="text-xl font-bold text-emerald-300">/ 37 Surat</p>
+                        </div>
+                    </div>
+
+                    <!-- UI Posisi (Timeline) -->
+                    <div class="bg-emerald-50/80 backdrop-blur border-2 border-dashed border-emerald-200 rounded-[2rem] p-6 mb-6 shadow-sm animate-fade-in-up" style="animation-delay: 0.2s">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-6 text-center">Posisi Hafalanmu</p>
+                        
+                        <div class="relative w-full h-3 bg-white rounded-full border border-emerald-100 flex items-center mb-2">
+                            <!-- Progress Fill -->
+                            <div class="absolute left-0 h-full bg-emerald-500 rounded-full transition-all duration-1000" id="s4_timeline_fill" style="width: 0%"></div>
+                            
+                            <!-- Start & End Nodes -->
+                            <div class="absolute left-0 w-4 h-4 bg-emerald-300 rounded-full -ml-1 border-2 border-white"></div>
+                            <div class="absolute right-0 w-4 h-4 bg-slate-200 rounded-full -mr-1 border-2 border-white"></div>
+                            
+                            <!-- Dummy Friends -->
+                            <div class="absolute left-[30%] w-6 h-6 bg-emerald-100 border-2 border-white rounded-full -ml-3 flex items-center justify-center shadow-sm z-0"><i class="fa-solid fa-user text-[8px] text-emerald-400"></i></div>
+                            <div class="absolute left-[50%] w-6 h-6 bg-emerald-100 border-2 border-white rounded-full -ml-3 flex items-center justify-center shadow-sm z-0"><i class="fa-solid fa-user text-[8px] text-emerald-400"></i></div>
+
+                            <!-- User Node (Highlighted) -->
+                            <div class="absolute w-10 h-10 bg-emerald-500 border-4 border-white shadow-xl rounded-full -ml-5 flex items-center justify-center z-10 transition-all duration-1000 animate-bounce" id="s4_timeline_user" style="left: 0%">
+                                <img id="s1_photo_timeline" src="" crossorigin="anonymous" class="w-full h-full rounded-full object-cover">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between text-[9px] font-bold text-emerald-600/60 mt-4">
+                            <span>An-Nas</span>
+                            <span>An-Naba'</span>
+                        </div>
+                    </div>
+
+                    <div id="s4_percentile" class="bg-white border border-emerald-100 p-4 rounded-2xl text-center mb-6 shadow-sm hidden animate-fade-in-up" style="animation-delay: 0.4s">
+                        <p class="text-xs font-bold text-emerald-700">Masya Allah! Hafalanmu melampaui <span class="font-black text-emerald-900 text-lg" id="s4_pct_val">0%</span> teman-temanmu! 🌟</p>
+                    </div>
+
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 animate-fade-in-up" style="animation-delay: 0.5s">Surat Terselesaikan:</h3>
+                    <div class="flex flex-wrap gap-2 animate-fade-in-up" style="animation-delay: 0.6s" id="s4_surahList">
+                    </div>
+
+                </div>
+            </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: GAMIFICATION (THEME VIOLET) -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-5">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
+                <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
+                    
+                    <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Gelar Sultanmu</h2>
+                    
+                    <!-- Utama (Primary) -->
+                    <div class="bg-violet-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-4 animate-pop-in">
+                        <i class="fa-solid fa-coins text-4xl mb-3 text-yellow-300 animate-pulse"></i>
+                        <p class="text-[10px] font-black uppercase tracking-widest mb-2 opacity-90 text-violet-200">Total Kekayaan Poin</p>
+                        <p class="text-6xl font-black drop-shadow-md" id="s5_poin">0</p>
+                    </div>
+
+                    <!-- Sekunder -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="bg-violet-50/80 backdrop-blur border-2 border-dashed border-violet-200 p-4 rounded-[2rem] text-center shadow-sm animate-fade-in-up" style="animation-delay: 0.2s">
+                            <p class="text-[9px] font-black text-violet-500 uppercase tracking-widest mb-1">Sering Dibeli</p>
+                            <p class="text-sm font-black text-violet-900" id="s5_item">-</p>
+                        </div>
+                        <div class="bg-violet-50/80 backdrop-blur border-2 border-dashed border-violet-200 p-4 rounded-[2rem] text-center shadow-sm animate-fade-in-up" style="animation-delay: 0.3s">
+                            <p class="text-[9px] font-black text-violet-500 uppercase tracking-widest mb-1">Korban Utama</p>
+                            <p class="text-sm font-black text-violet-900 capitalize truncate" id="s5_target">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Container List -->
+                    <div class="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm animate-fade-in-up" style="animation-delay: 0.5s">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100"><i class="fa-solid fa-crosshairs"></i> Diserang Kamu</h3>
+                                <ul class="text-xs font-bold text-slate-600 space-y-2" id="s5_listSerang"></ul>
+                            </div>
+                            <div>
+                                <h3 class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100"><i class="fa-solid fa-shield-halved"></i> Penyerangmu</h3>
+                                <ul class="text-xs font-bold text-slate-600 space-y-2" id="s5_listDiserang"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: GALLERY BENTO -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-6">
+            <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
+                <div class="max-w-sm mx-auto flex flex-col items-center min-h-[120%]">
+                    
+                    <h2 class="text-2xl font-black text-slate-800 mb-1">Wajah Bersejarah</h2>
+                    <p class="text-xs font-bold text-slate-500 mb-6">Jepretan momen seru kamu! 📸</p>
+                    
+                    <div id="bentoGallery" class="w-full bg-white p-3 rounded-3xl shadow-lg border border-slate-200">
+                        <div class="grid grid-cols-3 auto-rows-[80px] gap-2 w-full" id="bentoGrid">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="next-btn-container absolute bottom-6 inset-x-0 flex justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-40">
+                <button onclick="nextSlide()" class="bg-slate-800 text-white px-6 py-3 rounded-full font-black text-sm shadow-lg flex items-center gap-2">Lanjut ke Penutup <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: FINALE (CREDITS & AUDIO) -->
+        <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden bg-slate-950" id="slide-7">
             
-            <div id="bentoGallery" class="w-full bg-white p-3 rounded-3xl shadow-lg border border-slate-200 animate-fade-in-up" style="animation-delay: 0.4s">
-                <div class="grid grid-cols-3 grid-rows-3 gap-2 w-full aspect-[4/5]" id="bentoGrid">
-                    <div class="col-span-3 row-span-3 flex items-center justify-center bg-slate-100 rounded-xl"><i class="fa-solid fa-spinner fa-spin text-slate-400 text-2xl"></i></div>
+            <!-- CREDIT SCENE -->
+            <div id="slide-7-credits" class="absolute inset-0 flex items-center justify-center z-20">
+                <div id="creditsRoll" class="text-center space-y-12 text-white font-black tracking-widest uppercase text-sm w-full px-6">
+                    <div>
+                        <p class="text-xs text-indigo-400 mb-2">Pengajar & Pembimbing</p>
+                        <p class="text-xl">Pa Ustad Idris</p>
+                        <p class="text-xl">Pa ustad Yatno</p>
+                        <p class="text-xl">Kak Aziz</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-indigo-400 mb-2">Pemeran Utama</p>
+                        <p class="text-2xl text-amber-400" id="creditName">KAMU</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-indigo-400 mb-2">Lokasi Pengajian</p>
+                        <p class="text-lg">Mushola Nurul Hidayah</p>
+                    </div>
+                    <div class="pt-8">
+                        <p class="text-xl leading-relaxed">TERIMA KASIH TELAH BERJUANG HEBAT TAHUN INI!</p>
+                    </div>
+                    <div class="pt-4">
+                        <p class="text-sm text-slate-400">Semoga Al-Quran selalu menjagamu.</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Tombol Lanjut (Muncul cuma di slide galeri) -->
-            <button onclick="nextSlide()" id="btnNextGallery" class="mt-6 bg-indigo-600 text-white font-black px-6 py-3 rounded-full shadow-[0_4px_0_#4f46e5] active:translate-y-[4px] active:shadow-none transition-all animate-pop-in hidden" style="animation-delay: 0.6s">
-                Lanjut <i class="fa-solid fa-arrow-right ml-1"></i>
-            </button>
-        </div>
-
-        <!-- SLIDE 8: AUDIO (Grand Finale) -->
-        <div class="wrapped-slide hidden flex-col items-center justify-center text-center w-full max-w-sm h-full relative" data-index="8">
-            <div class="w-24 h-24 bg-gradient-to-tr from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-xl shadow-indigo-200 animate-bounce relative z-10 border-4 border-white">
-                <i class="fa-solid fa-microphone-lines text-white"></i>
-            </div>
-            
-            <div class="bg-white border-2 border-indigo-100 p-6 rounded-[2rem] shadow-xl relative z-10 w-full animate-fade-in-up">
-                <h2 id="s8_title" class="text-2xl font-black text-slate-800 mb-2">Suara Emasmu!</h2>
-                <p id="s8_desc1" class="text-[10px] text-slate-500 font-bold mb-6 leading-relaxed">Dan hari ini, kamu menutup ujian dengan indah. Dengerin lagi rekaman tartilmu...</p>
+            <!-- AUDIO SECTION (Fades in after credits) -->
+            <div id="slide-7-audio" class="relative z-10 flex-col items-center justify-center h-full p-6 hidden opacity-0">
                 
-                <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-2xl mb-2">
-                    <audio id="finalAudio" controls class="w-full rounded-lg"></audio>
+                <div class="w-32 h-32 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-5xl mb-8 shadow-[0_0_60px_rgba(99,102,241,0.5)] border-4 border-slate-800 relative">
+                    <i class="fa-solid fa-microphone-lines text-white animate-pulse"></i>
+                    <div class="absolute -bottom-2 -right-2 bg-amber-400 w-10 h-10 rounded-full flex items-center justify-center text-slate-900 text-xl border-2 border-slate-900 transform -rotate-12"><i class="fa-solid fa-star"></i></div>
                 </div>
+                
+                <h2 class="text-3xl font-black mb-3 drop-shadow-lg text-center text-white">Suara Emasmu</h2>
+                <p class="text-xs font-bold text-slate-400 mb-12 text-center max-w-xs leading-relaxed">Mari kita dengarkan kembali lantunan tartil terbaikmu di ujian tadi sebagai penutup yang indah.</p>
+                
+                <button id="btnPlayPause" onclick="toggleAudio()" class="w-20 h-20 bg-white text-indigo-600 rounded-full flex items-center justify-center text-3xl shadow-lg hover:scale-105 active:scale-95 transition-all outline-none">
+                    <i class="fa-solid fa-play ml-1" id="playIcon"></i>
+                </button>
+                <p class="mt-5 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-800 px-4 py-2 rounded-full" id="audioStatusText">Tekan untuk memutar</p>
+
             </div>
-            
-            <button onclick="closeWrapped()" class="mt-8 relative z-10 bg-indigo-600 text-white font-black px-8 py-4 rounded-2xl shadow-[0_6px_0_#4f46e5] active:translate-y-[6px] active:shadow-none transition-all animate-pop-in" style="animation-delay: 0.5s">
-                Tutup Catatan <i class="fa-solid fa-check ml-1"></i>
-            </button>
         </div>
 
     </div>
@@ -191,80 +346,143 @@ import Toast from '../../components/Toast.astro';
   <Toast />
 </Layout>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
-<!-- Library html-to-image (Support Tailwind & JPG) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" is:inline></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" is:inline></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" is:inline></script>
+<!-- [BARU] GSAP TextPlugin untuk efek mengetik -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js" is:inline></script>
 
 <script>
+    gsap.registerPlugin(ScrollTrigger, TextPlugin);
+
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
     const studentId = window.location.pathname.split('/').pop();
     const urlParams = new URLSearchParams(window.location.search);
     const isPreview = urlParams.get('preview') === 'true';
 
-    const WRAPPED_COPY = {
-        s0: { greeting: "Halo...", title: "Ini Perjalanan Ngajimu!" },
-        s1: { title: "Gak Kerasa Ya...", desc1: "Waktu cepet banget berlalunya.", desc2: "Kemarin rasanya baru mulai belajar iqro..." },
-        s2: { title: "Ujian Udah Beres!", desc1: "Pasti capek ngerjain tugas, ngapalin ayat. Tapi kamu hebat bisa lewatin semuanya!" },
-        s3: { title: "Pesan Ustadz/ah", desc1: "\"Terima kasih sudah berjuang keras! Ilmu yang kamu pelajari ini bakal jadi penerang jalanmu nanti.\"" },
-        s4: { title: "Si Paling Rajin!", desc1: "Kamu sudah hadir sebanyak", desc2: "Luar biasa! Pertahankan terus ya!" },
-        s5: { title: "Penghafal Quran!", desc1: "Setoran hafalanmu sudah sampai di:" },
-        s6: { title: "Si Sultan Koin!", desc1: "Total Kekayaanmu:", favItem: "Item Favorit", favTarget: "Korban Serangan" },
-        s7: { title: "Wajah Bersejarah", desc1: "Rekaman diam-diam ustadz! 📸" },
-        s8: { title: "Suara Emasmu!", desc1: "Dan hari ini, kamu menutup ujian dengan indah. Dengerin lagi rekaman tartilmu..." }
-    };
-
     let currentSlide = 0;
-    const totalSlides = 9; 
-    let slideTimers = []; 
-    const SLIDE_DURATION = 6000; 
-
+    const totalSlides = 8; // 0 to 7
     const base64Audio = sessionStorage.getItem('easterEggAudio');
-    
-    const initData = async () => {
-        try {
-            // Setup Text
-            for(let i=0; i<=8; i++) {
-                if(WRAPPED_COPY[`s${i}`]) {
-                    Object.keys(WRAPPED_COPY[`s${i}`]).forEach(key => {
-                        const el = document.getElementById(`s${i}_${key}`);
-                        if(el) el.innerText = WRAPPED_COPY[`s${i}`][key];
-                    });
-                }
-            }
+    let bgMusic, userAudio;
+    let audioFadeTimeout;
 
+    // ========================================================
+    // INITIALIZATION & FETCH DATA
+    // ========================================================
+    const initData = async () => {
+        bgMusic = document.getElementById('bgMusic');
+        userAudio = document.getElementById('userAudio');
+        bgMusic.volume = 0.5;
+
+        userAudio.onended = () => {
+            const icon = document.getElementById('playIcon');
+            icon.classList.replace('fa-pause', 'fa-play');
+            icon.classList.replace('ml-0', 'ml-1');
+            document.getElementById('audioStatusText').innerText = "Selesai (Tekan untuk ulang)";
+            
+            clearTimeout(audioFadeTimeout);
+            gsap.to(bgMusic, { volume: 0.5, duration: 2 });
+        };
+
+        try {
             if (isPreview) {
-                document.getElementById('s0_name').innerText = "Siswa Teladan";
-                document.getElementById('s4_hadir').innerText = "45";
-                document.getElementById('s5_surah').innerText = "Juz 30";
-                document.getElementById('s5_ayah').innerText = "Ayat 15";
-                document.getElementById('s6_poin').innerText = "5200";
-                document.getElementById('s6_fav_item').innerText = "Pedang Serang ⚔️";
-                document.getElementById('s6_fav_target').innerText = "John Doe";
+                document.getElementById('s1_name').innerText = "Siswa Teladan";
+                document.getElementById('creditName').innerText = "SISWA TELADAN";
+                document.getElementById('s1_initial').innerText = "ST";
+                document.getElementById('s1_photo').src = "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto";
+                document.getElementById('s1_photo_timeline').src = "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto";
+
+                document.getElementById('s3_hadir').innerText = "45";
+                document.getElementById('s3_izin').innerText = "3";
+                document.getElementById('s3_alpa').innerText = "0";
+                document.getElementById('s3_details').innerHTML = `
+                    <div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div>
+                        <div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin karena sakit. Kami doakan semoga kamu selalu diberikan kesehatan yang prima ya!</p></div>
+                    </div>`;
+
+                document.getElementById('s4_count').innerText = "15";
+                document.getElementById('s4_pct_val').innerText = "75%";
+                document.getElementById('s4_percentile').classList.remove('hidden');
+                document.getElementById('s4_surahList').innerHTML = ["An-Nas", "Al-Falaq", "Al-Ikhlas"].map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
                 
-                // Pake Dummy Image yang AMAN DARI CORS
-                const dummyImages = [
-                    "https://dummyimage.com/400x400/e2e8f0/64748b&text=Muka+Tegang",
-                    "https://dummyimage.com/400x400/cbd5e1/475569&text=Fokus+Ujian",
-                    "https://dummyimage.com/400x400/94a3b8/334155&text=Ngantuk",
-                    "https://dummyimage.com/400x400/64748b/1e293b&text=Santuy"
+                // Set Animasi Timeline Dummy
+                document.getElementById('s4_timeline_fill').style.width = "40%";
+                document.getElementById('s4_timeline_user').style.left = "40%";
+
+                document.getElementById('s5_poin').innerText = "5200";
+                document.getElementById('s5_item').innerText = "Perisai 🛡️";
+                document.getElementById('s5_target').innerText = "Si Fulan";
+                document.getElementById('s5_listSerang').innerHTML = `<li>Si Fulan <span class="text-[9px] text-slate-400 font-normal ml-1">(5x)</span></li>`;
+                document.getElementById('s5_listDiserang').innerHTML = `<li>Budi <span class="text-[9px] text-slate-400 font-normal ml-1">(2x)</span></li>`;
+
+                const dummyPhotos = [
+                    "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto+1",
+                    "https://dummyimage.com/400x400/cbd5e1/475569&text=Foto+2",
+                    "https://dummyimage.com/400x400/94a3b8/334155&text=Foto+3"
                 ];
-                renderBentoGrid(dummyImages);
-                setupAudioPreview(base64Audio); 
+                renderBentoGrid(dummyPhotos);
+                
+                if (base64Audio) userAudio.src = base64Audio;
+
             } else {
                 const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const stdData = (await stdRes.json()).data;
-                document.getElementById('s0_name').innerText = stdData.name;
-                document.getElementById('s6_poin').innerText = stdData.poin || 0;
-                document.getElementById('s5_surah').innerText = "Juz 30"; 
-                document.getElementById('s5_ayah').innerText = `Ayat ${stdData.current_ayah || 0}`;
+                
+                document.getElementById('s1_name').innerText = stdData.name;
+                document.getElementById('creditName').innerText = stdData.name.toUpperCase();
+                document.getElementById('s1_initial').innerText = stdData.name.substring(0,2).toUpperCase();
 
                 try {
-                    const logsRes = await fetch(`${API_URL}/api/students/${studentId}/point-history?days=all&limit=100`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const attRes = await fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const attData = (await attRes.json()).data;
+                    document.getElementById('s3_hadir').innerText = attData.stats.hadir || 0;
+                    document.getElementById('s3_izin').innerText = attData.stats.izin || 0;
+                    document.getElementById('s3_alpa').innerText = attData.stats.alpa || 0;
+
+                    let detHtml = "";
+                    if(attData.stats.alpa > 0) {
+                        detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Ada <b class="text-red-600">${attData.stats.alpa} hari</b> tanpa keterangan nih. Harus lebih rajin masuk ya biar makin pinter!</p></div></div>`;
+                    }
+                    if(attData.stats.izin > 0) {
+                        detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin/sakit. Kami doakan semoga kamu sehat dan semangat terus ngajinya.</p></div></div>`;
+                    }
+                    if(detHtml === "") detHtml = `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-green-100 text-green-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-star"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kehadiran sempurna! Luar biasa dedikasi dan semangatmu buat ngaji!</p></div></div>`;
+                    
+                    document.getElementById('s3_details').innerHTML = detHtml;
+                } catch(e) {}
+
+                try {
+                    const memRes = await fetch(`${API_URL}/api/students/${studentId}/memorization-logs`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    const memData = (await memRes.json()).data || [];
+                    const uniqueSurahs = [...new Set(memData.map(m => m.surah_name))];
+                    document.getElementById('s4_count').innerText = uniqueSurahs.length;
+                    
+                    // Setup UI Timeline Posisi
+                    const totalSurah = 37;
+                    const pctUser = Math.min(100, (uniqueSurahs.length / totalSurah) * 100);
+                    document.getElementById('s4_timeline_fill').style.width = `${pctUser}%`;
+                    document.getElementById('s4_timeline_user').style.left = `${pctUser}%`;
+
+                    if(uniqueSurahs.length > 15) {
+                        document.getElementById('s4_percentile').classList.remove('hidden');
+                        document.getElementById('s4_pct_val').innerText = Math.min(99, Math.floor(pctUser) + 20) + "%";
+                    }
+
+                    document.getElementById('s4_surahList').innerHTML = uniqueSurahs.map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
+                } catch(e) {}
+
+                document.getElementById('s5_poin').innerText = stdData.poin || 0;
+                try {
+                    const logsRes = await fetch(`${API_URL}/api/students/${studentId}/point-history?days=all&limit=200`, { headers: { 'Authorization': `Bearer ${token}` }});
                     const logsData = (await logsRes.json()).data || [];
                     
                     let itemsCount = { 'Perisai 🛡️': 0, 'Pedang Serang ⚔️': 0, 'Double Score ✨': 0, 'Extra Life 💖': 0 };
                     let targetsCount = {};
+                    let attackersCount = {};
 
                     logsData.forEach(log => {
                         if(log.icon === '🛍️') {
@@ -273,82 +491,67 @@ import Toast from '../../components/Toast.astro';
                             else if(log.title.includes('Double')) itemsCount['Double Score ✨']++;
                             else itemsCount['Extra Life 💖']++;
                         }
-                        if(log.icon === '🔥' && log.title.includes('mencuri poin dari')) {
+                        if(log.icon === '🔥') {
                             const match = log.title.match(/<strong>(.*?)<\/strong>/);
                             if(match && match[1]) {
-                                const tName = match[1];
-                                targetsCount[tName] = (targetsCount[tName] || 0) + 1;
+                                if(log.title.includes('mencuri poin dari')) targetsCount[match[1]] = (targetsCount[match[1]] || 0) + 1;
+                                else if(log.title.includes('berhasil diserang oleh')) attackersCount[match[1]] = (attackersCount[match[1]] || 0) + 1;
                             }
                         }
                     });
 
                     let favItem = Object.keys(itemsCount).reduce((a, b) => itemsCount[a] > itemsCount[b] ? a : b);
-                    if(itemsCount[favItem] === 0) favItem = "Belum Ada";
                     let favTarget = Object.keys(targetsCount).length > 0 ? Object.keys(targetsCount).reduce((a, b) => targetsCount[a] > targetsCount[b] ? a : b) : "Cinta Damai 🕊️";
 
-                    document.getElementById('s6_fav_item').innerText = favItem;
-                    document.getElementById('s6_fav_target').innerText = favTarget;
-                } catch(e) { console.error("Gagal load gamifikasi"); }
+                    document.getElementById('s5_item').innerText = itemsCount[favItem] === 0 ? "Belum Ada" : favItem;
+                    document.getElementById('s5_target').innerText = favTarget;
 
-                try {
-                    const attRes = await fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers: { 'Authorization': `Bearer ${token}` }});
-                    const attData = (await attRes.json()).data;
-                    document.getElementById('s4_hadir').innerText = attData.stats.hadir || 0;
-                } catch(e) { console.error("Gagal load absen"); }
+                    const renderList = (obj) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v]) => `<li>${k} <span class="text-[9px] text-slate-400 font-normal ml-1">(${v}x)</span></li>`).join('') || "<li>Kosong</li>";
+                    document.getElementById('s5_listSerang').innerHTML = renderList(targetsCount);
+                    document.getElementById('s5_listDiserang').innerHTML = renderList(attackersCount);
+                } catch(e) {}
 
                 try {
                     const [galReq, satpamReq] = await Promise.all([
                         fetch(`${API_URL}/api/students/${studentId}/gallery`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]})),
                         fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]}))
                     ]);
+                    const allPhotos = [...(galReq.data||[]).map(i=>i.image_url), ...(satpamReq.data||[]).map(i=>i.photo_url)];
                     
-                    const galPhotos = (galReq.data||[]).map(i => i.image_url);
-                    const satpamPhotos = (satpamReq.data||[]).map(i => i.photo_url);
+                    const avatarUrl = `https://ui-avatars.com/api/?name=${stdData.name}&background=e2e8f0&color=64748b`;
                     
-                    let allPhotos = [...galPhotos, ...satpamPhotos];
-                    if(allPhotos.length === 0) allPhotos = ["https://dummyimage.com/400x400/f1f5f9/94a3b8&text=Belum+Ada+Foto"];
-                    renderBentoGrid(allPhotos);
-                } catch(e) { console.error("Gagal load gallery"); renderBentoGrid(["https://dummyimage.com/400x400/fee2e2/ef4444&text=Error"]);}
+                    if(allPhotos.length > 0) {
+                        document.getElementById('s1_photo').src = allPhotos[0]; 
+                        document.getElementById('s1_photo_timeline').src = allPhotos[0];
+                        renderBentoGrid(allPhotos);
+                    } else {
+                        document.getElementById('s1_photo').src = avatarUrl;
+                        document.getElementById('s1_photo_timeline').src = avatarUrl;
+                        renderBentoGrid([avatarUrl]);
+                    }
+                } catch(e) {}
 
-                setupAudioPreview(base64Audio);
+                if (base64Audio) userAudio.src = base64Audio;
             }
 
-            initBars();
-            showSlide(0);
+            document.getElementById('slide-0').classList.replace('hidden', 'flex');
 
         } catch (error) {
             console.error(error);
-            window.showToast?.('danger', 'Error', 'Gagal memuat catatan Ngaji.');
-        }
-    };
-
-    const setupAudioPreview = (base64String) => {
-        const audioEl = document.getElementById('finalAudio');
-        if (base64String) {
-            audioEl.src = base64String;
-        } else {
-            document.getElementById('s8_desc1').innerText = "Ups, rekamannya belum ada atau tidak tersimpan.";
-            audioEl.parentElement.classList.add('hidden');
+            window.showToast?.('danger', 'Error', 'Gagal memuat data.');
         }
     };
 
     const renderBentoGrid = (images) => {
         const grid = document.getElementById('bentoGrid');
         grid.innerHTML = ''; 
-        const pool = images.slice(0, 5);
         
-        pool.forEach((url, i) => {
-            let gridClass = "col-span-1 row-span-1";
-            if(pool.length >= 3) {
-                if(i === 0) gridClass = "col-span-2 row-span-2";
-                else if(i === 1 || i === 2) gridClass = "col-span-1 row-span-1";
-                else if(i === 3) gridClass = "col-span-2 row-span-1";
-            } else if (pool.length === 1) {
-                gridClass = "col-span-3 row-span-3";
-            }
-
+        images.forEach((url, i) => {
+            let rowSpan = (i % 3 === 0) ? 'row-span-2' : 'row-span-1';
+            let colSpan = (i % 4 === 0) ? 'col-span-2' : 'col-span-1';
+            
             grid.innerHTML += `
-                <div class="${gridClass} relative bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer group" onclick="openPhotoViewer('${url}')">
+                <div class="${colSpan} ${rowSpan} relative bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer group" onclick="openPhotoViewer('${url}')">
                     <img src="${url}" crossorigin="anonymous" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-xl transition-opacity"></i>
@@ -358,131 +561,182 @@ import Toast from '../../components/Toast.astro';
         });
     };
 
-    const initBars = () => {
-        const pCont = document.getElementById('progressContainer');
-        pCont.innerHTML = '';
-        for(let i=0; i<totalSlides; i++) {
-            pCont.innerHTML += `
-                <div class="flex-1 h-1.5 bg-slate-200/50 rounded-full overflow-hidden cursor-pointer" onclick="jumpToSlide(${i})">
-                    <div id="bar-${i}" class="h-full bg-indigo-500 w-0 transition-none"></div>
-                </div>
-            `;
+    // ========================================================
+    // NAVIGATION & MANUAL SCROLL LOGIC
+    // ========================================================
+    window.startExperience = () => {
+        bgMusic.play().catch(e => console.log("Autoplay blocked."));
+        nextSlide();
+    };
+
+    window.nextSlide = () => {
+        if(currentSlide === totalSlides - 1) return;
+        
+        const currEl = document.getElementById(`slide-${currentSlide}`);
+        if(currEl) currEl.classList.replace('flex', 'hidden');
+        
+        currentSlide++;
+        
+        const nextEl = document.getElementById(`slide-${currentSlide}`);
+        nextEl.classList.replace('hidden', 'flex');
+        
+        const bar = document.getElementById('scrollProgress');
+        bar.style.width = '0%';
+        bar.classList.remove('bg-green-500'); bar.classList.add('bg-indigo-500');
+
+        const nextBtn = nextEl.querySelector('.next-btn-container');
+        if(nextBtn) {
+            nextBtn.classList.replace('opacity-100', 'opacity-0');
+            nextBtn.classList.replace('pointer-events-auto', 'pointer-events-none');
+        }
+
+        if(typeof confetti !== 'undefined' && currentSlide > 0 && currentSlide < 7) {
+            confetti({ particleCount: 40, spread: 60, origin: { y: 0.9 }, colors: ['#6366f1', '#f59e0b', '#10b981', '#f43f5e'] });
+        }
+
+        setupSlide(currentSlide);
+    };
+
+    const setupSlide = (index) => {
+        const btnDownload = document.getElementById('btnDownload');
+        const btnCloseHeader = document.getElementById('btnCloseHeader');
+        
+        // Atur Header Icons
+        if (index > 0 && index < 7) btnDownload.classList.replace('hidden', 'flex');
+        else btnDownload.classList.replace('flex', 'hidden');
+
+        // GSAP SLIDE 2: Efek Ngetik per Card Full Screen
+        if (index === 2) {
+            ScrollTrigger.getAll().forEach(t => t.kill()); 
+            
+            gsap.utils.toArray('#slide-2 .narrative-card').forEach((card) => {
+                const textTarget = card.querySelector('.type-target');
+                const fullText = textTarget.getAttribute('data-text');
+                textTarget.innerText = ''; // Kosongin dulu sebelum animasi
+
+                ScrollTrigger.create({
+                    trigger: card,
+                    scroller: "#scroller-2",
+                    start: "top 70%",
+                    onEnter: () => {
+                        // Animasi Muncul Card
+                        gsap.to(card, { opacity: 1, y: 0, duration: 0.8, ease: "back.out(1.5)" });
+                        // Animasi Ngetik Teks
+                        gsap.to(textTarget, { 
+                            text: fullText, 
+                            duration: 3.5, 
+                            delay: 0.4, 
+                            ease: "none" 
+                        });
+                    }
+                });
+            });
+        }
+
+        // SLIDE 7: GSAP Sequence (Credit -> Audio Play)
+        if (index === 7) {
+            // Sembunyikan UI Audio & tampilkan Credit
+            document.getElementById('slide-7-credits').classList.replace('hidden', 'flex');
+            document.getElementById('slide-7-audio').classList.replace('flex', 'hidden');
+            gsap.set("#slide-7-audio", { opacity: 0 });
+            
+            // GSAP Timeline untuk Credit Scene
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    // Setelah Credit beres, Munculin Audio Player + Tombol Silang Header
+                    document.getElementById('slide-7-credits').classList.replace('flex', 'hidden');
+                    document.getElementById('slide-7-audio').classList.replace('hidden', 'flex');
+                    
+                    gsap.to("#slide-7-audio", { opacity: 1, duration: 1.5 });
+                    btnCloseHeader.classList.replace('hidden', 'flex');
+                    
+                    // Kalau audio aslinya kosong/error, lgsg tunjukin tombol silang di header aja
+                    if(!userAudio.src || userAudio.src.endsWith('undefined')) {
+                        document.getElementById('audioStatusText').innerText = "Rekaman tidak tersedia.";
+                    }
+                }
+            });
+
+            // Animasi Credit dari bawah ke atas layar lalu ilang
+            tl.fromTo("#creditsRoll", 
+                { y: "100vh" }, 
+                { y: "-150vh", duration: 12, ease: "linear" }
+            ).to("#slide-7-credits", { opacity: 0, duration: 1 });
+        }
+
+        // Pancing fungsi scroll biar tombol Next bisa muncul kalo content layar pendek
+        const scroller = document.getElementById(`slide-${index}`).querySelector('.scroll-area');
+        if (scroller) handleScroll(scroller); 
+    };
+
+    window.handleScroll = (el) => {
+        const { scrollTop, scrollHeight, clientHeight } = el;
+        const maxScroll = scrollHeight - clientHeight;
+        
+        const progress = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 100;
+        
+        const bar = document.getElementById('scrollProgress');
+        bar.style.width = `${progress}%`;
+
+        if (progress >= 99) {
+            bar.classList.replace('bg-indigo-500', 'bg-green-500');
+            const slideEl = el.closest('.wrapped-slide');
+            const nextBtn = slideEl.querySelector('.next-btn-container');
+            
+            if (nextBtn) {
+                nextBtn.classList.replace('opacity-0', 'opacity-100');
+                nextBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
+            }
         }
     };
 
-    const resetBars = () => {
-        for(let i=0; i<totalSlides; i++) {
-            const bar = document.getElementById(`bar-${i}`);
-            bar.style.transition = 'none';
-            if (i < currentSlide) bar.style.width = '100%';
-            else bar.style.width = '0%';
-        }
-    };
-
-    const animateBar = (index) => {
-        const bar = document.getElementById(`bar-${index}`);
-        setTimeout(() => {
-            bar.style.transition = `width ${SLIDE_DURATION}ms linear`;
-            bar.style.width = '100%';
-        }, 50); 
-    };
-
-    const clearAllTimers = () => {
-        slideTimers.forEach(t => clearTimeout(t));
-        slideTimers = [];
-        const audioEl = document.getElementById('finalAudio');
-        if(audioEl && !audioEl.paused) audioEl.pause();
-    };
-
-    const shootConfetti = () => {
-        if(typeof confetti !== 'undefined') {
-            confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 }, colors: ['#6366f1', '#f59e0b', '#10b981', '#f43f5e'] });
-        }
-    };
-
-    window.jumpToSlide = (index) => {
-        if(event) event.stopPropagation(); 
-        showSlide(index);
-    };
-
-    const showSlide = (index) => {
-        if (index < 0 || index >= totalSlides) {
-            if(index >= totalSlides) closeWrapped();
+    // ========================================================
+    // AUDIO LOGIC (Debounce & Crossfade)
+    // ========================================================
+    window.toggleAudio = () => {
+        if(!userAudio.src || userAudio.src.endsWith('undefined')) {
+            window.showToast?.('warning', 'Ups', 'Tidak ada rekaman audio.');
             return;
         }
 
-        clearAllTimers();
-        currentSlide = index;
-        
-        const slides = document.querySelectorAll('.wrapped-slide');
-        slides.forEach(s => {
-            s.classList.replace('flex', 'hidden');
-            const animatedElems = s.querySelectorAll('.animate-fade-in-up, .animate-pop-in');
-            animatedElems.forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = null; });
-        });
+        const icon = document.getElementById('playIcon');
+        const statusText = document.getElementById('audioStatusText');
 
-        slides[index].classList.replace('hidden', 'flex');
-        shootConfetti(); 
-        resetBars();
-        
-        const btnDownload = document.getElementById('btnDownload');
-        const progressContainer = document.getElementById('progressContainer');
-        const clickAreaNext = document.getElementById('clickNext');
-        const clickAreaPrev = document.getElementById('clickPrev');
+        if (userAudio.paused) {
+            userAudio.play();
+            icon.classList.replace('fa-play', 'fa-pause');
+            icon.classList.replace('ml-1', 'ml-0');
+            statusText.innerText = "Sedang memutar...";
+            
+            clearTimeout(audioFadeTimeout);
+            gsap.to(bgMusic, { volume: 0.1, duration: 1 });
 
-        // Mengatur Visibilitas Tombol Download (Hanya di Slide 1-7)
-        if (index === 0 || index === 8) {
-            btnDownload.classList.replace('flex', 'hidden');
         } else {
-            btnDownload.classList.replace('hidden', 'flex');
+            userAudio.pause();
+            icon.classList.replace('fa-pause', 'fa-play');
+            icon.classList.replace('ml-0', 'ml-1');
+            statusText.innerText = "Dijeda (Tekan untuk lanjut)";
+            
+            clearTimeout(audioFadeTimeout);
+            audioFadeTimeout = setTimeout(() => {
+                gsap.to(bgMusic, { volume: 0.5, duration: 1.5 });
+            }, 500);
         }
-
-        // Logika Slide 7 (Galeri Bento)
-        if (index === 7) {
-            progressContainer.classList.add('opacity-0', 'pointer-events-none'); 
-            document.getElementById('btnNextGallery').classList.remove('hidden'); 
-            clickAreaNext.classList.add('hidden'); 
-            clickAreaPrev.classList.add('hidden'); 
-            return; // Matikan Auto-Next
-        } else {
-            progressContainer.classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('btnNextGallery').classList.add('hidden');
-            clickAreaNext.classList.remove('hidden');
-            clickAreaPrev.classList.remove('hidden');
-        }
-
-        // Logika Slide 8 (Audio Final)
-        if (index === 8) {
-            const audioEl = document.getElementById('finalAudio');
-            if (audioEl && !audioEl.parentElement.classList.contains('hidden') && audioEl.src) {
-                audioEl.play().catch(e => console.log("Auto-play diblok browser."));
-                audioEl.onloadedmetadata = () => {
-                    const durationMs = audioEl.duration * 1000;
-                    document.getElementById(`bar-${index}`).style.transition = `width ${durationMs}ms linear`;
-                    document.getElementById(`bar-${index}`).style.width = '100%';
-                };
-                audioEl.onended = () => { slideTimers.push(setTimeout(() => nextSlide(), 1000)); };
-                return; 
-            }
-        }
-
-        animateBar(index);
-        slideTimers.push(setTimeout(() => nextSlide(), SLIDE_DURATION));
     };
-
-    window.nextSlide = () => { showSlide(currentSlide + 1); };
-    window.prevSlide = () => { showSlide(currentSlide - 1); };
 
     window.closeWrapped = () => {
-        if (isPreview) window.location.href = `/exams`; 
-        else window.location.replace('/students'); 
+        if (isPreview) {
+            window.location.href = `/exams`; 
+        } else {
+            // Lempar ke halaman publik "Selesai"
+            window.location.replace('/selesai'); 
+        }
     };
 
     // ========================================================
-    // PHOTO VIEWER & DOWNLOAD LOGIC (JPG Format & CORS Fix)
+    // DOWNLOAD LOGIC
     // ========================================================
     window.openPhotoViewer = (url) => {
-        if(event) event.stopPropagation(); 
         document.getElementById('viewerImage').src = url;
         document.getElementById('photoViewerModal').classList.replace('hidden', 'flex');
     };
@@ -497,7 +751,6 @@ import Toast from '../../components/Toast.astro';
             const response = await fetch(url);
             const blob = await response.blob();
             const blobUrl = window.URL.createObjectURL(blob);
-            
             const link = document.createElement('a');
             link.download = `Ngaji_Memori_${Date.now()}.jpg`;
             link.href = blobUrl;
@@ -505,44 +758,28 @@ import Toast from '../../components/Toast.astro';
             window.URL.revokeObjectURL(blobUrl);
             window.showToast?.('success', 'Tersimpan!', 'Foto berhasil diunduh.');
         } catch(e) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `Ngaji_Memori_${Date.now()}.jpg`;
-            link.click();
+            const link = document.createElement('a'); link.href = url; link.target = '_blank'; link.download = `Ngaji_Memori_${Date.now()}.jpg`; link.click();
         }
     };
 
-    // FUNGSI SAKTI DOWNLOAD KESELURUHAN BODY (JPG)
     window.downloadCurrentSlide = async () => {
-        if(event) event.stopPropagation();
-        
         const btn = document.getElementById('btnDownload');
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Tunggu...';
         btn.disabled = true;
 
-        // 1. Sembunyikan elemen UI Header dan Area Klik biar gak ikut kefoto
         const headerUI = document.getElementById('headerUI');
-        const clickNext = document.getElementById('clickNext');
-        const clickPrev = document.getElementById('clickPrev');
-        const btnNextGallery = document.getElementById('btnNextGallery');
+        const activeSlide = document.querySelector('.wrapped-slide:not(.hidden)');
+        const nextBtnContainer = activeSlide.querySelector('.next-btn-container');
 
         headerUI.style.display = 'none';
-        clickNext.style.display = 'none';
-        clickPrev.style.display = 'none';
-        if(btnNextGallery) btnNextGallery.style.display = 'none';
+        if(nextBtnContainer) nextBtnContainer.style.display = 'none';
 
         try {
-            // Target seluruh layar/body biar background dan pernak-perniknya dapet
-            const elementToCapture = document.getElementById('wrappedContainer');
+            let elementToCapture = currentSlide === 6 ? document.getElementById('bentoGallery') : activeSlide.querySelector('.scroll-area > div');
             
-            // Konversi jadi JPG (Kualitas 90%, skip pembacaan font eksternal biar gak error CSSRules)
             const dataUrl = await htmlToImage.toJpeg(elementToCapture, {
-                quality: 0.9,
-                pixelRatio: 2,
-                skipFonts: true, 
-                backgroundColor: '#f8fafc' // Warna slate-50
+                quality: 0.9, pixelRatio: 2, skipFonts: true, backgroundColor: '#f8fafc' 
             });
 
             const link = document.createElement('a');
@@ -552,15 +789,10 @@ import Toast from '../../components/Toast.astro';
             
             window.showToast?.('success', 'Tersimpan!', 'Catatan (JPG) berhasil diunduh.');
         } catch (error) {
-            console.error("Gagal render gambar:", error);
             window.showToast?.('danger', 'Ups!', 'Gagal menyimpan gambar.');
         } finally {
-            // 2. Kembalikan lagi elemen UI
             headerUI.style.display = 'flex';
-            clickNext.style.display = 'block';
-            clickPrev.style.display = 'block';
-            if(btnNextGallery && currentSlide === 7) btnNextGallery.style.display = 'block';
-            
+            if(nextBtnContainer) nextBtnContainer.style.display = 'flex';
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
@@ -570,6 +802,7 @@ import Toast from '../../components/Toast.astro';
 </script>
 
 <style is:global>
+    /* CSS Pola Grid */
     .pattern-grid {
         background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
         background-size: 24px 24px;
@@ -578,9 +811,24 @@ import Toast from '../../components/Toast.astro';
     .animate-float { animation: float 6s ease-in-out infinite; }
     @keyframes float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-20px) scale(1.05); } }
 
-    .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-    @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+    /* Flip Card CSS */
+    .flip-card { perspective: 1000px; }
+    .flip-card-inner {
+        position: relative; 
+        width: 100%; 
+        height: 100%;
+        transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform-style: preserve-3d;
+    }
+    .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+    .flip-card-front, .flip-card-back {
+        position: absolute; 
+        width: 100%; 
+        height: 100%;
+        backface-visibility: hidden;
+    }
+    .flip-card-back { transform: rotateY(180deg); }
 
-    .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
-    @keyframes popIn { 0% { opacity: 0; transform: scale(0.5) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>

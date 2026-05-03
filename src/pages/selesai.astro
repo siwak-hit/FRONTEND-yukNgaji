@@ -1,0 +1,62 @@
+---
+// src/pages/selesai.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Ujian Selesai - yukNgaji">
+    <!-- [FIX] Hapus 'relative', tambahin 'z-[100]' biar beneran nutupin full layar dan center sempurna -->
+    <div class="fixed inset-0 z-[100] bg-slate-50 font-sans text-slate-800 pattern-grid flex flex-col items-center justify-center p-6 overflow-hidden select-none">
+        
+        <!-- Ornamen Geometris -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+            <div class="absolute top-10 left-10 w-32 h-32 bg-yellow-300 rounded-full mix-blend-multiply filter blur-2xl opacity-60 animate-float"></div>
+            <div class="absolute bottom-10 right-10 w-40 h-40 bg-indigo-300 rounded-full mix-blend-multiply filter blur-2xl opacity-60 animate-float" style="animation-delay: 2s;"></div>
+        </div>
+
+        <!-- Card Utama -->
+        <div class="bg-white/80 backdrop-blur-md border-2 border-indigo-100 p-8 rounded-[2rem] w-full max-w-sm shadow-2xl text-center relative z-10 animate-fade-in-up">
+            
+            <!-- Ikon Tengah -->
+            <div class="w-24 h-24 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 shadow-inner border-4 border-white">
+                <i class="fa-solid fa-hourglass-half animate-pulse"></i>
+            </div>
+            
+            <!-- Teks -->
+            <h1 class="text-3xl font-black text-slate-800 mb-1">Alhamdulillah!</h1>
+            <h2 class="text-sm font-black text-indigo-600 mb-6 uppercase tracking-widest">Ujian Selesai</h2>
+            
+            <!-- Pesan -->
+            <div class="bg-slate-50 border border-slate-200 p-5 rounded-2xl mb-8 text-sm font-bold text-slate-600 leading-relaxed shadow-sm">
+                Sekarang kamu boleh istirahat. Silakan tunggu hasil raport dibagikan oleh Kak Aziz ya!
+            </div>
+            
+            <!-- Tombol Tutup -->
+            <a href="/" class="block w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
+                Kembali ke Beranda <i class="fa-solid fa-house ml-2"></i>
+            </a>
+            
+        </div>
+    </div>
+
+    <style is:global>
+        /* Grid Background */
+        .pattern-grid {
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        
+        /* Animasi Mengambang */
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 
+            0%, 100% { transform: translateY(0) scale(1); } 
+            50% { transform: translateY(-20px) scale(1.05); } 
+        }
+        
+        /* Animasi Muncul dari Bawah */
+        .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes fadeInUp { 
+            0% { opacity: 0; transform: translateY(30px); } 
+            100% { opacity: 1; transform: translateY(0); } 
+        }
+    </style>
+</Layout>
