@@ -27,7 +27,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                                 <i class="fa-solid fa-bell"></i>
                             </div>
                             <div class="flex-1">
-                                <p>Notifikasi PR</p>
+                                <p>Pusat PR</p>
                             </div>
                             <span id="notifBadgeCounter" class="hidden bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">0</span>
                         </button>
@@ -291,34 +291,66 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
-    <!-- MODAL NOTIFIKASI PR -->
+    <!-- [BARU] MODAL PUSAT PR (NOTIFIKASI + LEADERBOARD) -->
     <div id="modalNotif" class="fixed inset-0 bg-black/60 z-[200] hidden items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity opacity-0">
-        <div class="bg-white w-full sm:max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[75vh] sm:h-[80vh] transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="notifBox">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[85vh] sm:h-[80vh] transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="notifBox">
+            
+            <div class="flex justify-between items-center mb-4 shrink-0">
                 <div class="flex items-center gap-2">
                     <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
                         <i class="fa-solid fa-bell"></i>
                     </div>
-                    <h3 class="font-black text-gray-800 text-lg">Notifikasi PR</h3>
+                    <h3 class="font-black text-gray-800 text-lg">Pusat PR</h3>
                 </div>
                 <button onclick="closeNotifModal()" class="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
-            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><span id="notifCountText">0</span> Pesan Baru</p>
-                <button onclick="clearAllNotifs()" class="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-colors">
-                    <i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua
+
+            <!-- Tabs Pilihan (Pesan Baru & Leaderboard) -->
+            <div class="flex p-1 bg-gray-100 rounded-2xl mb-4 shadow-inner shrink-0">
+                <button id="tabNotifListBtn" onclick="switchNotifTab('list')" class="flex-1 py-2.5 text-[10px] font-bold bg-white text-indigo-600 rounded-xl shadow-sm transition-all uppercase tracking-widest">
+                    <i class="fa-solid fa-inbox mr-1"></i> Pesan Baru
+                </button>
+                <button id="tabNotifLBBtn" onclick="switchNotifTab('lb')" class="flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest">
+                    <i class="fa-solid fa-trophy mr-1"></i> Leaderboard
                 </button>
             </div>
 
-            <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-6">
-                <!-- List notif masuk kesini -->
-                <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500"></i></div>
+            <!-- CONTENT: NOTIF LIST -->
+            <div id="contentNotifList" class="flex-1 flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-100 shrink-0">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><span id="notifCountText">0</span> Pesan Baru</p>
+                    <button onclick="clearAllNotifs()" class="text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-colors">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua
+                    </button>
+                </div>
+
+                <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 pb-6">
+                    <!-- List notif masuk kesini -->
+                    <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500"></i></div>
+                </div>
             </div>
+
+            <!-- CONTENT: LEADERBOARD PR -->
+            <div id="contentNotifLB" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="flex gap-2 mb-3 shrink-0">
+                    <select id="lbFilterSubject" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                        <option value="tajwid">Tajwid</option>
+                        <option value="fiqih">Fiqih</option>
+                        <option value="tauhid">Tauhid</option>
+                    </select>
+                    <select id="lbFilterWeek" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                        <!-- Pilihan pertemuan di-generate oleh JS -->
+                    </select>
+                </div>
+                <div id="lbPRContainer" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1 pb-4">
+                    <!-- Daftar Leaderboard PR masuk kesini -->
+                </div>
+            </div>
+            
         </div>
     </div>
 
-    <!-- [BARU] MODAL DETAIL NOTIFIKASI PR -->
+    <!-- MODAL DETAIL NOTIFIKASI PR -->
     <div id="modalNotifDetail" class="fixed inset-0 bg-black/80 z-[300] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden transform scale-95 transition-transform duration-300" id="notifDetailBox">
             
@@ -376,12 +408,10 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     <div id="drawerTransfer" class="fixed inset-0 bg-black/60 z-[120] hidden items-end justify-center p-0 backdrop-blur-sm transition-all">
         <div class="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col animate-slide-up-drawer relative overflow-hidden pb-8 max-h-[85vh]">
             
-            <!-- Handle atas -->
             <div class="w-full flex justify-center pt-3 pb-1 bg-white z-20">
                 <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
             </div>
 
-            <!-- Header Drawer -->
             <div class="px-6 pt-4 pb-4 border-b border-gray-100 flex justify-between items-center bg-white">
                 <div>
                     <h3 class="font-black text-gray-800 text-lg"><i class="fa-solid fa-coins text-yellow-500 mr-2"></i> Transfer Koin</h3>
@@ -392,10 +422,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 </button>
             </div>
 
-            <!-- Konten -->
             <div class="p-6 overflow-y-auto no-scrollbar">
                 
-                <!-- Pilih Siswa -->
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">1. Pilih Murid</label>
                 <div class="relative mb-6">
                     <select id="transferStudentSelect" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-bold rounded-xl pl-4 pr-10 py-3.5 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all appearance-none cursor-pointer">
@@ -404,9 +432,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
 
-                <!-- Input Nominal -->
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">2. Tentukan Jumlah Koin</label>
-                
                 <div class="grid grid-cols-4 gap-2 mb-3">
                     <button onclick="setTransferAmount(20)" class="py-2.5 bg-white text-yellow-600 font-black text-xs rounded-xl border border-yellow-200 hover:bg-yellow-50 active:scale-95 transition-all shadow-sm">+20</button>
                     <button onclick="setTransferAmount(50)" class="py-2.5 bg-white text-yellow-600 font-black text-xs rounded-xl border border-yellow-200 hover:bg-yellow-50 active:scale-95 transition-all shadow-sm">+50</button>
@@ -446,7 +472,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const greetingEl = document.getElementById('greetingName');
     if (greetingEl) greetingEl.innerText = `Ahlan, Ustadz ${userData.username || ''}!`;
 
-    // --- TAB SWITCHER LOGIC ---
+    // --- TAB SWITCHER LOGIC (Ringkasan Kelas) ---
     const tabList = document.getElementById('tabList');
     const tabLeader = document.getElementById('tabLeaderboard');
     const contentList = document.getElementById('contentList');
@@ -487,34 +513,52 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
 
     // ==============================================================
-    // LOGIKA NOTIFIKASI PR (GROUPING, AUTO-DELETE, DETAIL)
+    // LOGIKA NOTIFIKASI PR (GROUPING, AUTO-DELETE, DETAIL, LEADERBOARD)
     // ==============================================================
     let notifications = [];
+
+    // TABS NOTIFIKASI
+    window.switchNotifTab = (mode) => {
+        const btnList = document.getElementById('tabNotifListBtn');
+        const btnLB = document.getElementById('tabNotifLBBtn');
+        const contentList = document.getElementById('contentNotifList');
+        const contentLB = document.getElementById('contentNotifLB');
+
+        const activeCls = "flex-1 py-2.5 text-[10px] font-bold bg-white text-indigo-600 rounded-xl shadow-sm transition-all uppercase tracking-widest";
+        const inactiveCls = "flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest";
+
+        if (mode === 'list') {
+            btnList.className = activeCls;
+            btnLB.className = inactiveCls;
+            contentList.classList.replace('hidden', 'flex');
+            contentLB.classList.replace('flex', 'hidden');
+        } else {
+            btnLB.className = activeCls;
+            btnList.className = inactiveCls;
+            contentLB.classList.replace('hidden', 'flex');
+            contentList.classList.replace('flex', 'hidden');
+            loadPRLeaderboard();
+        }
+    };
 
     const getTimeCategory = (dateString) => {
         const notifDate = new Date(dateString);
         const now = new Date();
         
-        // Cek "Hari Ini" dan "Kemarin" pakai format lokal string
-        const isToday = notifDate.toLocaleDateString('id-ID') === now.toLocaleDateString('id-ID');
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const notifMidnight = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
         
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const isYesterday = notifDate.toLocaleDateString('id-ID') === yesterday.toLocaleDateString('id-ID');
+        const diffDays = Math.floor((todayMidnight - notifMidnight) / (1000 * 60 * 60 * 24));
 
-        // Untuk menghitung "Minggu Ini"
-        const diffTime = now - notifDate;
-        const diffDaysExact = diffTime / (1000 * 60 * 60 * 24);
-
-        if (isToday) {
+        if (diffDays === 0) {
             const hour = notifDate.getHours();
             if (hour < 12) return "Pagi Ini";
             if (hour < 15) return "Siang Ini";
             if (hour < 18) return "Sore Ini";
             return "Malam Ini";
         }
-        if (isYesterday) return "Kemarin";
-        if (diffDaysExact <= 7) return "Minggu Ini";
+        if (diffDays === 1) return "Kemarin";
+        if (diffDays > 1 && diffDays <= 7) return "Minggu Ini";
         return "Beberapa Minggu Lalu";
     };
 
@@ -627,9 +671,67 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         }).join('');
     };
 
+    // LEADERBOARD PR FETCH
+    window.loadPRLeaderboard = async () => {
+        const subj = document.getElementById('lbFilterSubject').value;
+        const week = document.getElementById('lbFilterWeek').value;
+        const container = document.getElementById('lbPRContainer');
+
+        if (!subj || !week) return;
+
+        container.innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i><p class="text-[10px] text-indigo-400 font-bold mt-2">Menghitung Peringkat...</p></div>`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/leaderboard-pr?subject=${subj}&week=${week}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            let data = result.data || [];
+            
+            // Filter kalau memang ada parameter is_pr dari server, jaga-jaga kalau server ngirim yang reguler juga
+            data = data.filter(d => d.is_pr === true);
+            data = data.slice(0, 5); // Ambil 5 Terbaik
+
+            if (data.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-gray-400 italic py-10 font-medium">Belum ada murid yang menyetorkan PR ini.</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map((d, index) => {
+                let badgeClass = "bg-gray-100 text-gray-500";
+                if (index === 0) badgeClass = "bg-amber-100 text-amber-600 border border-amber-300";
+                if (index === 1) badgeClass = "bg-slate-200 text-slate-600 border border-slate-300";
+                if (index === 2) badgeClass = "bg-orange-100 text-orange-600 border border-orange-300";
+
+                return `
+                <div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-indigo-200 transition-colors">
+                    <div class="w-8 h-8 rounded-full ${badgeClass} font-black flex items-center justify-center shrink-0 text-sm shadow-inner">
+                        ${index + 1}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-gray-800 truncate">${d.name}</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Asli: <span class="text-indigo-500">${d.raw_score}</span> | Waktu: <span class="text-indigo-500">${d.time_taken}s</span></p>
+                    </div>
+                    <div class="text-right shrink-0 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
+                        <p class="text-sm font-black text-indigo-700 leading-none">${d.composite_score}</p>
+                        <p class="text-[7px] font-black text-indigo-400 uppercase mt-0.5">Komposit</p>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        } catch (e) {
+            container.innerHTML = `<p class="text-center text-xs text-red-500 font-bold py-10">Gagal memuat leaderboard.</p>`;
+        }
+    };
+
     window.openNotifModal = () => {
         const modal = document.getElementById('modalNotif');
         const box = document.getElementById('notifBox');
+        
+        // Reset ke Tab List Notifikasi setiap modal dibuka
+        switchNotifTab('list');
+
         modal.classList.replace('hidden', 'flex');
         setTimeout(() => { 
             modal.classList.replace('opacity-0', 'opacity-100'); 
@@ -697,7 +799,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         });
     };
 
-    // [BARU] FUNGSI BUKA DETAIL NOTIFIKASI
+    // FUNGSI BUKA DETAIL NOTIFIKASI
     window.openNotifDetail = async (studentName, subject) => {
         const modal = document.getElementById('modalNotifDetail');
         const box = document.getElementById('notifDetailBox');
@@ -727,7 +829,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const subjProgress = progData.data[subjLower] || [];
             if (subjProgress.length === 0) throw new Error("Belum ada data nilai di database.");
             
-            // Ambil progress ujian yg terakhir dikerjain anak
             const latestResult = subjProgress.sort((a, b) => parseInt(b.week) - parseInt(a.week))[0];
             const week = latestResult.week;
             const score = latestResult.score;
@@ -737,7 +838,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 const satpamRes = await fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const satpamData = await satpamRes.json();
                 
-                // Cari jepretan satpam yang match (Tipe data aman String & Int)
                 const exactLog = (satpamData.data || []).find(l => 
                     String(l.subject).toLowerCase().trim() === subjLower && 
                     parseInt(l.week) === parseInt(week)
@@ -746,7 +846,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 if (exactLog) {
                     photoUrl = exactLog.photo_url;
                 } else {
-                    // Fallback: Kalo minggu spesifik nggak ketemu, ambil foto terakhir di mapel itu
                     const fallbackLogs = (satpamData.data || []).filter(l => String(l.subject).toLowerCase().trim() === subjLower);
                     if (fallbackLogs.length > 0) {
                         const latestLog = fallbackLogs.sort((a,b) => parseInt(b.week) - parseInt(a.week))[0];
@@ -825,9 +924,17 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     subjSelect.innerHTML = `<option value="">Semua Pelajaran</option>` + 
                         subjectsList.map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('');
                 }
+
+                // [UPDATE] Populate dropdown untuk Leaderboard PR juga
+                const lbWeekSelect = document.getElementById('lbFilterWeek');
+                const weeksHtml = (filterData.data.weeks || []).map(w => `<option value="${w}">Pert. ${w}</option>`).join('');
+
                 if (weekSelect) {
-                    weekSelect.innerHTML = `<option value="">Semua Pertemuan</option>` + 
-                        (filterData.data.weeks || []).map(w => `<option value="${w}">Pert. ${w}</option>`).join('');
+                    weekSelect.innerHTML = `<option value="">Semua Pertemuan</option>` + weeksHtml;
+                }
+                
+                if (lbWeekSelect) {
+                    lbWeekSelect.innerHTML = weeksHtml;
                 }
 
                 subjSelect?.addEventListener('change', renderNotDoneModalList);
@@ -1206,7 +1313,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     }
 
     // ==============================================================
-    // [UPDATE] LOGIKA TRANSFER KOIN REWARD
+    // LOGIKA TRANSFER KOIN REWARD
     // ==============================================================
     window.openTransferDrawer = () => {
         const select = document.getElementById('transferStudentSelect');
@@ -1276,7 +1383,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #fee2e2; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 
     @keyframes slideUp {
