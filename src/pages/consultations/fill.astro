@@ -872,7 +872,9 @@ import Mascot from '../../components/Mascot.astro';
                 const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`);
                 if (sysRes.ok) {
                     const sysData = await sysRes.json();
-                    if (sysData.data && sysData.data.is_maintenance) {
+                    
+                    // [FIX] Tambahkan "&& !isPreview" agar Ustadz (Mode Simulasi) lolos dari blokir maintenance
+                    if (sysData.data && sysData.data.is_maintenance && !isPreview) {
                         window.location.replace('/maintenance');
                         return; 
                     }
