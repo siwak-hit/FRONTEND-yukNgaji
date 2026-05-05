@@ -256,7 +256,24 @@ import Toast from '../../components/Toast.astro';
     // =======================================================================
     // 2. SETUP UI AWAL (MODE GURU VS MODE MURID)
     // =======================================================================
-    const initUI = () => {
+    const initUI = async () => {
+
+        try {
+            const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`);
+            if (sysRes.ok) {
+                const sysData = await sysRes.json();
+                // Jika sistem dikunci, HANYA murid (Mode PR) yang ditendang keluar
+                // Guru tetap harus bisa akses dashboard & consultations untuk ngelepas kuncian
+                if (sysData.data && sysData.data.is_maintenance && isPRMode) {
+                    window.location.replace('/maintenance');
+                    return; // Stop inisialisasi di sini!
+                }
+            }
+        } catch (err) {
+            console.warn("Lewati cek maintenance (API belum siap/error)");
+        }
+
+        
         if (isPRMode) {
             document.querySelector('header h1').innerText = "Pilih Nama Kamu";
             document.querySelector('header p').innerText = "Pastikan klik namamu sendiri ya!";
