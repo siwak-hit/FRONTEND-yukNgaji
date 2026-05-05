@@ -15,14 +15,11 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             </div>
         
             <div class="relative">
-                <!-- [BARU] Tombol Menu (Titik Tiga) -->
                 <button onclick="toggleHeaderMenu()" id="btnHeaderMenu" class="relative text-gray-500 bg-white border border-gray-100 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-sm">
                     <i class="fa-solid fa-ellipsis-vertical"></i>
-                    <!-- Badge Titik Merah kecil kalau ada notif -->
                     <span id="headerMenuBadge" class="hidden absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
 
-                <!-- [BARU] Dropdown Menu Header -->
                 <div id="dropdownHeaderMenu" class="hidden absolute right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl w-48 z-[60] overflow-hidden origin-top-right transition-all">
                     <div class="p-2 space-y-1">
                         <button onclick="openNotifModal(); toggleHeaderMenu();" class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-indigo-50 text-gray-600 transition-colors rounded-xl text-xs font-bold text-left relative">
@@ -321,6 +318,45 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL DETAIL NOTIFIKASI PR -->
+    <div id="modalNotifDetail" class="fixed inset-0 bg-black/80 z-[300] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden transform scale-95 transition-transform duration-300" id="notifDetailBox">
+            
+            <button onclick="closeNotifDetail()" class="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center active:scale-95 z-10"><i class="fa-solid fa-xmark"></i></button>
+
+            <h3 class="font-black text-gray-800 text-lg mb-4 text-center border-b border-gray-100 pb-3">Detail Laporan PR</h3>
+
+            <div id="notifDetailContent" class="space-y-4 hidden">
+                <!-- Foto Satpam -->
+                <div class="w-32 h-32 mx-auto rounded-2xl bg-gray-100 overflow-hidden shadow-inner border-4 border-white shadow-md relative">
+                    <img id="detailSatpamPhoto" src="" class="w-full h-full object-cover" />
+                    <div id="detailSatpamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-50 hidden">
+                        <i class="fa-solid fa-user-shield text-3xl mb-1"></i>
+                        <span class="text-[8px] font-bold uppercase tracking-widest text-center mt-2 px-2">Tidak Ada<br>Jepretan Satpam</span>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="text-center">
+                    <h4 id="detailStudentName" class="font-black text-xl text-gray-800 leading-tight">Nama Siswa</h4>
+                    <p id="detailSubjectWeek" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 inline-block px-3 py-1 rounded-lg mt-2 uppercase tracking-widest border border-indigo-100">MAPEL • MINGGU</p>
+                </div>
+
+                <!-- Nilai -->
+                <div class="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100 shadow-sm mt-2">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Nilai Pengerjaan</p>
+                    <p id="detailScore" class="text-5xl font-black text-gray-800 drop-shadow-sm">0</p>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="notifDetailLoading" class="py-10 flex flex-col items-center justify-center text-indigo-500">
+                <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+                <p class="text-xs font-bold text-gray-500">Menarik data dari server...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL KONFIRMASI CUSTOM NOTIFIKASI -->
     <div id="modalConfirmNotif" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-indigo-400" id="modalConfirmNotifBox">
@@ -430,13 +466,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     };
 
     // ==============================================================
-    // [BARU] LOGIKA MENU HEADER (TITIK TIGA)
+    // LOGIKA MENU HEADER (TITIK TIGA)
     // ==============================================================
     window.toggleHeaderMenu = () => {
         const menu = document.getElementById('dropdownHeaderMenu');
         menu.classList.toggle('hidden');
         
-        // Klik di luar buat nutup menu
         const closeMenu = (e) => {
             const btn = document.getElementById('btnHeaderMenu');
             if (!menu.contains(e.target) && !btn.contains(e.target)) {
@@ -452,26 +487,34 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
 
     // ==============================================================
-    // LOGIKA NOTIFIKASI PR (GROUPING & AUTO-DELETE)
+    // LOGIKA NOTIFIKASI PR (GROUPING, AUTO-DELETE, DETAIL)
     // ==============================================================
     let notifications = [];
 
     const getTimeCategory = (dateString) => {
         const notifDate = new Date(dateString);
         const now = new Date();
-        const diffMs = now - notifDate;
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        
+        // Cek "Hari Ini" dan "Kemarin" pakai format lokal string
+        const isToday = notifDate.toLocaleDateString('id-ID') === now.toLocaleDateString('id-ID');
+        
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isYesterday = notifDate.toLocaleDateString('id-ID') === yesterday.toLocaleDateString('id-ID');
 
-        if (diffDays === 0 && now.getDate() === notifDate.getDate()) {
-            if (diffHours < 12 && notifDate.getHours() < 12) return "Pagi Ini";
-            if (diffHours < 12 && notifDate.getHours() >= 12 && notifDate.getHours() < 15) return "Siang Ini";
-            if (diffHours < 12 && notifDate.getHours() >= 15 && notifDate.getHours() < 18) return "Sore Ini";
-            if (diffHours < 12 && notifDate.getHours() >= 18) return "Malam Ini";
-            return "Hari Ini";
+        // Untuk menghitung "Minggu Ini"
+        const diffTime = now - notifDate;
+        const diffDaysExact = diffTime / (1000 * 60 * 60 * 24);
+
+        if (isToday) {
+            const hour = notifDate.getHours();
+            if (hour < 12) return "Pagi Ini";
+            if (hour < 15) return "Siang Ini";
+            if (hour < 18) return "Sore Ini";
+            return "Malam Ini";
         }
-        if (diffDays === 1) return "Kemarin";
-        if (diffDays > 1 && diffDays <= 7) return "Minggu Ini";
+        if (isYesterday) return "Kemarin";
+        if (diffDaysExact <= 7) return "Minggu Ini";
         return "Beberapa Minggu Lalu";
     };
 
@@ -511,9 +554,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     };
 
     const updateNotifBadge = () => {
-        // Update titik merah di header
         const headerBadge = document.getElementById('headerMenuBadge');
-        // Update badge angka di dalam dropdown
         const dropBadge = document.getElementById('notifBadgeCounter');
         const countText = document.getElementById('notifCountText');
 
@@ -559,16 +600,17 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const listHtml = grouped[cat].map(notif => {
                 const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 return `
-                <div class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group">
+                <div onclick="openNotifDetail('${notif.student_name}', '${notif.subject}')" class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group cursor-pointer hover:bg-indigo-100/50 transition-colors">
                     <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0 font-black text-xs border border-indigo-50">
                         <i class="fa-solid fa-check"></i>
                     </div>
-                    <div class="flex-1 min-w-0 pr-6">
+                    <div class="flex-1 min-w-0 pr-8 pointer-events-none">
                         <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
                         <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
                     </div>
-                    <button onclick="deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm">
-                        <i class="fa-solid fa-xmark"></i>
+                    <!-- Tombol Delete Ikon Sampah -->
+                    <button onclick="event.stopPropagation(); deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm z-10">
+                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
                 `;
@@ -653,6 +695,101 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             renderNotifications();
             try { await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
         });
+    };
+
+    // [BARU] FUNGSI BUKA DETAIL NOTIFIKASI
+    window.openNotifDetail = async (studentName, subject) => {
+        const modal = document.getElementById('modalNotifDetail');
+        const box = document.getElementById('notifDetailBox');
+        const content = document.getElementById('notifDetailContent');
+        const loading = document.getElementById('notifDetailLoading');
+
+        modal.classList.replace('hidden', 'flex');
+        content.classList.add('hidden');
+        loading.classList.remove('hidden');
+        loading.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-xs font-bold text-gray-500">Menarik data dari server...</p>`;
+        
+        setTimeout(() => { 
+            modal.classList.replace('opacity-0', 'opacity-100'); 
+            box.classList.replace('scale-95', 'scale-100');
+        }, 10);
+
+        try {
+            const student = enrichedStudents.find(s => s.name === studentName);
+            if (!student) throw new Error("Siswa tidak ditemukan di data kelas.");
+
+            const studentId = student.id;
+            const subjLower = String(subject).toLowerCase().trim();
+
+            const progRes = await fetch(`${API_URL}/api/students/${studentId}/progress`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const progData = await progRes.json();
+            
+            const subjProgress = progData.data[subjLower] || [];
+            if (subjProgress.length === 0) throw new Error("Belum ada data nilai di database.");
+            
+            // Ambil progress ujian yg terakhir dikerjain anak
+            const latestResult = subjProgress.sort((a, b) => parseInt(b.week) - parseInt(a.week))[0];
+            const week = latestResult.week;
+            const score = latestResult.score;
+
+            let photoUrl = null;
+            try {
+                const satpamRes = await fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const satpamData = await satpamRes.json();
+                
+                // Cari jepretan satpam yang match (Tipe data aman String & Int)
+                const exactLog = (satpamData.data || []).find(l => 
+                    String(l.subject).toLowerCase().trim() === subjLower && 
+                    parseInt(l.week) === parseInt(week)
+                );
+                
+                if (exactLog) {
+                    photoUrl = exactLog.photo_url;
+                } else {
+                    // Fallback: Kalo minggu spesifik nggak ketemu, ambil foto terakhir di mapel itu
+                    const fallbackLogs = (satpamData.data || []).filter(l => String(l.subject).toLowerCase().trim() === subjLower);
+                    if (fallbackLogs.length > 0) {
+                        const latestLog = fallbackLogs.sort((a,b) => parseInt(b.week) - parseInt(a.week))[0];
+                        photoUrl = latestLog.photo_url;
+                    }
+                }
+            } catch (e) { console.error("Gagal get satpam:", e); }
+
+            document.getElementById('detailStudentName').innerText = studentName;
+            document.getElementById('detailSubjectWeek').innerText = `${subject} • PERTEMUAN ${week}`;
+            
+            const scoreEl = document.getElementById('detailScore');
+            scoreEl.innerText = score;
+            scoreEl.className = `text-5xl font-black drop-shadow-sm ${score >= 80 ? 'text-green-600' : (score >= 60 ? 'text-amber-500' : 'text-red-500')}`;
+
+            const photoEl = document.getElementById('detailSatpamPhoto');
+            const placeholderEl = document.getElementById('detailSatpamPlaceholder');
+            
+            if (photoUrl) {
+                photoEl.src = photoUrl;
+                photoEl.classList.remove('hidden');
+                placeholderEl.classList.add('hidden');
+            } else {
+                photoEl.src = '';
+                photoEl.classList.add('hidden');
+                placeholderEl.classList.remove('hidden');
+            }
+
+            loading.classList.add('hidden');
+            content.classList.remove('hidden');
+
+        } catch (err) {
+            loading.innerHTML = `<div class="text-center"><i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i><p class="text-xs font-bold text-gray-500">${err.message}</p></div>`;
+        }
+    };
+
+    window.closeNotifDetail = () => {
+        const modal = document.getElementById('modalNotifDetail');
+        const box = document.getElementById('notifDetailBox');
+        
+        modal.classList.replace('opacity-100', 'opacity-0');
+        box.classList.replace('scale-100', 'scale-95');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
     };
 
 
@@ -1075,7 +1212,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         const select = document.getElementById('transferStudentSelect');
         const amountInput = document.getElementById('transferAmountInput');
         
-        // Pake enrichedStudents biar nggak undefined
         if (enrichedStudents && enrichedStudents.length > 0) {
             select.innerHTML = '<option value="" disabled selected>-- Siapa yang berhasil jawab? --</option>' + 
                 enrichedStudents.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
