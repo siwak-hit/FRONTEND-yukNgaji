@@ -37,7 +37,7 @@ import Mascot from '../../components/Mascot.astro';
                 <i class="fa-solid fa-box text-indigo-500 text-xs transition-transform" id="floatItemsIcon"></i>
             </div>
             <div id="itemsTextContainer" class="overflow-hidden transition-all duration-300 max-w-0 opacity-0 flex items-center justify-end gap-1.5 h-9">
-                </div>
+            </div>
         </div>
 
         <div id="shopDrawerWrapper" class="fixed bottom-0 left-0 w-full z-[350] flex flex-col items-center pointer-events-none overflow-hidden transition-all duration-500">
@@ -104,14 +104,13 @@ import Mascot from '../../components/Mascot.astro';
 
         <main class="flex-1 relative overflow-y-auto px-6 py-8 pb-32">
             
-            <div id="startOverlay" class="absolute inset-0 bg-white z-[120] flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
-                <div class="w-24 h-24 bg-green-50 text-green-600 rounded-[2rem] flex items-center justify-center text-4xl mb-6 shadow-inner border border-green-100">
+            <div id="startOverlay" class="absolute inset-0 bg-white z-[120] flex flex-col items-center justify-center p-8 text-center transition-all duration-500 pb-16 overflow-y-auto">
+                <div class="w-24 h-24 bg-green-50 text-green-600 rounded-[2rem] flex items-center justify-center text-4xl mb-6 shadow-inner border border-green-100 mt-10">
                     <i class="fa-solid fa-stopwatch"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-800 mb-2" id="startTitleText">Siap Mengerjakan?</h1>
                 <p id="startDescText" class="text-sm text-gray-400 mb-4 leading-relaxed">Pastikan fokus. Waktu terbatas untuk bagian akademik.</p>
                 
-                <!-- [BARU] TAMPILAN KHUSUS MODE PR -->
                 <div id="prSettings" class="hidden flex-col items-center w-full max-w-xs mb-6">
                     <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl mb-3 text-left">
                         <p class="text-[10px] text-indigo-700 font-bold leading-relaxed">
@@ -127,7 +126,6 @@ import Mascot from '../../components/Mascot.astro';
                     </label>
                 </div>
 
-                <!-- [UX BARU] Tombol Mulai Dimatikan Default -->
                 <button id="btnStart" disabled class="w-full max-w-xs py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg flex items-center justify-center gap-2">
                     <i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Data...
                 </button>
@@ -202,6 +200,33 @@ import Mascot from '../../components/Mascot.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL CEK SATPAM LOKAL -->
+    <div id="modalCekSatpam" class="fixed inset-0 bg-black/70 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-blue-100 shadow-inner">
+                <i class="fa-solid fa-user-shield animate-pulse"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg mb-2">Verifikasi Keamanan</h3>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">Sedang memeriksa histori pemindaian wajah...</p>
+            <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 animate-pulse w-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KAMERA OTOMATIS (SATPAM/NETWORK) -->
+    <div id="modalNetwork" class="fixed inset-0 bg-black/70 z-[400] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100">
+                <i class="fa-solid fa-wifi" id="networkIcon"></i>
+            </div>
+            <h3 id="networkTitle" class="font-bold text-gray-800 text-lg mb-2">Jaringan Lambat</h3>
+            <p id="networkDesc" class="text-sm text-gray-500 mb-4 leading-relaxed">Sepertinya jaringan anda sedang lambat, silahkan angkat HP anda sejajar dengan wajah (seperti gambar) agar sinyal lebih kuat.</p>
+            <img src="/images/image_tutor.png" alt="Instruksi Sinyal" class="w-50 h-32 mx-auto mb-6 object-cover rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50">
+            <button id="btnRetryNetwork" disabled class="w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">Tunggu (3)</button>
+        </div>
+    </div>
+
     <div id="modalEarlyFinish" class="fixed inset-0 bg-black/70 z-[400] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center border-4 border-amber-400">
             <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">
@@ -213,18 +238,6 @@ import Mascot from '../../components/Mascot.astro';
                 <button onclick="closeEarlyFinishModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all">Batal</button>
                 <button id="btnConfirmEarlyFinish" onclick="confirmEarlyFinish()" class="flex-1 py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all">Ya, Kunci</button>
             </div>
-        </div>
-    </div>
-
-    <div id="modalNetwork" class="fixed inset-0 bg-black/70 z-[400] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
-            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100">
-                <i class="fa-solid fa-wifi"></i>
-            </div>
-            <h3 class="font-bold text-gray-800 text-lg mb-2">Jaringan Lambat</h3>
-            <p class="text-sm text-gray-500 mb-4 leading-relaxed">Sepertinya jaringan anda sedang lambat, silahkan angkat HP anda sejajar dengan wajah (seperti gambar) agar sinyal lebih kuat.</p>
-            <img src="/images/image_tutor.png" alt="Instruksi Sinyal" class="w-50 h-32 mx-auto mb-6 object-cover rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50">
-            <button id="btnRetryNetwork" disabled class="w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all">Tunggu (3)</button>
         </div>
     </div>
 
@@ -334,7 +347,6 @@ import Mascot from '../../components/Mascot.astro';
                 </div>
             </div>
             
-            <!-- [UPDATE] Panggil fungsi closeResult... agar bisa redirect ke Leaderboard PR -->
             <button onclick="closeResultAndCheckReminder()" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
                 Tutup & Kembali
             </button>
@@ -391,14 +403,12 @@ import Mascot from '../../components/Mascot.astro';
     
     // --- [FIX BUG 401] LOGIKA TANGKAP TOKEN PR ---
     const rawPrToken = urlParams.get('pr_token');
-    // Cegah Javascript membaca string "null" sebagai token asli
     const paramPrToken = (rawPrToken && rawPrToken !== 'null') ? rawPrToken : null; 
     
     const isPRMode = urlParams.get('pr') === 'true' || !!paramPrToken;
     
     let token = localStorage.getItem('token');
     
-    // Jika masuk dari link WA (bawa pr_token), simpan ke sessionStorage biar gak hilang pas refresh
     if (paramPrToken) {
         token = paramPrToken;
         sessionStorage.setItem('temp_pr_token', paramPrToken);
@@ -408,21 +418,18 @@ import Mascot from '../../components/Mascot.astro';
 
     const isPreview = urlParams.get('preview') === 'true'; 
 
-    // Usir kalau gak punya token Ustadz DAN gak punya token PR
     if (!token && !isPreview) window.location.replace('/');
 
-    // Jika ini Mode PR, ganti teks tombol "Keluar" di header
     if (isPRMode) {
         const exitBtn = document.querySelector('a[onclick="handleBack()"]');
         if (exitBtn) {
             exitBtn.innerText = "Tutup";
             exitBtn.classList.replace('text-gray-400', 'text-indigo-400');
-            exitBtn.onclick = () => window.close(); // Usaha nutup tab otomatis
+            exitBtn.onclick = () => window.close(); 
         }
         document.getElementById('prSettings').classList.remove('hidden');
         document.getElementById('startTitleText').innerText = "Siap Ngerjain PR?";
         
-        // [UPDATE] Tambahkan extra padding bottom dan izin scroll vertikal biar gak mentok
         document.getElementById('startOverlay').classList.add('pb-16', 'overflow-y-auto');
     }
 
@@ -606,10 +613,24 @@ import Mascot from '../../components/Mascot.astro';
     // ==========================================
     const init = async () => {
         try {
+            try {
+                // Tembak API yang baru kita bikin
+                const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`);
+                if (sysRes.ok) {
+                    const sysData = await sysRes.json();
+                    if (sysData.data && sysData.data.is_maintenance) {
+                        // Tendang langsung ke halaman maintenance
+                        window.location.replace('/maintenance');
+                        return; // PENTING: Stop semua eksekusi ke bawah!
+                    }
+                }
+            } catch (err) {
+                console.warn("Lewati cek maintenance (API belum siap/error)");
+            }
+
             setupKuesionerSosial();
             let allQuestions = [];
 
-            // [FIX UX] Tampilkan Spinner Animasi dan Gembok Tombol Submit
             const qListContainer = document.getElementById('questionsList');
             if (qListContainer) {
                 qListContainer.innerHTML = `
@@ -656,12 +677,13 @@ import Mascot from '../../components/Mascot.astro';
                 if (!student || !student.data) {
                     window.showToast?.('danger', 'Akses Ditolak', 'Sesi telah berakhir atau Anda tidak memiliki akses ke ujian ini.');
                     setTimeout(() => window.location.replace('/'), 2000);
-                    return; // Hentikan script di sini agar tidak error ke bawah
+                    return; 
                 }
 
                 currentStudentName = student.data.name?.split(' ')[0] || "Anak Baik";
                 if (consData.data) {
                     completedWeeksForSubject = consData.data.filter(c => c.subject === subject).map(c => parseInt(c.week));
+                    // Check foto konsultasi sbg cadangan
                     hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
                 }
 
@@ -778,7 +800,6 @@ import Mascot from '../../components/Mascot.astro';
         } catch (e) {
             console.error(e); 
             window.showToast?.('danger', 'Error', 'Gagal memuat Tugas.');
-            // Kalau gagal fetch data, ganti teks tombol jadi error biar anak tau
             const btnStartLobby = document.getElementById('btnStart');
             if (btnStartLobby) {
                 btnStartLobby.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Gagal Memuat Data';
@@ -924,28 +945,29 @@ import Mascot from '../../components/Mascot.astro';
             } else if (type === 'urutan') answered++;
             else if (block.querySelector(`input[name="q-${qId}"]:checked`)) answered++;
         });
-        if (document.querySelector('input[name="q_akhlak"]:checked')) answered++;
-        if (document.querySelector('input[name="q_disiplin"]:checked')) answered++;
-        if (document.querySelector('input[name="q_aktif"]:checked')) answered++;
+        
+        let psychAnswered = 0;
+        if (document.querySelector('input[name="q_akhlak"]:checked')) { answered++; psychAnswered++; }
+        if (document.querySelector('input[name="q_disiplin"]:checked')) { answered++; psychAnswered++; }
+        if (document.querySelector('input[name="q_aktif"]:checked')) { answered++; psychAnswered++; }
         
         if(elProgressBar) elProgressBar.style.width = `${totalQs > 0 ? (answered / totalQs) * 100 : 0}%`;
 
-        // [UX BARU] Logika Validasi Bertingkat (Anti Asal Kirim)
-        const isAllAnswered = answered >= totalQs;
+        // [FIX BUG] Jika waktu habis atau dikunci, abaikan soal akademik yang kosong
+        const isTimeUp = (timeLeft <= 0 && isQuizStarted && !isEvaluatingExtraLife);
+        const isAllAnswered = isTimeUp ? (psychAnswered === 3) : (answered >= totalQs);
+
         const reviewContainer = document.getElementById('reviewCheckboxContainer');
         const checkReview = document.getElementById('checkReview');
 
         if (isAllAnswered) {
-            // 1. Soal beres? Munculin Kotak Janji
             if (reviewContainer.classList.contains('hidden')) {
                 reviewContainer.classList.remove('hidden');
                 setTimeout(() => reviewContainer.classList.remove('opacity-0', 'translate-y-4'), 10);
             }
             
-            // 2. Tombol Kirim HANYA nyala kalau kotak janji dicentang
             if (checkReview && checkReview.checked) {
                 btnSubmitGlobal.disabled = false;
-                // [FIX BUG] Kembalikan teks tombol ke kondisi semula pas dicentang
                 btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
                 if (!isEvaluatingExtraLife) {
                     btnSubmitGlobal.classList.replace('bg-gray-200', 'bg-green-600'); 
@@ -954,7 +976,6 @@ import Mascot from '../../components/Mascot.astro';
                 }
             } else {
                 btnSubmitGlobal.disabled = true;
-                // [FIX BUG] Ubah teks pas belum dicentang (Hapus spinner!)
                 btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Centang Janji di Atas';
                 if (!isEvaluatingExtraLife) {
                     btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
@@ -963,13 +984,11 @@ import Mascot from '../../components/Mascot.astro';
                 }
             }
         } else {
-            // Kalau ada jawaban yang mendadak dikosongin lagi, tarik balik kotaknya
             reviewContainer.classList.add('opacity-0', 'translate-y-4');
             setTimeout(() => reviewContainer.classList.add('hidden'), 300);
-            if (checkReview) checkReview.checked = false; // Reset centangnya
+            if (checkReview) checkReview.checked = false; 
             
             btnSubmitGlobal.disabled = true;
-            // [FIX BUG] Balikin teks ke default pas ada soal kosong (Hapus spinner!)
             btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
             if (!isEvaluatingExtraLife) {
                 btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-200'); 
@@ -979,10 +998,8 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
-    // Dengarkan saat anak menceklis/un-ceklis kotak janji
     document.getElementById('checkReview')?.addEventListener('change', validate);
 
-    // [UX BARU] Delay Konfirmasi agar anak tidak double tap
     document.getElementById('btnEarlyFinish').onclick = () => {
         document.getElementById('modalEarlyFinish').classList.replace('hidden', 'flex');
         const btnConfirm = document.getElementById('btnConfirmEarlyFinish');
@@ -1076,6 +1093,9 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('academicSection').classList.add('opacity-40', 'pointer-events-none', 'grayscale');
         document.getElementById('btnEarlyFinish').classList.add('hidden');
         window.showToast?.('warning', 'Waktu Habis', 'Bagian akademik telah dikunci.');
+        
+        // [FIX BUG] Panggil validasi ulang saat waktu habis agar tombol Kirim kebuka
+        validate(); 
     };
 
     const updateTimerUI = () => {
@@ -1131,7 +1151,6 @@ import Mascot from '../../components/Mascot.astro';
 
         if (isPRMode && isNewSession) {
             try {
-                // Fetch detail PR (Lu bisa bikin endpoint get pr_locks detail, atau cek dari data /status)
                 const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const prDetail = await res.json();
                 
@@ -1143,7 +1162,7 @@ import Mascot from '../../components/Mascot.astro';
                         const hasExt = prDetail.data.extended_students?.includes(studentId);
                         if (!hasExt) {
                             window.showConfirm('Waktu Habis!', 'Batas waktu PR ini sudah lewat. Minta dispensasi ke Kak Aziz dulu ya!', () => window.close(), 'danger');
-                            return; // STOP! Gak bisa mulai.
+                            return; 
                         } else {
                             window.showToast?.('info', 'Dispensasi Aktif', 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!');
                         }
@@ -1152,12 +1171,10 @@ import Mascot from '../../components/Mascot.astro';
             } catch(e) { console.log("Gagal cek deadline"); }
         }
 
-        // [UPDATE] Logika ketat per-sesi untuk menyembunyikan Miaw
         if (isNewSession) {
             window.isMiawHidden = document.getElementById('toggleHideMiaw')?.checked || false;
             if (window.isMiawHidden) sessionStorage.setItem(`hide_miaw_${studentId}_${subject}_${week}`, 'true');
         } else {
-            // Kalau murid refresh halaman, ambil statusnya dari memori sementara
             window.isMiawHidden = sessionStorage.getItem(`hide_miaw_${studentId}_${subject}_${week}`) === 'true';
         }
 
@@ -1177,10 +1194,8 @@ import Mascot from '../../components/Mascot.astro';
         isQuizStarted = true; updateShopUI(); updateTimerUI();
         warned30 = false; warned10 = false;
 
-        // [UPDATE] Eksekusi kemunculan atau penonaktifan Miaw
         if (window.MiawMascot) {
             if (window.isMiawHidden) {
-                // Matikan paksa fungsinya agar tidak bersuara/nongol di sesi PR ini
                 window.MiawMascot.show = () => {};
                 window.MiawMascot.say = () => {};
                 const mascotContainer = document.getElementById('mascotContainer') || document.querySelector('.mascot-wrapper');
@@ -1217,7 +1232,7 @@ import Mascot from '../../components/Mascot.astro';
 
 
     // ==========================================
-    // 7. TOKO & GAMIFIKASI (FIX BUGS)
+    // 7. TOKO & GAMIFIKASI 
     // ==========================================
     window.toggleShopDrawer = () => {
         const inner = document.getElementById('shopDrawerInner'); const icon = document.getElementById('shopDrawerIcon'); const btn = document.getElementById('btnToggleDrawer');
@@ -1287,10 +1302,7 @@ import Mascot from '../../components/Mascot.astro';
                     studentInventory.item_perisai -= 1; 
                     boughtItemsThisSession.item_perisai = true; 
                     updateShopUI(); 
-                    
-                    // [UPDATE TEXT UX]
                     window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif hingga malam ini!');
-                    
                     if (!isPreview) fetch(`${API_URL}/api/shop/use-item`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, item_type: 'item_perisai' }) }).catch(e=>e);
                 });
             } else if (itemKey === 'item_double_score') {
@@ -1341,7 +1353,6 @@ import Mascot from '../../components/Mascot.astro';
             let peers = [];
             if (isPreview) { 
                 await new Promise(r => setTimeout(r, 800)); 
-                // Simulasi Data untuk Poin
                 peers = [ 
                     { id: '1', name: 'Ahmad Fauzan', has_shield: false, poin: 150 }, 
                     { id: '2', name: 'Zaskia Adya', has_shield: true, poin: 200 },
@@ -1357,7 +1368,6 @@ import Mascot from '../../components/Mascot.astro';
                 return; 
             }
 
-            // [FIX BUG RUGI BANDAR] Menampilkan jumlah poin, dan disable attack jika target miskin (0 Poin)
             listContainer.innerHTML = peers.map(p => {
                 const targetPoints = p.poin || 0;
                 const isBroke = targetPoints <= 0;
@@ -1397,7 +1407,7 @@ import Mascot from '../../components/Mascot.astro';
                 if (isPreview) { 
                     window.showToast?.('success', 'CRITTIICAL HIT!', `Mencuri 50 Poin dari ${targetName}!`); 
                     studentInventory.item_serang -= 1; 
-                    boughtItemsThisSession.item_serang = true; // [FIX BUG DOUBLE BUY]
+                    boughtItemsThisSession.item_serang = true; 
                     studentWallet += 50; 
                     updateShopUI(); 
                     return; 
@@ -1407,13 +1417,11 @@ import Mascot from '../../components/Mascot.astro';
                 if(data.status === 'success') { 
                     window.showToast?.('success', 'Serangan Selesai', data.message); 
                     studentInventory.item_serang -= 1; 
-                    boughtItemsThisSession.item_serang = true; // [FIX BUG DOUBLE BUY]
+                    boughtItemsThisSession.item_serang = true; 
                     
-                    // Membaca poin update dari backend (Bisa disesuaikan dengan kembalian API lu)
                     if (data.data && data.data.new_poin !== undefined) {
                         studentWallet = data.data.new_poin;
                     } else if (data.message.includes('berhasil')) {
-                        // Fallback jika API belum diperbarui
                         studentWallet += 50; 
                     }
                     updateShopUI(); 
@@ -1448,7 +1456,6 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('modalOfferExtraLife').classList.replace('flex', 'hidden'); 
         isEvaluatingExtraLife = true; 
         studentInventory.item_extra_life -= 1; 
-        // Note: Extra life tidak dibatasi 1 per sesi karena sifatnya dikonsumsi oleh fungsi validasi, tapi logicnya nyatu sama submit.
         updateShopUI();
         
         const academicSec = document.getElementById('academicSection');
@@ -1479,35 +1486,108 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     // ==========================================
-    // 9. SUBMIT FINAL
+    // 9. SUBMIT FINAL & CEK SATPAM LOKAL
     // ==========================================
     document.getElementById('btnSubmit').onclick = async () => {
         if (isPreview) return proceedSubmit();
-        if (!selfieFileToUpload && !hasPriorPhoto) {
-            btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Jaringan...'; btnSubmitGlobal.disabled = true; btnSubmitGlobal.classList.replace('bg-green-600', 'bg-blue-600');
+        
+        btnSubmitGlobal.disabled = true;
+        btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-user-shield"></i> Mengecek Keamanan...';
+        btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-500');
+
+        let isVerified = false;
+
+        // 1. Apakah sudah ngambil foto di sesi ini atau via konsultasi?
+        if (selfieFileToUpload || hasPriorPhoto) {
+            isVerified = true;
+        } else {
+            // 2. Tembak Backend untuk cek histori Satpam Logs
+            const modalCek = document.getElementById('modalCekSatpam');
+            modalCek.classList.replace('hidden', 'flex');
+
+            try {
+                const checkRes = await fetch(`${API_URL}/api/onboarding/check-satpam?student_id=${studentId}&subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const checkData = await checkRes.json();
+                if (checkData.isScanned) {
+                    isVerified = true;
+                    await new Promise(r => setTimeout(r, 800)); // Jeda biar animasi modal kerasa
+                }
+            } catch (e) {
+                console.error("Gagal cek satpam", e);
+            }
+            modalCek.classList.replace('flex', 'hidden');
+        }
+
+        // 3. Eksekusi Berdasarkan Status Verifikasi
+        if (isVerified) {
+            proceedSubmit();
+        } else {
+            // Kalau belum verify, tampilin modal Network buat auto-capture
+            btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Jaringan...';
+            btnSubmitGlobal.classList.replace('bg-gray-500', 'bg-blue-600');
+
             setTimeout(() => {
-                const modalNet = document.getElementById('modalNetwork'); modalNet.classList.replace('hidden', 'flex');
-                const btnRetry = document.getElementById('btnRetryNetwork'); let count = 3; btnRetry.innerText = `Tunggu (${count})`; btnRetry.disabled = true; btnRetry.className = 'w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all';
-                const iv = setInterval(() => { count--; if(count > 0) btnRetry.innerText = `Tunggu (${count})`; else { clearInterval(iv); btnRetry.innerText = 'Coba Lagi & Kirim'; btnRetry.disabled = false; btnRetry.className = 'w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all text-lg'; } }, 1000);
+                const modalNet = document.getElementById('modalNetwork'); 
+                modalNet.classList.replace('hidden', 'flex');
+                
+                // Ubah teks modal jaringan jadi mode absen satpam
+                document.getElementById('networkTitle').innerText = 'Pemindaian Wajah';
+                document.getElementById('networkDesc').innerText = 'Arahkan wajahmu ke kamera (seperti gambar) untuk absen kehadiran otomatis.';
+                document.getElementById('networkIcon').className = 'fa-solid fa-camera-retro animate-bounce';
+                
+                const btnRetry = document.getElementById('btnRetryNetwork'); 
+                let count = 3; 
+                btnRetry.innerText = `Tunggu (${count})`; 
+                btnRetry.disabled = true; 
+                btnRetry.className = 'w-full py-4 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all';
+                
+                const iv = setInterval(() => { 
+                    count--; 
+                    if(count > 0) btnRetry.innerText = `Tunggu (${count})`; 
+                    else { 
+                        clearInterval(iv); 
+                        btnRetry.innerText = 'Mulai Pindai Wajah'; 
+                        btnRetry.disabled = false; 
+                        btnRetry.className = 'w-full py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all text-lg'; 
+                    } 
+                }, 1000);
+                
                 btnRetry.onclick = async () => {
-                    btnRetry.disabled = true; btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menunggu jaringan stabil...';
+                    btnRetry.disabled = true; 
+                    btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghubungkan kamera...';
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
-                        setTimeout(() => btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedikit lagi, tahan posisi HP...', 2500);
+                        setTimeout(() => btnRetry.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Tahan posisi HP, memotret...', 2500);
                         const video = document.createElement('video'); video.srcObject = stream; video.setAttribute('playsinline', ''); await video.play(); await new Promise(resolve => setTimeout(resolve, 5000));
                         const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; canvas.getContext('2d').drawImage(video, 0, 0); stream.getTracks().forEach(track => track.stop());
-                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8)); selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
+                        
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8)); 
+                        selfieFileToUpload = new File([blob], 'auto-selfie.jpg', { type: 'image/jpeg' });
+                        
+                        // [NEW] Langsung tembak upload ke Satpam Backend di belakang layar!
+                        const base64Img = canvas.toDataURL('image/jpeg', 0.8);
+                        fetch(`${API_URL}/api/onboarding/upload-satpam`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                student_id: studentId,
+                                student_name: currentStudentName,
+                                subject: subject,
+                                week: week,
+                                image: base64Img
+                            })
+                        }).catch(e => console.error(e));
+
                     } catch(err) { console.warn("Kamera gagal diakses:", err); }
-                    modalNet.classList.replace('flex', 'hidden'); proceedSubmit(); 
+                    modalNet.classList.replace('flex', 'hidden'); 
+                    proceedSubmit(); 
                 };
-            }, 3000); 
-            return;
+            }, 1000); 
         }
-        proceedSubmit();
     };
 
     const proceedSubmit = async () => {
-        btnSubmitGlobal.disabled = true; btnSubmitGlobal.classList.add('bg-green-600'); btnSubmitGlobal.classList.remove('bg-blue-600', 'bg-gray-200', 'bg-pink-500'); btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
+        btnSubmitGlobal.disabled = true; btnSubmitGlobal.classList.add('bg-green-600'); btnSubmitGlobal.classList.remove('bg-blue-600', 'bg-gray-500', 'bg-gray-200', 'bg-pink-500'); btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
         const normalView = document.getElementById('normalResultView'); const memeView = document.getElementById('meme67ResultView');
 
         const answers = [];
@@ -1585,7 +1665,6 @@ import Mascot from '../../components/Mascot.astro';
                 }
                 emojiEl.innerText = '🔥';
 
-                // [UX BARU] Bikin bocil terpaksa nonton meme selama 5 detik!
                 const btnMeme = document.getElementById('btnMemeClose');
                 if (btnMeme) {
                     btnMeme.disabled = true;
@@ -1630,9 +1709,7 @@ import Mascot from '../../components/Mascot.astro';
     window.closeResultAndCheckReminder = () => {
         document.getElementById('modalResult').classList.replace('flex', 'hidden');
         
-        // [BARU] JIKA MODE PR, ARAHKAN KE LEADERBOARD PR!
         if (isPRMode) {
-            // [UPDATE]: Bawa parameter student_id biar leaderboard tau ini siapa
             window.location.replace(`/leaderboard-pr?subject=${subject}&week=${week}&student_id=${studentId}`);
             return;
         }

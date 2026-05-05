@@ -230,9 +230,22 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 </button>
                 
                 <div id="dangerContent" class="hidden px-5 py-4 border-t border-gray-100 bg-white">
-                    <div class="bg-red-50 border border-red-100 rounded-2xl p-4">
+                    
+                    <!-- [BARU] SAKLAR MAINTENANCE -->
+                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="text-sm font-bold text-amber-600"><i class="fa-solid fa-person-digging mr-1"></i> Mode Perbaikan</h4>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggleMaintenance" class="sr-only peer" onchange="promptMaintenanceToggle(this)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-amber-700 leading-relaxed font-medium">Aktifkan untuk memblokir akses murid ke halaman ujian/PR secara instan.</p>
+                    </div>
+
+                    <div class="bg-red-50 border border-red-100 rounded-2xl p-4 shadow-sm">
                         <h4 class="text-sm font-bold text-red-600 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Zona Bahaya</h4>
-                        <p class="text-[10px] text-red-500 leading-relaxed mb-4">Menghapus permanen seluruh data nilai, absen, tugas, dan kuesioner. Hanya nama siswa yang dipertahankan.</p>
+                        <p class="text-[10px] text-red-500 leading-relaxed mb-4 font-medium">Menghapus permanen seluruh data nilai, absen, tugas, dan kuesioner. Hanya nama siswa yang dipertahankan.</p>
                         <button onclick="openResetModal()" class="w-full py-3 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
                             <i class="fa-solid fa-bomb mr-1"></i> Reset Tahun Ajaran
                         </button>
@@ -291,7 +304,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
-    <!-- [BARU] MODAL PUSAT PR (NOTIFIKASI + LEADERBOARD) -->
+    <!-- PUSAT PR (NOTIFIKASI + LEADERBOARD) -->
     <div id="modalNotif" class="fixed inset-0 bg-black/60 z-[200] hidden items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity opacity-0">
         <div class="bg-white w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[85vh] sm:h-[80vh] transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="notifBox">
             
@@ -305,7 +318,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <button onclick="closeNotifModal()" class="w-8 h-8 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center active:scale-95"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- Tabs Pilihan (Pesan Baru & Leaderboard) -->
             <div class="flex p-1 bg-gray-100 rounded-2xl mb-4 shadow-inner shrink-0">
                 <button id="tabNotifListBtn" onclick="switchNotifTab('list')" class="flex-1 py-2.5 text-[10px] font-bold bg-white text-indigo-600 rounded-xl shadow-sm transition-all uppercase tracking-widest">
                     <i class="fa-solid fa-inbox mr-1"></i> Pesan Baru
@@ -325,7 +337,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 </div>
 
                 <div id="notifListContainer" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1 pb-6">
-                    <!-- List notif masuk kesini -->
                     <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500"></i></div>
                 </div>
             </div>
@@ -339,11 +350,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         <option value="tauhid">Tauhid</option>
                     </select>
                     <select id="lbFilterWeek" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
-                        <!-- Pilihan pertemuan di-generate oleh JS -->
                     </select>
                 </div>
                 <div id="lbPRContainer" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1 pb-4">
-                    <!-- Daftar Leaderboard PR masuk kesini -->
                 </div>
             </div>
             
@@ -353,13 +362,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     <!-- MODAL DETAIL NOTIFIKASI PR -->
     <div id="modalNotifDetail" class="fixed inset-0 bg-black/80 z-[300] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden transform scale-95 transition-transform duration-300" id="notifDetailBox">
-            
             <button onclick="closeNotifDetail()" class="absolute top-4 right-4 w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center active:scale-95 z-10"><i class="fa-solid fa-xmark"></i></button>
-
             <h3 class="font-black text-gray-800 text-lg mb-4 text-center border-b border-gray-100 pb-3">Detail Laporan PR</h3>
-
             <div id="notifDetailContent" class="space-y-4 hidden">
-                <!-- Foto Satpam -->
                 <div class="w-32 h-32 mx-auto rounded-2xl bg-gray-100 overflow-hidden shadow-inner border-4 border-white shadow-md relative">
                     <img id="detailSatpamPhoto" src="" class="w-full h-full object-cover" />
                     <div id="detailSatpamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-50 hidden">
@@ -367,21 +372,15 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         <span class="text-[8px] font-bold uppercase tracking-widest text-center mt-2 px-2">Tidak Ada<br>Jepretan Satpam</span>
                     </div>
                 </div>
-
-                <!-- Info -->
                 <div class="text-center">
                     <h4 id="detailStudentName" class="font-black text-xl text-gray-800 leading-tight">Nama Siswa</h4>
                     <p id="detailSubjectWeek" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 inline-block px-3 py-1 rounded-lg mt-2 uppercase tracking-widest border border-indigo-100">MAPEL • MINGGU</p>
                 </div>
-
-                <!-- Nilai -->
                 <div class="bg-gray-50 rounded-2xl p-4 text-center border border-gray-100 shadow-sm mt-2">
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Nilai Pengerjaan</p>
                     <p id="detailScore" class="text-5xl font-black text-gray-800 drop-shadow-sm">0</p>
                 </div>
             </div>
-
-            <!-- Loading State -->
             <div id="notifDetailLoading" class="py-10 flex flex-col items-center justify-center text-indigo-500">
                 <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
                 <p class="text-xs font-bold text-gray-500">Menarik data dari server...</p>
@@ -389,17 +388,17 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         </div>
     </div>
 
-    <!-- MODAL KONFIRMASI CUSTOM NOTIFIKASI -->
-    <div id="modalConfirmNotif" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-indigo-400" id="modalConfirmNotifBox">
-            <div id="confirmNotifIconBox" class="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner">
-                <i class="fa-solid fa-bell-slash"></i>
+    <!-- [BARU] MODAL KONFIRMASI GLOBAL DINAMIS -->
+    <div id="modalConfirmGlobal" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-indigo-400 transition-all duration-300" id="modalConfirmGlobalBox">
+            <div id="confirmGlobalIconBox" class="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner transition-all duration-300">
+                <i id="confirmGlobalIcon" class="fa-solid fa-circle-question"></i>
             </div>
-            <h3 id="confirmNotifTitle" class="font-black text-gray-800 text-xl mb-2">Hapus Notifikasi?</h3>
-            <p id="confirmNotifMessage" class="text-sm text-gray-600 mb-6 leading-relaxed font-medium">Apakah Anda yakin?</p>
+            <h3 id="confirmGlobalTitle" class="font-black text-gray-800 text-xl mb-2">Konfirmasi</h3>
+            <p id="confirmGlobalMessage" class="text-sm text-gray-600 mb-6 leading-relaxed font-medium">Apakah Anda yakin?</p>
             <div class="flex gap-3">
-                <button id="btnConfirmNotifCancel" class="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
-                <button id="btnConfirmNotifYes" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm">Ya, Hapus</button>
+                <button id="btnConfirmGlobalCancel" class="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
+                <button id="btnConfirmGlobalYes" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm">Ya, Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -407,11 +406,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     <!-- DRAWER TRANSFER KOIN -->
     <div id="drawerTransfer" class="fixed inset-0 bg-black/60 z-[120] hidden items-end justify-center p-0 backdrop-blur-sm transition-all">
         <div class="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col animate-slide-up-drawer relative overflow-hidden pb-8 max-h-[85vh]">
-            
             <div class="w-full flex justify-center pt-3 pb-1 bg-white z-20">
                 <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
             </div>
-
             <div class="px-6 pt-4 pb-4 border-b border-gray-100 flex justify-between items-center bg-white">
                 <div>
                     <h3 class="font-black text-gray-800 text-lg"><i class="fa-solid fa-coins text-yellow-500 mr-2"></i> Transfer Koin</h3>
@@ -421,9 +418,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-
             <div class="p-6 overflow-y-auto no-scrollbar">
-                
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">1. Pilih Murid</label>
                 <div class="relative mb-6">
                     <select id="transferStudentSelect" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-bold rounded-xl pl-4 pr-10 py-3.5 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all appearance-none cursor-pointer">
@@ -431,7 +426,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     </select>
                     <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
-
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">2. Tentukan Jumlah Koin</label>
                 <div class="grid grid-cols-4 gap-2 mb-3">
                     <button onclick="setTransferAmount(20)" class="py-2.5 bg-white text-yellow-600 font-black text-xs rounded-xl border border-yellow-200 hover:bg-yellow-50 active:scale-95 transition-all shadow-sm">+20</button>
@@ -439,14 +433,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <button onclick="setTransferAmount(100)" class="py-2.5 bg-white text-yellow-600 font-black text-xs rounded-xl border border-yellow-200 hover:bg-yellow-50 active:scale-95 transition-all shadow-sm">+100</button>
                     <button onclick="setTransferAmount(200)" class="py-2.5 bg-white text-yellow-600 font-black text-xs rounded-xl border border-yellow-200 hover:bg-yellow-50 active:scale-95 transition-all shadow-sm">+200</button>
                 </div>
-                
                 <div class="relative mb-8">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fa-solid fa-coins text-yellow-400"></i>
                     </div>
                     <input type="number" id="transferAmountInput" placeholder="Atau ketik manual..." class="w-full bg-white border-2 border-gray-200 text-gray-700 text-sm font-black rounded-xl pl-10 pr-4 py-3.5 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-all">
                 </div>
-
                 <button id="btnSubmitTransfer" onclick="submitTransfer()" class="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-white font-black rounded-2xl shadow-lg shadow-yellow-500/30 active:translate-y-[2px] transition-all flex justify-center items-center gap-2">
                     <i class="fa-solid fa-paper-plane"></i> Kirim Reward Sekarang
                 </button>
@@ -490,6 +482,63 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         tabLeader.className = activeTabClass; tabList.className = inactiveTabClass;
         contentLeader.classList.replace('hidden', 'block'); contentList.classList.replace('block', 'hidden');
     };
+
+    // ==============================================================
+    // [BARU] LOGIKA MODAL KONFIRMASI GLOBAL
+    // ==============================================================
+    let globalConfirmCallback = null;
+    let globalKeepIfCancel = false;
+
+    window.showConfirmGlobal = (title, message, onConfirm, warnIfCancel = false, type = 'primary') => {
+        document.getElementById('confirmGlobalTitle').innerText = title;
+        document.getElementById('confirmGlobalMessage').innerHTML = message;
+        globalConfirmCallback = onConfirm;
+        globalKeepIfCancel = warnIfCancel;
+        
+        const modalBox = document.getElementById('modalConfirmGlobalBox');
+        const iconBox = document.getElementById('confirmGlobalIconBox');
+        const icon = document.getElementById('confirmGlobalIcon');
+        const btnYes = document.getElementById('btnConfirmGlobalYes');
+
+        if (type === 'danger') {
+            modalBox.className = 'bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-red-400 transition-all duration-300';
+            iconBox.className = 'w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-red-100 shadow-inner transition-all duration-300';
+            icon.className = 'fa-solid fa-triangle-exclamation';
+            btnYes.className = 'flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl shadow-lg shadow-red-600/30 active:scale-95 transition-all text-sm';
+        } else if (type === 'warning') {
+            modalBox.className = 'bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-amber-400 transition-all duration-300';
+            iconBox.className = 'w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-amber-100 shadow-inner transition-all duration-300';
+            icon.className = 'fa-solid fa-person-digging';
+            btnYes.className = 'flex-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl shadow-lg shadow-amber-500/30 active:scale-95 transition-all text-sm';
+        } else {
+            modalBox.className = 'bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-indigo-400 transition-all duration-300';
+            iconBox.className = 'w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner transition-all duration-300';
+            icon.className = 'fa-solid fa-circle-question';
+            btnYes.className = 'flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm';
+        }
+
+        const modal = document.getElementById('modalConfirmGlobal');
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => modal.classList.replace('opacity-0', 'opacity-100'), 10);
+    };
+
+    document.getElementById('btnConfirmGlobalCancel').onclick = () => {
+        const modal = document.getElementById('modalConfirmGlobal');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        globalConfirmCallback = null;
+        if (globalKeepIfCancel) {
+            window.showToast?.('info', 'Dibatalkan', 'Tindakan telah dibatalkan.');
+        }
+    };
+
+    document.getElementById('btnConfirmGlobalYes').onclick = () => {
+        const modal = document.getElementById('modalConfirmGlobal');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        if (globalConfirmCallback) globalConfirmCallback();
+    };
+
 
     // ==============================================================
     // LOGIKA MENU HEADER (TITIK TIGA)
@@ -575,7 +624,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 });
 
                 if (oldNotifs.length > 0) {
-                    showConfirmNotif(
+                    showConfirmGlobal(
                         "Bersih-bersih Laci",
                         `Terdapat ${oldNotifs.length} notif yang sudah lewat dari seminggu. Mau dihapus biar laci rapi?`,
                         async () => {
@@ -587,7 +636,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                                 await Promise.all(oldIds.map(id => fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }})));
                             } catch(e) {}
                         },
-                        true 
+                        true,
+                        'primary'
                     );
                 }
             }
@@ -652,7 +702,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
                         <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
                     </div>
-                    <!-- Tombol Delete Ikon Sampah -->
                     <button onclick="event.stopPropagation(); deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm z-10">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -671,7 +720,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         }).join('');
     };
 
-    // LEADERBOARD PR FETCH
     window.loadPRLeaderboard = async () => {
         const subj = document.getElementById('lbFilterSubject').value;
         const week = document.getElementById('lbFilterWeek').value;
@@ -689,9 +737,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             
             let data = result.data || [];
             
-            // Filter kalau memang ada parameter is_pr dari server, jaga-jaga kalau server ngirim yang reguler juga
             data = data.filter(d => d.is_pr === true);
-            data = data.slice(0, 5); // Ambil 5 Terbaik
+            data = data.slice(0, 5); 
 
             if (data.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-gray-400 italic py-10 font-medium">Belum ada murid yang menyetorkan PR ini.</p>`;
@@ -729,7 +776,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         const modal = document.getElementById('modalNotif');
         const box = document.getElementById('notifBox');
         
-        // Reset ke Tab List Notifikasi setiap modal dibuka
         switchNotifTab('list');
 
         modal.classList.replace('hidden', 'flex');
@@ -748,58 +794,25 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
     };
 
-    // --- MODAL KONFIRMASI CUSTOM NOTIF ---
-    let notifConfirmCallback = null;
-    let keepIfCancel = false;
-
-    const showConfirmNotif = (title, message, onConfirm, warnIfCancel = false) => {
-        document.getElementById('confirmNotifTitle').innerText = title;
-        document.getElementById('confirmNotifMessage').innerText = message;
-        notifConfirmCallback = onConfirm;
-        keepIfCancel = warnIfCancel;
-        
-        const modal = document.getElementById('modalConfirmNotif');
-        modal.classList.replace('hidden', 'flex');
-        setTimeout(() => modal.classList.replace('opacity-0', 'opacity-100'), 10);
-    };
-
-    document.getElementById('btnConfirmNotifCancel').onclick = () => {
-        const modal = document.getElementById('modalConfirmNotif');
-        modal.classList.replace('opacity-100', 'opacity-0');
-        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
-        notifConfirmCallback = null;
-        if (keepIfCancel) {
-            window.showToast?.('info', 'Notif Disimpan', 'Notif lama dipindahkan ke "Beberapa Minggu Lalu".');
-        }
-    };
-
-    document.getElementById('btnConfirmNotifYes').onclick = () => {
-        const modal = document.getElementById('modalConfirmNotif');
-        modal.classList.replace('opacity-100', 'opacity-0');
-        setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
-        if (notifConfirmCallback) notifConfirmCallback();
-    };
-
     window.deleteNotif = (id) => {
-        showConfirmNotif('Hapus Notifikasi?', 'Notif ini akan dihapus permanen dari laci.', async () => {
+        showConfirmGlobal('Hapus Notifikasi?', 'Notif ini akan dihapus permanen dari laci.', async () => {
             notifications = notifications.filter(n => n.id !== id);
             updateNotifBadge();
             renderNotifications();
             try { await fetch(`${API_URL}/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
-        });
+        }, false, 'danger');
     };
 
     window.clearAllNotifs = () => {
         if (notifications.length === 0) return;
-        showConfirmNotif('Hapus Semua?', 'Yakin mau hapus semua notifikasi? Laci akan kembali kosong.', async () => {
+        showConfirmGlobal('Hapus Semua?', 'Yakin mau hapus semua notifikasi? Laci akan kembali kosong.', async () => {
             notifications = [];
             updateNotifBadge();
             renderNotifications();
             try { await fetch(`${API_URL}/api/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }}); } catch (e) {}
-        });
+        }, false, 'danger');
     };
 
-    // FUNGSI BUKA DETAIL NOTIFIKASI
     window.openNotifDetail = async (studentName, subject) => {
         const modal = document.getElementById('modalNotifDetail');
         const box = document.getElementById('notifDetailBox');
@@ -893,6 +906,102 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
 
     // ==============================================================
+    // LOGIKA PENGATURAN LANJUTAN & RESET TAHUN AJARAN & MAINTENANCE
+    // ==============================================================
+    window.toggleDangerZone = () => {
+        const content = document.getElementById('dangerContent');
+        const icon = document.getElementById('dangerIcon');
+        if(content) content.classList.toggle('hidden');
+        if(icon) icon.classList.toggle('rotate-180');
+    };
+
+    // [BARU] Logika Toggle Maintenance
+    window.promptMaintenanceToggle = (checkbox) => {
+        const newState = checkbox.checked;
+        checkbox.checked = !newState; // Revert sementara sampai dikonfirmasi
+        
+        const actionText = newState ? 'Mengaktifkan' : 'Mematikan';
+        const msgText = newState 
+            ? 'Semua akses murid ke halaman PR akan diblokir dan dialihkan ke halaman Maintenance.' 
+            : 'Murid dapat kembali mengakses halaman PR secara normal.';
+        
+        showConfirmGlobal(
+            `${actionText} Maintenance?`,
+            msgText,
+            () => executeMaintenanceToggle(newState, checkbox),
+            false,
+            'warning'
+        );
+    };
+
+    window.executeMaintenanceToggle = async (newState, checkbox) => {
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/system/status`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_maintenance: newState })
+            });
+            
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message || 'Gagal update status');
+            
+            checkbox.checked = newState;
+            window.showToast?.('success', 'Berhasil', `Mode perbaikan berhasil di${newState ? 'aktifkan' : 'matikan'}.`);
+        } catch (e) {
+            window.showToast?.('danger', 'Error', e.message);
+        }
+    };
+
+
+    const resetPassInput = document.getElementById('resetPasswordInput');
+    const btnExecuteReset = document.getElementById('btnExecuteReset');
+    
+    window.openResetModal = () => {
+        if (resetPassInput) resetPassInput.value = '';
+        if (btnExecuteReset) { btnExecuteReset.disabled = true; btnExecuteReset.innerHTML = 'Hapus Data'; }
+        document.getElementById('modalReset')?.classList.replace('hidden', 'flex');
+        setTimeout(() => { if (resetPassInput) resetPassInput.focus() }, 100);
+    };
+    
+    window.closeResetModal = () => { document.getElementById('modalReset')?.classList.replace('flex', 'hidden'); };
+
+    if (resetPassInput && btnExecuteReset) {
+        resetPassInput.addEventListener('input', (e) => { btnExecuteReset.disabled = e.target.value.trim().length < 3; });
+        
+        btnExecuteReset.onclick = async () => {
+            const password = resetPassInput.value.trim();
+            if (!password) return;
+            if (!confirm('Peringatan Terakhir: Anda yakin ingin menghapus SELURUH data transaksi?')) return;
+
+            btnExecuteReset.disabled = true;
+            btnExecuteReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+            try {
+                const res = await fetch(`${API_URL}/api/admin/factory-reset`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: password }) 
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    const blob = new Blob([JSON.stringify(result.backup, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `Backup_YukNgaji_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+
+                    window.showToast?.('success', 'Reset Selesai', 'Data dihapus dan dibackup.');
+                    closeResetModal(); setTimeout(() => window.location.reload(), 2000);
+                } else throw new Error(result.message);
+            } catch (err) {
+                window.showToast?.('danger', 'Akses Ditolak', err.message || 'Terjadi kesalahan.');
+                btnExecuteReset.innerHTML = 'Hapus Data'; btnExecuteReset.disabled = true; resetPassInput.value = ''; resetPassInput.focus();
+            }
+        };
+    }
+
+    // ==============================================================
     // LOGIKA TUNGGAKAN TUGAS (GLOBAL & MODAL)
     // ==============================================================
     window.prLocksCache = {};
@@ -925,7 +1034,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         subjectsList.map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('');
                 }
 
-                // [UPDATE] Populate dropdown untuk Leaderboard PR juga
                 const lbWeekSelect = document.getElementById('lbFilterWeek');
                 const weeksHtml = (filterData.data.weeks || []).map(w => `<option value="${w}">Pert. ${w}</option>`).join('');
 
@@ -1042,6 +1150,18 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         try {
             const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
             
+            // [UPDATE] Sekalian fetch status maintenance dari backend saat load dashboard
+            try {
+                const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`, { headers });
+                if (sysRes.ok) {
+                    const sysData = await sysRes.json();
+                    if (sysData.data) {
+                        const toggleBtn = document.getElementById('toggleMaintenance');
+                        if (toggleBtn) toggleBtn.checked = sysData.data.is_maintenance;
+                    }
+                }
+            } catch (e) { console.log('Gagal fetch system status'); }
+
             const [dashRes, enrichedRes] = await Promise.all([
                 fetch(`${API_URL}/api/insights/dashboard`, { headers }),
                 fetch(`${API_URL}/api/students/stats/enriched`, { headers }) 
@@ -1252,65 +1372,6 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         } catch (e) {}
     };
     checkAbsensiStatus();
-
-
-    // ================================================================
-    // LOGIKA PENGATURAN LANJUTAN & RESET TAHUN AJARAN
-    // ================================================================
-    window.toggleDangerZone = () => {
-        const content = document.getElementById('dangerContent');
-        const icon = document.getElementById('dangerIcon');
-        if(content) content.classList.toggle('hidden');
-        if(icon) icon.classList.toggle('rotate-180');
-    };
-
-    const resetPassInput = document.getElementById('resetPasswordInput');
-    const btnExecuteReset = document.getElementById('btnExecuteReset');
-    
-    window.openResetModal = () => {
-        if (resetPassInput) resetPassInput.value = '';
-        if (btnExecuteReset) { btnExecuteReset.disabled = true; btnExecuteReset.innerHTML = 'Hapus Data'; }
-        document.getElementById('modalReset')?.classList.replace('hidden', 'flex');
-        setTimeout(() => { if (resetPassInput) resetPassInput.focus() }, 100);
-    };
-    
-    window.closeResetModal = () => { document.getElementById('modalReset')?.classList.replace('flex', 'hidden'); };
-
-    if (resetPassInput && btnExecuteReset) {
-        resetPassInput.addEventListener('input', (e) => { btnExecuteReset.disabled = e.target.value.trim().length < 3; });
-        
-        btnExecuteReset.onclick = async () => {
-            const password = resetPassInput.value.trim();
-            if (!password) return;
-            if (!confirm('Peringatan Terakhir: Anda yakin ingin menghapus SELURUH data transaksi?')) return;
-
-            btnExecuteReset.disabled = true;
-            btnExecuteReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-
-            try {
-                const res = await fetch(`${API_URL}/api/admin/factory-reset`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: password }) 
-                });
-                const result = await res.json();
-
-                if (res.ok) {
-                    const blob = new Blob([JSON.stringify(result.backup, null, 2)], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `Backup_YukNgaji_${new Date().toISOString().split('T')[0]}.json`;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-
-                    window.showToast?.('success', 'Reset Selesai', 'Data dihapus dan dibackup.');
-                    closeResetModal(); setTimeout(() => window.location.reload(), 2000);
-                } else throw new Error(result.message);
-            } catch (err) {
-                window.showToast?.('danger', 'Akses Ditolak', err.message || 'Terjadi kesalahan.');
-                btnExecuteReset.innerHTML = 'Hapus Data'; btnExecuteReset.disabled = true; resetPassInput.value = ''; resetPassInput.focus();
-            }
-        };
-    }
 
     // ==============================================================
     // LOGIKA TRANSFER KOIN REWARD
