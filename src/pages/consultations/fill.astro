@@ -117,7 +117,7 @@ import Mascot from '../../components/Mascot.astro';
             </div>
         </div>
 
-        <!-- [UPDATE] LAYAR ANIMASI BULLYING DENGAN KAMERA -->
+        <!-- LAYAR ANIMASI BULLYING DENGAN KAMERA -->
         <div id="bullyOverlay" class="fixed inset-0 pointer-events-none z-[1000] hidden items-center justify-center overflow-hidden">
             <div id="bullyCharacter" class="transform translate-x-[150vw] transition-transform duration-1000 flex flex-col items-center">
                 <div class="relative bg-white border-4 border-purple-500 rounded-3xl p-4 shadow-2xl mb-4 w-64 text-center z-30">
@@ -126,12 +126,10 @@ import Mascot from '../../components/Mascot.astro';
                 </div>
                 
                 <div class="relative flex items-center justify-center w-48 h-48">
-                    <!-- Foto Inisial Pelaku -->
                     <div id="bullyAvatar" class="absolute inset-0 bg-purple-100 border-4 border-purple-500 rounded-full flex items-center justify-center shadow-2xl overflow-hidden z-10 transition-all duration-500">
                         <span id="bullyInitials" class="text-5xl font-black text-purple-600">??</span>
                     </div>
                     
-                    <!-- Frame Video Wajah Korban (Mute & Mirrored) -->
                     <div id="bullyCameraFrame" class="absolute inset-0 bg-white border-4 border-purple-500 rounded-full shadow-2xl overflow-hidden z-20 hidden transition-all duration-500 scale-0 opacity-0">
                         <video id="bullyCameraStream" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
                     </div>
@@ -321,6 +319,11 @@ import Mascot from '../../components/Mascot.astro';
                 <button onclick="closeBuyModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
                 <button id="btnConfirmBuy" onclick="executeBuyItem()" class="flex-1 py-3.5 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm">Beli Sekarang</button>
             </div>
+            <button id="btnGiftItem" 
+                class="w-full mt-3 py-3.5 bg-green-100 hover:bg-green-200 text-green-600 border border-green-300 font-bold rounded-2xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                
+                <i class="fa-solid fa-gift"></i> Hadiahkan ke Teman
+            </button>
         </div>
     </div>
 
@@ -390,6 +393,36 @@ import Mascot from '../../components/Mascot.astro';
         </div>
     </div>
 
+    <div id="modalOwnedItemAction" class="fixed inset-0 bg-black/60 z-[450] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center border-4 border-indigo-400">
+            <div id="ownedItemIcon" class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">📦</div>
+            <h3 id="ownedItemName" class="font-black text-gray-800 text-xl mb-1">Nama Item</h3>
+            <p class="text-xs text-gray-500 mb-6 font-bold">Pilih aksi yang ingin dilakukan:</p>
+            
+            <div class="flex gap-3">
+                <button id="btnSellItem" class="flex-1 py-3.5 bg-red-100 text-red-600 hover:bg-red-200 font-bold rounded-2xl active:scale-95 transition-all text-sm">
+                    Jual (<span id="sellPriceText">0</span> Poin)
+                </button>
+                <button id="btnUseItem" class="flex-1 py-3.5 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all text-sm">
+                    Pakai Sekarang
+                </button>
+            </div>
+            <button onclick="document.getElementById('modalOwnedItemAction').classList.replace('flex', 'hidden')" class="w-full mt-3 py-3 text-gray-400 font-bold text-xs hover:text-gray-600">Batal</button>
+        </div>
+    </div>
+
+    <div id="modalReceiveGift" class="fixed inset-0 bg-pink-900/80 z-[600] hidden items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center transform scale-100 animate-bounce-short border-4 border-pink-400">
+            <div class="text-6xl mb-4 animate-bounce">🎁</div>
+            <h3 class="font-black text-pink-600 text-2xl mb-1 uppercase">Kamu Dapat Hadiah!</h3>
+            <p class="text-gray-700 text-sm font-bold mb-4">Dikirim oleh <span id="giftSenderName" class="text-indigo-600">---</span></p>
+            <div class="bg-pink-50 p-4 rounded-2xl border border-pink-200 mb-6">
+                <p class="text-xs text-pink-800 font-bold">1x <span id="giftItemName" class="text-pink-600 text-lg mx-1">Item</span> berhasil masuk ke Tas kamu!</p>
+            </div>
+            <button onclick="document.getElementById('modalReceiveGift').classList.replace('flex', 'hidden')" class="w-full py-3.5 bg-pink-600 text-white font-black uppercase rounded-2xl shadow-lg active:scale-95 transition-all text-sm">Terima Kasih!</button>
+        </div>
+    </div>
+
     <!-- HASIL UJIAN -->
     <div id="modalResult" class="fixed inset-0 bg-black/90 z-[500] hidden items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
         <div id="meme67ResultView" class="hidden w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-gray-900 bg-black my-auto mx-auto">
@@ -405,41 +438,64 @@ import Mascot from '../../components/Mascot.astro';
             </div>
         </div>
 
-        <div id="normalResultView" class="flex flex-col bg-white w-full max-w-sm rounded-[2rem] p-7 text-center animate-slide-up my-auto mx-auto relative overflow-hidden">
-            <div id="resultEmoji" class="text-5xl mb-2 animate-bounce">🏆</div>
-            <h3 id="resultTitle" class="font-black text-gray-800 text-xl mb-1">Luar Biasa!</h3>
-            <p id="resultMessage" class="text-[10px] text-gray-400 font-bold mb-5 leading-relaxed">Alhamdulillah, nilaimu sangat bagus!</p>
+        <div id="normalResultView" class="flex flex-col bg-white w-full max-w-sm rounded-[2rem] p-6 text-center animate-slide-up my-auto mx-auto relative max-h-[90vh] overflow-hidden">
             
-            <div class="bg-gray-50 rounded-3xl p-4 mb-4 border border-gray-100 shadow-inner relative z-10">
-                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nilai Akademik</p>
-                <div id="resultScore" class="text-5xl font-black text-green-600 leading-none">100</div>
-                <div id="resultBonus" class="hidden text-[9px] font-black text-indigo-500 mt-2 bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
-                    +0 ✨
-                </div>
+            <!-- 1. HEADER (Fixed/Diam) -->
+            <div class="shrink-0 mb-3">
+                <div id="resultEmoji" class="text-5xl mb-2 animate-bounce">🏆</div>
+                <h3 id="resultTitle" class="font-black text-gray-800 text-xl mb-1">Luar Biasa!</h3>
+                <p id="resultMessage" class="text-[10px] text-gray-400 font-bold leading-relaxed">Alhamdulillah, nilaimu sangat bagus!</p>
+            </div>
+            
+            <!-- 2. SCROLLABLE CONTENT (Kartu Nilai, Koin, Item) -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-1 pb-2 space-y-4">
                 
-                <div class="grid grid-cols-2 gap-2 border-t border-gray-200 mt-4 pt-4 relative z-10">
-                    <div>
-                        <p class="text-[8px] font-black text-gray-400 uppercase">Waktu</p>
-                        <p id="resultTime" class="text-xs font-black text-gray-700">--:--</p>
+                <!-- Kartu Nilai -->
+                <div class="bg-gray-50 rounded-3xl p-4 border border-gray-100 shadow-inner relative z-10">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nilai Akademik</p>
+                    <div id="resultScore" class="text-5xl font-black text-green-600 leading-none">100</div>
+                    <div id="resultBonus" class="hidden text-[10px] font-black text-indigo-500 mt-2 bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
+                        +0 ✨
                     </div>
-                    <div>
-                        <p class="text-[8px] font-black text-gray-400 uppercase">Karakter</p>
-                        <p id="resultSocial" class="text-xs font-black text-gray-700">Baik</p>
+                    
+                    <div class="grid grid-cols-2 gap-2 border-t border-gray-200 mt-4 pt-4 relative z-10">
+                        <div>
+                            <p class="text-[8px] font-black text-gray-400 uppercase">Waktu</p>
+                            <p id="resultTime" class="text-xs font-black text-gray-700">--:--</p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] font-black text-gray-400 uppercase">Karakter</p>
+                            <p id="resultSocial" class="text-xs font-black text-gray-700">Baik</p>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Kartu Koin -->
+                <div class="bg-amber-50 rounded-3xl p-4 border border-amber-200 shadow-sm relative z-10 hidden" id="resultCoinContainer">
+                    <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Koin Reward Didapat</p>
+                    <div id="resultCoinEarned" class="text-3xl font-black text-amber-600 leading-none">+0 💰</div>
+                    <div id="resultCoinMultiplier" class="hidden text-[8px] font-black text-white bg-amber-500 inline-block px-2 py-0.5 rounded border border-amber-600 mt-2 shadow-sm uppercase tracking-widest">
+                        DIKALI 2X! 🤑
+                    </div>
+                </div>
+
+                <!-- Kartu List Item -->
+                <div class="bg-indigo-50/50 rounded-3xl p-4 border border-indigo-100 shadow-sm relative z-10 hidden" id="resultUsedItemsContainer">
+                    <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-3">Item Terpakai:</p>
+                    <ul id="resultUsedItemsList" class="space-y-2 text-xs font-bold text-indigo-700 text-left pl-1">
+                        <!-- List Item Masuk Sini lewat JS -->
+                    </ul>
+                </div>
+
+            </div>
+            
+            <!-- 3. FOOTER / TOMBOL CTA (Fixed/Diam di bawah) -->
+            <div class="shrink-0 mt-4 pt-2 border-t border-gray-100/50">
+                <button onclick="closeResultAndCheckReminder()" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
+                    Tutup & Kembali
+                </button>
             </div>
 
-            <div class="bg-amber-50 rounded-3xl p-4 mb-6 border border-amber-200 shadow-sm relative z-10 hidden" id="resultCoinContainer">
-                <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Koin Reward Didapat</p>
-                <div id="resultCoinEarned" class="text-3xl font-black text-amber-600 leading-none">+0 💰</div>
-                <div id="resultCoinMultiplier" class="hidden text-[8px] font-black text-white bg-amber-500 inline-block px-2 py-0.5 rounded border border-amber-600 mt-2 shadow-sm uppercase tracking-widest">
-                    DIKALI 2X! 🤑
-                </div>
-            </div>
-            
-            <button onclick="closeResultAndCheckReminder()" class="w-full py-3.5 bg-gray-800 text-white font-bold rounded-2xl text-xs active:scale-95 transition-all uppercase tracking-widest">
-                Tutup & Kembali
-            </button>
         </div>
     </div>
 
@@ -464,6 +520,19 @@ import Mascot from '../../components/Mascot.astro';
         <Toast />
     </div>
 </Layout>
+
+<style>
+    @keyframes bounce-short { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.02); } }
+    .animate-bounce-short { animation: bounce-short 0.5s ease-in-out 1; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+</style>
+
+<style is:global>
+    .toast-container, [id^="toast"] { z-index: 99999 !important; }
+</style>
+
 
 <style>
     @keyframes bounce-short { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.02); } }
@@ -701,6 +770,12 @@ import Mascot from '../../components/Mascot.astro';
     window.closeBuyModal = () => document.getElementById('modalBuyItem').classList.replace('flex', 'hidden');
     window.closeExamReminder = executeExit;
 
+    document.getElementById('btnGiftItem').onclick = () => {
+        document.getElementById('modalBuyItem').classList.replace('flex', 'hidden');
+        currentAttackMode = 'gift'; 
+        openAttackModal(); 
+    };
+
     window.toggleFloatingTimer = () => {
         if (!isAppReady) return;
         const container = document.getElementById('timerTextContainer');
@@ -736,18 +811,12 @@ import Mascot from '../../components/Mascot.astro';
         });
     };
 
-    // ==========================================
-    // [BARU] TRIGGER SIMULASI BULLY
-    // ==========================================
     window.triggerSimBully = () => {
         localStorage.setItem('sim_bully_pending', 'true');
         window.showToast?.('info', 'Simulasi Aktif!', 'Tunggu ya, pembully akan datang beberapa saat lagi saat ngerjain soal!');
         window.toggleShopDrawer(); 
     };
 
-    // ==========================================
-    // [UPDATE] ANIMASI BULLYING + KAMERA
-    // ==========================================
     window.playBullyAnimation = async (attackerName) => {
         const overlay = document.getElementById('bullyOverlay');
         const char = document.getElementById('bullyCharacter');
@@ -760,7 +829,6 @@ import Mascot from '../../components/Mascot.astro';
         const cameraFrame = document.getElementById('bullyCameraFrame');
         const videoEl = document.getElementById('bullyCameraStream');
 
-        // 1. Request akses kamera dulu di *background*
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
@@ -774,21 +842,14 @@ import Mascot from '../../components/Mascot.astro';
         nameEl.innerText = attackerName;
         speech.innerText = "Wle wle wle, soalnya aku umpetin wle.... 😜";
         
-        // Reset state visual
         cameraFrame.classList.add('hidden', 'scale-0', 'opacity-0');
         cameraFrame.classList.remove('scale-100', 'opacity-100');
         avatarBox.classList.remove('scale-0', 'opacity-0');
 
-        // 2. Bully masuk ke layar
         setTimeout(() => char.classList.replace('translate-x-[150vw]', 'translate-x-0'), 100);
-        
-        // 3. Soal diumpetin
         setTimeout(() => academicSec.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4'), 1000);
 
-        // 4. Tunggu 10 detik ngeledek biasa
         setTimeout(() => {
-            
-            // 5. Ubah teks jadi makin ngeledek & munculin kamera
             const mockingTexts = [
                 "Utututu, keliatannya ada yang marah marah nih 🤣",
                 "Kamu mau lihat badut? Nih lihat! 🤡",
@@ -798,7 +859,7 @@ import Mascot from '../../components/Mascot.astro';
             speech.innerText = mockingTexts[Math.floor(Math.random() * mockingTexts.length)];
             
             if (stream) {
-                avatarBox.classList.add('scale-0', 'opacity-0'); // Sembunyiin inisial
+                avatarBox.classList.add('scale-0', 'opacity-0'); 
                 cameraFrame.classList.remove('hidden');
                 setTimeout(() => {
                     cameraFrame.classList.remove('scale-0', 'opacity-0');
@@ -806,17 +867,14 @@ import Mascot from '../../components/Mascot.astro';
                 }, 50);
             }
 
-            // 6. Tunggu 5 detik kamera nyala
             setTimeout(() => {
                 speech.innerText = "Nih aku balikkin... jangan nangis ya. wleeee 🤣";
                 
-                // Sembunyikan kamera, balikin inisial
                 cameraFrame.classList.remove('scale-100', 'opacity-100');
                 cameraFrame.classList.add('scale-0', 'opacity-0');
                 avatarBox.classList.remove('scale-0', 'opacity-0');
                 setTimeout(() => cameraFrame.classList.add('hidden'), 500);
 
-                // 7. Balikin soal & Keluar layar
                 setTimeout(() => {
                     academicSec.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
                     char.classList.replace('translate-x-0', '-translate-x-[150vw]');
@@ -824,19 +882,13 @@ import Mascot from '../../components/Mascot.astro';
                     setTimeout(() => {
                         overlay.classList.replace('flex', 'hidden');
                         char.classList.replace('-translate-x-[150vw]', 'translate-x-[150vw]');
-                        if (stream) {
-                            stream.getTracks().forEach(track => track.stop()); // Matiin lampu hijau kamera
-                        }
+                        if (stream) stream.getTracks().forEach(track => track.stop()); 
                     }, 1000);
                 }, 2500); 
             }, 5000); 
-
-        }, 11000); // 10 detik jeda + 1 detik dari masuk layar
+        }, 11000); 
     }
 
-    // ==========================================
-    // ANIMASI TANYA TEMAN
-    // ==========================================
     window.triggerCallFriend = () => {
         if (window.hasCalledFriend) return;
         window.hasCalledFriend = true;
@@ -858,9 +910,7 @@ import Mascot from '../../components/Mascot.astro';
         const overlay = document.getElementById('callFriendOverlay');
         overlay.classList.remove('translate-x-full');
         
-        setTimeout(() => {
-            overlay.classList.add('translate-x-full');
-        }, 6000);
+        setTimeout(() => { overlay.classList.add('translate-x-full'); }, 6000);
     }
 
     // ==========================================
@@ -872,8 +922,6 @@ import Mascot from '../../components/Mascot.astro';
                 const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`);
                 if (sysRes.ok) {
                     const sysData = await sysRes.json();
-                    
-                    // [FIX] Tambahkan "&& !isPreview" agar Ustadz (Mode Simulasi) lolos dari blokir maintenance
                     if (sysData.data && sysData.data.is_maintenance && !isPreview) {
                         window.location.replace('/maintenance');
                         return; 
@@ -1195,7 +1243,7 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     // ==========================================
-    // 5. VALIDATION & AUTO-SAVE (UX UPDATED)
+    // 5. VALIDATION & AUTO-SAVE
     // ==========================================
     const validate = () => {
         const totalQs = questions.length + 3; let answered = 0;
@@ -1501,7 +1549,6 @@ import Mascot from '../../components/Mascot.astro';
         }, 1000);
     };
 
-
     // ==========================================
     // 7. TOKO & GAMIFIKASI 
     // ==========================================
@@ -1532,6 +1579,47 @@ import Mascot from '../../components/Mascot.astro';
         } catch (error) {
             if (error.message.includes('sudah') || error.message.includes('pernah')) { hasClaimedBonusGlobal = true; localStorage.setItem(`bonus_claimed_${studentId}`, 'true'); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); }
             else { window.showToast?.('danger', 'Gagal', error.message); btn.innerText = 'Ambil Poinnya!'; btn.disabled = false; }
+        }
+    };
+
+    window.activateItem = (itemKey) => {
+        if (itemKey === 'item_perisai') {
+            window.showConfirm('Gunakan Perisai?', 'Gunakan Perisai sekarang? (Hanya berlaku sampai jam 12 malam ini)', () => {
+                window.isShieldActive = true; 
+                studentInventory.item_perisai -= 1; 
+                boughtItemsThisSession.item_perisai = true; 
+                updateShopUI(); 
+                window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif hingga malam ini!');
+                if (!isPreview) fetch(`${API_URL}/api/shop/use-item`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, item_type: 'item_perisai' }) }).catch(e=>e);
+            });
+        } else if (itemKey === 'item_double_score') {
+            window.isDoubleScoreActive = true; studentInventory.item_double_score -= 1; boughtItemsThisSession.item_double_score = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
+        } else if (itemKey === 'item_double_coin') {
+            if (window.isTripleCoinActive) {
+                window.isTripleCoinActive = false;
+                studentInventory.item_triple_coin += 1;
+                window.showToast?.('warning', 'Switch Item', 'Triple Koin dimatikan. Double Koin diaktifkan!');
+            } else {
+                window.showToast?.('success', 'Sihir Aktif', 'Koinmu akan di-double di akhir!');
+            }
+            window.isDoubleCoinActive = true; 
+            studentInventory.item_double_coin -= 1; 
+            boughtItemsThisSession.item_double_coin = true; 
+            updateShopUI(); 
+        } else if (itemKey === 'item_triple_coin') {
+            if (window.isDoubleCoinActive) {
+                window.isDoubleCoinActive = false;
+                studentInventory.item_double_coin += 1;
+                window.showToast?.('warning', 'Switch Item', 'Double Koin dimatikan. Triple Koin diaktifkan!');
+            } else {
+                window.showToast?.('success', 'Sihir Aktif', 'Jackpot! Koinmu akan dikali 3 di akhir!');
+            }
+            window.isTripleCoinActive = true; 
+            studentInventory.item_triple_coin -= 1; 
+            boughtItemsThisSession.item_triple_coin = true; 
+            updateShopUI(); 
+        } else if (itemKey === 'item_diskon') {
+            window.isDiscountActive = true; studentInventory.item_diskon -= 1; boughtItemsThisSession.item_diskon = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Semua harga di Toko dipotong 50%!');
         }
     };
 
@@ -1602,27 +1690,49 @@ import Mascot from '../../components/Mascot.astro';
         }
 
         if (studentInventory[itemKey] > 0) {
-            if (itemKey === 'item_perisai') {
-                window.showConfirm('Gunakan Perisai?', 'Gunakan Perisai sekarang? (Hanya berlaku sampai jam 12 malam ini)', () => {
-                    window.isShieldActive = true; 
-                    studentInventory.item_perisai -= 1; 
-                    boughtItemsThisSession.item_perisai = true; 
-                    updateShopUI(); 
-                    window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif hingga malam ini!');
-                    if (!isPreview) fetch(`${API_URL}/api/shop/use-item`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, item_type: 'item_perisai' }) }).catch(e=>e);
-                });
-            } else if (itemKey === 'item_double_score') {
-                window.isDoubleScoreActive = true; studentInventory.item_double_score -= 1; boughtItemsThisSession.item_double_score = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
-            } else if (itemKey === 'item_double_coin') {
-                window.isDoubleCoinActive = true; studentInventory.item_double_coin -= 1; boughtItemsThisSession.item_double_coin = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Koinmu akan di-double di akhir!');
-            } else if (itemKey === 'item_triple_coin') {
-                window.isTripleCoinActive = true; studentInventory.item_triple_coin -= 1; boughtItemsThisSession.item_triple_coin = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Jackpot! Koinmu akan dikali 3 di akhir!');
-            } else if (itemKey === 'item_diskon') {
-                window.isDiscountActive = true; studentInventory.item_diskon -= 1; boughtItemsThisSession.item_diskon = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Semua harga di Toko dipotong 50%!');
-            }
+            const item = ITEM_DB[itemKey];
+            const sellPrice = Math.floor(item.price / 2);
+
+            document.getElementById('ownedItemIcon').innerText = item.icon;
+            document.getElementById('ownedItemName').innerText = item.name;
+            document.getElementById('sellPriceText').innerText = sellPrice;
+
+            document.getElementById('btnSellItem').onclick = () => executeSellItem(itemKey, sellPrice);
+            document.getElementById('btnUseItem').onclick = () => {
+                document.getElementById('modalOwnedItemAction').classList.replace('flex', 'hidden');
+                activateItem(itemKey); 
+            };
+
+            document.getElementById('modalOwnedItemAction').classList.replace('hidden', 'flex');
         } else {
             previewItem(itemKey);
         }
+    };
+
+    window.executeSellItem = async (itemKey, sellPrice) => {
+        document.getElementById('modalOwnedItemAction').classList.replace('flex', 'hidden');
+        if (isPreview) {
+            studentInventory[itemKey] -= 1;
+            studentWallet += sellPrice;
+            updateShopUI();
+            window.showToast?.('success', 'Terjual!', `Item berhasil dijual seharga ${sellPrice} Poin.`);
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/shop/sell`, { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ student_id: studentId, item_type: itemKey }) 
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                studentInventory[itemKey] -= 1;
+                studentWallet = data.data.new_poin;
+                updateShopUI();
+                window.showToast?.('success', 'Terjual!', data.message);
+            }
+        } catch(e) { window.showToast?.('danger', 'Gagal', 'Gagal menjual item.'); }
     };
 
     window.previewItem = (itemKey) => {
@@ -1711,20 +1821,33 @@ import Mascot from '../../components/Mascot.astro';
 
     const updateShopUI = () => {
         const displayPoin = document.getElementById('currentPoinDisplay'); if (displayPoin) displayPoin.innerText = studentWallet;
+        
         Object.keys(ITEM_DB).forEach(key => {
             const btn = document.getElementById(`btn-shop-${key}`); if (!btn) return;
-            const isOwned = studentInventory[key] > 0; const isBought = boughtItemsThisSession[key];
+            const isOwned = studentInventory[key] > 0; 
+            const isBought = boughtItemsThisSession[key];
             const titleEl = btn.querySelector('.item-title'); 
             const oldBadge = btn.querySelector('.qty-badge'); if (oldBadge) oldBadge.remove();
             
+            // 1. BERSIHKAN SEMUA CLASS STATE SEBELUMNYA BIAR GAK NYANGKUT
+            btn.classList.remove('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed', 'bg-indigo-50', 'border-indigo-300', 'bg-pink-50', 'border-pink-300', 'cursor-pointer', 'cursor-default');
+            
+            // 2. KEMBALIKAN NAMA ASLI ITEM (Misal: "Double Nilai" jadi "Double<br>Nilai")
+            const defaultName = ITEM_DB[key].name.replace(' ', '<br>');
+
+            // ===============================================
+            // LOGIKA SPESIAL: ITEM SEKALI PAKAI (TIDAK MASUK TAS)
+            // ===============================================
             if (key === 'item_tambah_waktu' || key === 'item_bullying') {
                  if (studentWallet < getPrice(key) && key !== 'item_tambah_waktu') {
                     btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
                     btn.disabled = true;
                 } else {
-                    btn.classList.remove('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed');
+                    btn.classList.add('cursor-pointer');
                     btn.disabled = false;
                 }
+                titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight";
+                titleEl.innerHTML = defaultName;
                 return;
             }
 
@@ -1735,28 +1858,58 @@ import Mascot from '../../components/Mascot.astro';
                     btn.disabled = true;
                     titleEl.innerText = "HABIS";
                 } else {
-                    btn.classList.remove('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed');
+                    btn.classList.add('cursor-pointer');
                     btn.disabled = false;
-                    titleEl.innerText = "Tanya Teman";
+                    titleEl.innerHTML = "Tanya<br>Teman";
                 }
                 titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight"; 
                 return;
             }
 
+            // ===============================================
+            // LOGIKA ITEM INVENTORY (Bisa Disimpan, Dijual, Dikirim)
+            // ===============================================
             if (isOwned) {
-                if (key === 'item_extra_life') { btn.classList.add('bg-pink-50', 'border-pink-300', 'cursor-default'); titleEl.innerText = "AKTIF OTOMATIS"; titleEl.className = "text-[7px] font-black text-pink-700 mt-1 uppercase tracking-wider item-title text-center leading-tight"; btn.disabled = true; } 
-                else { btn.classList.add('bg-indigo-50', 'border-indigo-300', 'cursor-pointer'); titleEl.innerText = "PAKAI SEKARANG"; titleEl.className = "text-[7px] font-black text-indigo-700 mt-1 uppercase tracking-wider item-title text-center leading-tight"; }
-                const newBadge = document.createElement('span'); newBadge.className = "qty-badge absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-md"; newBadge.innerText = studentInventory[key]; btn.appendChild(newBadge);
-            } else if (isBought || studentWallet < getPrice(key)) {
-                btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight"; btn.disabled = true;
+                // KONDISI A: ITEM ADA DI DALAM TAS
+                btn.disabled = false; // Harus bisa diklik buat buka Modal Jual/Pakai/Gift
+                btn.classList.add('bg-indigo-50', 'border-indigo-300', 'cursor-pointer'); 
+                
+                titleEl.innerText = "PAKAI"; 
+                titleEl.className = "text-[7px] font-black text-indigo-700 mt-1 uppercase tracking-wider item-title text-center leading-tight"; 
+                
+                // Tambah badge jumlah
+                const newBadge = document.createElement('span'); 
+                newBadge.className = "qty-badge absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-md"; 
+                newBadge.innerText = studentInventory[key]; 
+                btn.appendChild(newBadge);
+                
+            } else if (isBought) {
+                // KONDISI B: ITEM SUDAH DIPAKAI DI SESI INI
+                btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
+                titleEl.className = "text-[8px] font-black text-gray-500 mt-1 uppercase tracking-widest item-title text-center leading-tight"; 
+                btn.disabled = true;
+                titleEl.innerText = "TERPAKAI"; // Teks berubah jadi terpakai
+                
+            } else if (studentWallet < getPrice(key)) {
+                // KONDISI C: BELUM PUNYA & DUIT KURANG BUAT BELI
+                btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
+                titleEl.className = "text-[8px] font-bold text-gray-400 mt-0.5 item-title text-center leading-tight"; 
+                btn.disabled = true;
+                titleEl.innerHTML = defaultName; // Teks balik normal tapi redup
+                
             } else {
-                btn.classList.remove('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed', 'bg-indigo-50', 'bg-pink-50'); btn.disabled = false;
+                // KONDISI D: NORMAL (BISA DIBELI)
+                btn.classList.add('cursor-pointer');
+                btn.disabled = false;
                 titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight"; 
+                titleEl.innerHTML = defaultName; // Teks balik ke nama aslinya
             }
         });
 
+        // 3. LOGIKA VIGNETTE & FLOATING ICONS SAAT UJIAN BERJALAN
         const vignette = document.getElementById('shieldVignette');
         if (vignette) window.isShieldActive && isQuizStarted ? vignette.classList.replace('opacity-0', 'opacity-100') : vignette.classList.replace('opacity-100', 'opacity-0');
+        
         const floatingItems = document.getElementById('floatingItems');
         if (isQuizStarted) {
             let activeHtml = '';
@@ -1766,8 +1919,13 @@ import Mascot from '../../components/Mascot.astro';
             if (window.isTripleCoinActive) activeHtml += `<span class="text-base drop-shadow-sm animate-pulse">🤑</span>`;
             if (window.isDiscountActive) activeHtml += `<span class="text-base drop-shadow-sm animate-pulse">🏷️</span>`;
             if (studentInventory.item_extra_life > 0) activeHtml += `<span class="text-base drop-shadow-sm animate-pulse">💖</span>`;
-            if (activeHtml !== '') { floatingItems.classList.replace('hidden', 'flex'); document.getElementById('itemsTextContainer').innerHTML = activeHtml; } 
-            else floatingItems.classList.replace('flex', 'hidden');
+            
+            if (activeHtml !== '') { 
+                floatingItems.classList.replace('hidden', 'flex'); 
+                document.getElementById('itemsTextContainer').innerHTML = activeHtml; 
+            } else {
+                floatingItems.classList.replace('flex', 'hidden');
+            }
         }
     };
 
@@ -1775,7 +1933,12 @@ import Mascot from '../../components/Mascot.astro';
         const listContainer = document.getElementById('attackTargetList'); 
         listContainer.innerHTML = '<div class="text-center p-4 text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><br>Mencari target...</div>'; 
         
-        if (currentAttackMode === 'bully') {
+        if (currentAttackMode === 'gift') {
+            document.getElementById('attackIconBox').innerText = '🎁';
+            document.getElementById('attackIconBox').className = "w-16 h-16 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-pink-100 shadow-inner";
+            document.getElementById('attackTitle').innerText = 'Kirim Hadiah';
+            document.getElementById('attackDesc').innerText = `Kirim ${ITEM_DB[selectedItemToBuy].name} ke temanmu.`;
+        } else if (currentAttackMode === 'bully') {
             document.getElementById('attackIconBox').innerText = '😈';
             document.getElementById('attackIconBox').className = "w-16 h-16 bg-purple-50 text-purple-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-purple-100 shadow-inner";
             document.getElementById('attackTitle').innerText = 'Bully Teman';
@@ -1815,7 +1978,10 @@ import Mascot from '../../components/Mascot.astro';
                 let btnText = '';
                 let btnClass = '';
 
-                if (currentAttackMode === 'bully') {
+                if (currentAttackMode === 'gift') {
+                    btnText = 'KIRIM 🎁';
+                    btnClass = 'bg-pink-500 text-white hover:bg-pink-600 shadow-md shadow-pink-500/30';
+                } else if (currentAttackMode === 'bully') {
                     isDisabled = studentWallet < getPrice('item_bullying'); 
                     btnText = isDisabled ? 'Koin Kurang' : 'BULLY 😈';
                     btnClass = isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:bg-purple-600 active:scale-95 shadow-md shadow-purple-500/30';
@@ -1827,7 +1993,7 @@ import Mascot from '../../components/Mascot.astro';
                 }
 
                 return `
-                    <div class="flex items-center justify-between p-3 rounded-xl border ${isDisabled && currentAttackMode !== 'bully' ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm transition-all hover:border-gray-200'}">
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${isDisabled && currentAttackMode !== 'bully' && currentAttackMode !== 'gift' ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm transition-all hover:border-gray-200'}">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${p.has_shield ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}">
                                 ${p.name.substring(0,2).toUpperCase()}
@@ -1852,15 +2018,26 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     window.executeAttack = (targetId, targetName, btnElement) => {
-        const titleText = currentAttackMode === 'bully' ? 'Umpetin Soal Teman?' : 'Serang Teman?';
-        const cost = currentAttackMode === 'bully' ? getPrice('item_bullying') : 0;
-        const descText = currentAttackMode === 'bully' ? `Yakin bayar ${cost} koin untuk ngebully ${targetName}?` : `Yakin menyerang dan mencuri koin ${targetName}?`;
+        const titleText = currentAttackMode === 'gift' ? 'Kirim Hadiah?' : (currentAttackMode === 'bully' ? 'Umpetin Soal Teman?' : 'Serang Teman?');
+        const cost = currentAttackMode === 'gift' ? getPrice(selectedItemToBuy) : (currentAttackMode === 'bully' ? getPrice('item_bullying') : 0);
+        let descText = "";
+        
+        if (currentAttackMode === 'gift') {
+            descText = `Yakin kirim ${ITEM_DB[selectedItemToBuy].name} seharga ${cost} koin untuk ${targetName}?`;
+        } else if (currentAttackMode === 'bully') {
+            descText = `Yakin bayar ${cost} koin untuk ngebully ${targetName}?`;
+        } else {
+            descText = `Yakin menyerang dan mencuri koin ${targetName}?`;
+        }
 
         window.showConfirm(titleText, descText, async () => {
             document.getElementById('modalAttack').classList.replace('flex', 'hidden');
             try {
                 if (isPreview) { 
-                    if (currentAttackMode === 'bully') {
+                    if (currentAttackMode === 'gift') {
+                        studentWallet -= cost;
+                        window.showToast?.('success', 'Berhasil Dikirim', `Hadiah terkirim ke ${targetName}!`);
+                    } else if (currentAttackMode === 'bully') {
                         studentWallet -= cost;
                         window.showToast?.('success', 'BULLY BERHASIL!', `Soal ${targetName} diumpetin!`); 
                     } else {
@@ -1871,6 +2048,21 @@ import Mascot from '../../components/Mascot.astro';
                     }
                     updateShopUI(); 
                     return; 
+                }
+
+                if (currentAttackMode === 'gift') {
+                    const res = await fetch(`${API_URL}/api/shop/gift`, { 
+                        method: 'POST', 
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ actor_id: studentId, target_id: targetId, item_type: selectedItemToBuy }) 
+                    });
+                    const data = await res.json();
+                    if(data.status === 'success') {
+                        studentWallet = data.data.new_poin;
+                        window.showToast?.('success', 'Berhasil Dikirim', `Hadiah terkirim ke ${targetName}!`);
+                        updateShopUI();
+                    } else throw new Error(data.message);
+                    return;
                 }
 
                 if (currentAttackMode === 'bully') {
@@ -1918,6 +2110,18 @@ import Mascot from '../../components/Mascot.astro';
                     }
                 }
 
+                const giftLogs = data.data.filter(l => l.action_type === 'gift');
+                if (giftLogs.length > 0) {
+                    const log = giftLogs[0];
+                    unreadLogIds.push(log.id); 
+                    document.getElementById('giftSenderName').innerText = log.attacker_name;
+                    document.getElementById('giftItemName').innerText = log.metadata?.item_name || 'Item Misterius';
+                    document.getElementById('modalReceiveGift').classList.replace('hidden', 'flex');
+                    
+                    if(log.metadata?.item_type) studentInventory[log.metadata.item_type] += 1;
+                    updateShopUI();
+                }
+
                 const attackLogs = data.data.filter(l => l.action_type === 'serang_berhasil');
                 if (attackLogs.length > 0) {
                     unreadLogIds.push(...attackLogs.map(l => l.id));
@@ -1935,6 +2139,11 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('modalVictim').classList.replace('flex', 'hidden');
         if (unreadLogIds.length > 0) { try { await fetch(`${API_URL}/api/shop/notifications/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ log_ids: unreadLogIds }) }); unreadLogIds = []; } catch (error) {} }
     };
+
+    window.closeGiftModal = async () => {
+        document.getElementById('modalReceiveGift').classList.replace('flex', 'hidden');
+        if (unreadLogIds.length > 0) { try { await fetch(`${API_URL}/api/shop/notifications/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ log_ids: unreadLogIds }) }); unreadLogIds = []; } catch (error) {} }
+    }
 
     // ==========================================
     // 8. EXTRA LIFE LOGIC
@@ -2069,7 +2278,10 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     const proceedSubmit = async () => {
-        btnSubmitGlobal.disabled = true; btnSubmitGlobal.classList.add('bg-green-600'); btnSubmitGlobal.classList.remove('bg-blue-600', 'bg-gray-500', 'bg-gray-200', 'bg-pink-500'); btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
+        btnSubmitGlobal.disabled = true; 
+        btnSubmitGlobal.className = 'w-full py-5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg shadow-sm mb-12 relative overflow-hidden';
+        btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
+
         const normalView = document.getElementById('normalResultView'); const memeView = document.getElementById('meme67ResultView');
 
         const answers = [];
@@ -2098,7 +2310,11 @@ import Mascot from '../../components/Mascot.astro';
 
         if (!isEvaluatingExtraLife && studentInventory.item_extra_life > 0 && wrongQuestions.length > 0) {
             wrongQuestionsGlobal = wrongQuestions; document.getElementById('elWrongCount').innerText = wrongQuestions.length; document.getElementById('modalOfferExtraLife').classList.replace('hidden', 'flex');
-            btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban'; btnSubmitGlobal.disabled = false; btnSubmitGlobal.classList.remove('bg-green-600'); return;
+            
+            btnSubmitGlobal.disabled = false; 
+            btnSubmitGlobal.className = 'w-full py-5 bg-green-600 text-white font-bold rounded-2xl shadow-sm mb-12 relative overflow-hidden active:scale-95 cursor-pointer transition-all text-lg';
+            btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
+            return;
         }
 
         let finalScore = score; let isBonusApplied = false;
@@ -2111,7 +2327,7 @@ import Mascot from '../../components/Mascot.astro';
         if (window.isDoubleCoinActive) coinMultiplier = 2;
         if (window.isTripleCoinActive) coinMultiplier = 3;
 
-        btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Mengirim Data...';
+        btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim Data...';
         const formData = new FormData();
         formData.append('student_id', studentId); formData.append('subject', subject); formData.append('week', week);
         formData.append('akhlak_score', document.querySelector('input[name="q_akhlak"]:checked')?.value || 0); formData.append('disiplin_score', document.querySelector('input[name="q_disiplin"]:checked')?.value || 0); formData.append('aktif_score', document.querySelector('input[name="q_aktif"]:checked')?.value || 0);
@@ -2151,27 +2367,49 @@ import Mascot from '../../components/Mascot.astro';
             
             scoreEl.innerText = score;
             
-            let extraBadgeHtml = '';
-            if (isBonusApplied) { setTimeout(() => { scoreEl.innerText = finalScore; scoreEl.classList.add('scale-110', 'text-indigo-600'); }, 800); extraBadgeHtml += `+${finalScore - score} ✨<br>`; } 
-            
-            if (extraBadgeHtml !== '') {
-                bonusEl.innerHTML = extraBadgeHtml;
+            // [FIX 1] Tampilkan label bonus nilai (HANYA angka) kalau user BELI Double Nilai
+            if (window.isDoubleScoreActive && isBonusApplied) { 
+                setTimeout(() => { scoreEl.innerText = finalScore; scoreEl.classList.add('scale-110', 'text-green-600'); }, 800); 
+                bonusEl.innerText = `+${finalScore - score} ✨`;
                 setTimeout(() => bonusEl.classList.remove('hidden'), 800);
             } else {
                 bonusEl.classList.add('hidden');
             }
 
-            const earnedCoins = finalScore * coinMultiplier;
+            // [FIX 2] Tampilkan section Koin kalau user BELI item Koin
             const coinContainer = document.getElementById('resultCoinContainer');
-            document.getElementById('resultCoinEarned').innerText = `+${earnedCoins} 💰`;
-            
             if (coinMultiplier > 1) {
+                const earnedCoins = finalScore * coinMultiplier;
+                document.getElementById('resultCoinEarned').innerText = `+${earnedCoins} 💰`;
+                
                 const coinBadge = document.getElementById('resultCoinMultiplier');
                 coinBadge.innerText = `DIKALI ${coinMultiplier}X! 🤑`;
                 coinBadge.classList.remove('hidden');
+                
+                coinContainer.classList.remove('hidden');
+            } else {
+                coinContainer.classList.add('hidden');
             }
-            coinContainer.classList.remove('hidden');
 
+            // [BARU 3] List Item Terpakai dimasukkan ke container baru
+            let usedItems = [];
+            if (window.isDoubleScoreActive) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">✨</span> Double Nilai</li>');
+            if (isEvaluatingExtraLife) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">💖</span> Extra Life</li>');
+            if (window.isShieldActive) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">🛡️</span> Perisai Aman</li>');
+            if (window.isDiscountActive) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">🏷️</span> Kupon Diskon</li>');
+            if (window.hasCalledFriend) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">📞</span> Tanya Teman</li>');
+            if (window.isDoubleCoinActive) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">💰</span> Double Koin</li>');
+            if (window.isTripleCoinActive) usedItems.push('<li class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm">🤑</span> Triple Koin</li>');
+
+            const usedItemsContainer = document.getElementById('resultUsedItemsContainer');
+            const usedItemsList = document.getElementById('resultUsedItemsList');
+            
+            if (usedItems.length > 0) {
+                usedItemsList.innerHTML = usedItems.join('');
+                usedItemsContainer.classList.remove('hidden');
+            } else {
+                usedItemsContainer.classList.add('hidden');
+            }
 
             if (finalScore === 67) {
                 normalView.classList.replace('flex', 'hidden'); 
@@ -2220,9 +2458,15 @@ import Mascot from '../../components/Mascot.astro';
             }
 
             localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
-            btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-check"></i> Selesai'; btnSubmitGlobal.classList.replace('bg-green-600', 'bg-gray-800'); document.getElementById('modalResult').classList.replace('hidden', 'flex');
+            btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-check"></i> Selesai'; 
+            btnSubmitGlobal.className = 'w-full py-5 bg-gray-800 text-white font-bold rounded-2xl transition-all text-lg shadow-sm mb-12 relative overflow-hidden';
+            document.getElementById('modalResult').classList.replace('hidden', 'flex');
         } catch (e) {
-            console.error(e); window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.'); btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban'; btnSubmitGlobal.disabled = false;
+            console.error(e); window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.'); 
+            
+            btnSubmitGlobal.disabled = false;
+            btnSubmitGlobal.className = 'w-full py-5 bg-green-600 text-white font-bold rounded-2xl shadow-sm mb-12 relative overflow-hidden active:scale-95 cursor-pointer transition-all text-lg';
+            btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban'; 
         }
     };
 
