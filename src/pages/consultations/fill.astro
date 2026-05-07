@@ -1636,11 +1636,22 @@ import Mascot from '../../components/Mascot.astro';
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         if (timeLeft <= 0) return;
+        let notificationCheckCounter = 0;
 
         timerInterval = setInterval(() => {
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000); 
             updateTimerUI();
             
+            // =======================================================
+            // [FIX REAL-TIME BULLY] Cek notifikasi setiap 5 detik
+            // =======================================================
+            notificationCheckCounter++;
+            if (!isPreview && notificationCheckCounter >= 5) {
+                checkRealNotifications();
+                notificationCheckCounter = 0; // Reset counter
+            }
+            // =======================================================
+
             if (timeLeft === 30 && !warned30) {
                 warned30 = true;
                 if(window.MiawMascot) window.MiawMascot.say('large', `Awas <strong>${currentStudentName}</strong>! Waktu tinggal <strong>30 detik</strong> lagi!`, null, 'warning', 5000);
@@ -2283,44 +2294,66 @@ import Mascot from '../../components/Mascot.astro';
 
     window.checkRealNotifications = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/shop/notifications?student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            // [OPTIMASI] Tambahkan cache-busting agar browser gak ambil data lama
+            const res = await fetch(`${API_URL}/api/shop/notifications?student_id=${studentId}&t=${Date.now()}`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
             const data = await res.json();
+            
             if (data.status === 'success' && data.data.length > 0) {
-                
+                // 1. Tangani Serangan Bully
                 const bullyLogs = data.data.filter(l => l.action_type === 'bully');
                 if (bullyLogs.length > 0) {
+                    const log = bullyLogs[0];
+                    
+                    // Mark read dulu di sistem agar tidak ke-trigger berkali-kali pas polling selanjutnya
+                    fetch(`${API_URL}/api/shop/notifications/read`, { 
+                        method: 'POST', 
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ log_ids: [log.id] }) 
+                    }).catch(e => console.warn("Gagal mark read bully"));
+
                     if (window.isShieldActive) {
-                        window.showToast?.('info', 'Perisai Memantul!', `Perisaimu menahan serangan usil dari ${bullyLogs[0].attacker_name}!`);
-                        fetch(`${API_URL}/api/shop/notifications/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ log_ids: bullyLogs.map(l => l.id) }) }).catch(e=>e);
+                        window.showToast?.('info', 'Perisai Memantul!', `Perisaimu menahan serangan usil dari ${log.attacker_name}!`);
                     } else {
-                        unreadLogIds.push(...bullyLogs.map(l => l.id));
-                        playBullyAnimation(bullyLogs[0].attacker_name);
+                        playBullyAnimation(log.attacker_name);
                     }
                 }
 
+                // 2. Tangani Notifikasi Hadiah (Gift)
                 const giftLogs = data.data.filter(l => l.action_type === 'gift');
                 if (giftLogs.length > 0) {
                     const log = giftLogs[0];
-                    unreadLogIds.push(log.id); 
+                    
+                    fetch(`${API_URL}/api/shop/notifications/read`, { 
+                        method: 'POST', 
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ log_ids: [log.id] }) 
+                    }).catch(e => e);
+
                     document.getElementById('giftSenderName').innerText = log.attacker_name;
                     document.getElementById('giftItemName').innerText = log.metadata?.item_name || 'Item Misterius';
                     document.getElementById('modalReceiveGift').classList.replace('hidden', 'flex');
                     
-                    if(log.metadata?.item_type) studentInventory[log.metadata.item_type] += 1;
+                    if(log.metadata?.item_type) studentInventory[log.metadata.item_type] = (studentInventory[log.metadata.item_type] || 0) + 1;
                     updateShopUI();
                 }
 
+                // 3. Tangani Serangan Pencurian Koin
                 const attackLogs = data.data.filter(l => l.action_type === 'serang_berhasil');
                 if (attackLogs.length > 0) {
-                    unreadLogIds.push(...attackLogs.map(l => l.id));
+                    const logIds = attackLogs.map(l => l.id);
                     document.getElementById('victimAttackerName').innerText = attackLogs.map(l => l.attacker_name).join(', ');
-                    document.getElementById('victimPointsLost').innerText = attackLogs.reduce((sum, log) => sum + log.points_lost, 0);
+                    document.getElementById('victimPointsLost').innerText = attackLogs.reduce((sum, log) => sum + (log.points_lost || 0), 0);
                     document.getElementById('modalVictim').classList.replace('hidden', 'flex');
-                } else if (unreadLogIds.length > 0 && attackLogs.length === 0) {
-                    fetch(`${API_URL}/api/shop/notifications/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ log_ids: unreadLogIds }) }).catch(e=>e);
+                    
+                    // Simpan ID untuk ditandai terbaca saat modal ditutup
+                    window.unreadLogIds = [...(window.unreadLogIds || []), ...logIds];
                 }
             }
-        } catch (error) {}
+        } catch (error) {
+            console.error("Gagal cek notif:", error);
+        }
     };
 
     window.closeVictimModal = async () => {
