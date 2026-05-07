@@ -141,8 +141,8 @@ import Mascot from '../../components/Mascot.astro';
 
         <div id="callFriendOverlay" class="fixed right-0 top-1/4 z-[400] transform translate-x-full transition-transform duration-700 flex items-center pointer-events-none">
             <div class="bg-white/95 backdrop-blur-md border-4 border-blue-400 p-4 rounded-l-3xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] flex items-center gap-4 max-w-[280px]">
-                <div class="w-16 h-16 bg-blue-100 rounded-full border-2 border-blue-500 flex items-center justify-center text-2xl shrink-0 shadow-inner font-black text-blue-600" id="cfAvatar">
-                    👨
+                <div class="w-16 h-16 bg-blue-100 rounded-full border-2 border-blue-500 flex items-center justify-center text-3xl shrink-0 shadow-inner font-black text-blue-600 uppercase" id="cfAvatar">
+                    A
                 </div>
                 <div>
                     <p class="text-[10px] font-black text-blue-500 mb-1 tracking-widest uppercase" id="cfName">Ahmad</p>
@@ -341,13 +341,36 @@ import Mascot from '../../components/Mascot.astro';
         </div>
     </div>
 
+    <div id="modalCallFriendConfirm" class="fixed inset-0 bg-black/60 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-center border-4 border-blue-400">
+            <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-blue-100 shadow-inner">📞</div>
+            <h3 class="font-black text-gray-800 text-xl mb-1">Minta Bantuan Teman?</h3>
+            <p class="text-blue-500 font-bold text-sm mb-4">GRATIS (1x Sehari)</p>
+            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6">
+                <p class="text-xs text-gray-600 leading-relaxed font-medium">
+                    "Nanti akan ada salah satu temanmu yang sudah selesai mengerjakan, muncul di layar untuk memberikan bocoran jawabannya!"
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('modalCallFriendConfirm').classList.replace('flex', 'hidden')" class="flex-1 py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
+                <button onclick="confirmCallFriend()" class="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 active:scale-95 transition-all text-sm">Ya, Gunakan!</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalAttack" class="fixed inset-0 bg-black/60 z-[400] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[80vh]">
             <div class="text-center mb-4">
                 <div id="attackIconBox" class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-red-100 shadow-inner">⚔️</div>
                 <h3 id="attackTitle" class="font-black text-gray-800 text-xl">Serang Teman</h3>
                 <p id="attackDesc" class="text-[10px] text-gray-500 font-medium mt-1">Pilih 1 teman untuk dicuri poinnya (Maks. 50 Poin)</p>
+                
+                <div id="bullyToggleContainer" class="hidden mt-4 bg-gray-100 p-1 rounded-xl flex items-center justify-between">
+                    <button id="btnFilterKhusus" onclick="setBullyFilter('khusus')" class="flex-1 py-2 text-[10px] font-black rounded-lg bg-white text-purple-600 shadow-sm transition-all">Target PR Ini</button>
+                    <button id="btnFilterUmum" onclick="setBullyFilter('umum')" class="flex-1 py-2 text-[10px] font-black rounded-lg text-gray-400 hover:text-gray-600 transition-all">Semua Orang</button>
+                </div>
             </div>
+            
             <div id="attackTargetList" class="flex-1 overflow-y-auto space-y-2 pr-1 mb-4 custom-scrollbar"></div>
             <button onclick="document.getElementById('modalAttack').classList.replace('flex', 'hidden')" class="w-full py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
         </div>
@@ -889,29 +912,86 @@ import Mascot from '../../components/Mascot.astro';
         }, 11000); 
     }
 
-    window.triggerCallFriend = () => {
+    window.triggerCallFriend = async () => {
         if (window.hasCalledFriend) return;
         window.hasCalledFriend = true;
         
-        const qBlocks = document.querySelectorAll('.question-block');
-        if (qBlocks.length === 0) return;
-        
-        const randomBlock = qBlocks[Math.floor(Math.random() * qBlocks.length)];
-        const qIndex = Array.from(qBlocks).indexOf(randomBlock) + 1;
-        
-        const fakeNames = ["Fulan", "Budi", "Siti", "Aisyah", "Reza", "Andi", "Tono"];
-        const fakeName = fakeNames[Math.floor(Math.random() * fakeNames.length)];
-        const options = ['A', 'B', 'C', 'D'];
-        const randomAns = options[Math.floor(Math.random() * options.length)];
-        
-        document.getElementById('cfName').innerText = fakeName;
-        document.getElementById('cfMessage').innerText = `Pstt! Kalo aku nomor ${qIndex} jawabannya ${randomAns} kayaknya...`;
-        
-        const overlay = document.getElementById('callFriendOverlay');
-        overlay.classList.remove('translate-x-full');
-        
-        setTimeout(() => { overlay.classList.add('translate-x-full'); }, 6000);
-    }
+        let friendName = "Robot Teman";
+        let friendAnswerRaw = "B";
+        let targetQuestionId = null;
+
+        try {
+            const currentQuestionIds = questions.map(q => q.id);
+
+            if (!isPreview) {
+                let peersAnswers = [];
+                try {
+                    const res = await fetch(`${API_URL}/api/onboarding/peer-help?subject=${subject}&week=${week}&student_id=${studentId}`, { 
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const result = await res.json();
+                        peersAnswers = result.data || []; 
+                    }
+                } catch (apiErr) {
+                    console.warn("API Bantuan Teman belum merespon. Menggunakan Fallback.");
+                }
+
+                const matchingAnswers = peersAnswers.filter(pa => currentQuestionIds.includes(pa.question_id));
+
+                if (matchingAnswers.length > 0) {
+                    const pick = matchingAnswers[Math.floor(Math.random() * matchingAnswers.length)];
+                    friendName = pick.student_name;
+                    friendAnswerRaw = pick.answer;
+                    targetQuestionId = pick.question_id;
+                } else {
+                    friendName = "Robot Teman";
+                    targetQuestionId = currentQuestionIds[Math.floor(Math.random() * currentQuestionIds.length)];
+                    friendAnswerRaw = "B"; 
+                }
+            } else {
+                const dummyNames = ["Budi", "Aisyah", "Andi", "Reza"];
+                friendName = dummyNames[Math.floor(Math.random() * dummyNames.length)];
+                targetQuestionId = currentQuestionIds[0];
+                friendAnswerRaw = "A";
+            }
+
+            if (!targetQuestionId) targetQuestionId = currentQuestionIds[0];
+
+            const targetQObj = questions.find(q => q.id === targetQuestionId);
+            const qIndexUI = questions.indexOf(targetQObj) + 1;
+            const qType = targetQObj ? (targetQObj.type || 'pilgan') : 'pilgan';
+
+            // Format Pesan
+            let finalMsg = "";
+            if (qType === 'pilgan') {
+                const labelAns = (targetQObj && targetQObj.options) ? (targetQObj.options[friendAnswerRaw] || friendAnswerRaw) : friendAnswerRaw;
+                finalMsg = `Kalo aku nomor ${qIndexUI} diisi sama jawaban "${labelAns}"!`;
+            } else if (qType === 'tf') {
+                const tfText = friendAnswerRaw === 'A' ? 'BENAR' : 'SALAH';
+                finalMsg = `Pstt! Nomor ${qIndexUI} diisi ${tfText} aja!`;
+            } else if (qType === 'drag') {
+                const parts = friendAnswerRaw.split(',').map(k => (targetQObj && targetQObj.options) ? (targetQObj.options[k] || k) : k);
+                finalMsg = `Nomor ${qIndexUI} urutannya: [ ${parts.join(', ')} ]`;
+            } else {
+                finalMsg = `Aku nomor ${qIndexUI} jawabannya ${friendAnswerRaw} deh kayaknya.`;
+            }
+
+            document.getElementById('cfName').innerText = friendName;
+            document.getElementById('cfMessage').innerText = finalMsg;
+            document.getElementById('cfAvatar').innerText = friendName.substring(0, 1).toUpperCase();
+            
+            const overlay = document.getElementById('callFriendOverlay');
+            overlay.classList.remove('translate-x-full');
+            
+            setTimeout(() => {
+                overlay.classList.add('translate-x-full');
+            }, 7000); 
+
+        } catch (e) {
+            console.error("Gagal menjalankan animasi teman:", e);
+        }
+    };
 
     // ==========================================
     // 3. INIT & FETCH DATA
@@ -968,10 +1048,12 @@ import Mascot from '../../components/Mascot.astro';
                 const detik = timeLeft % 60;
                 const teksWaktu = detik > 0 ? `${menit} menit ${detik} detik` : `${menit} menit`;
                 document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${teksWaktu} untuk mengerjakan soal.`;
+                
+                // [OPTIMASI] Gunakan fetchWithTimeout biar gak loading muter terus kalau sinyal jelek
                 const [stdRes, consRes, qRes] = await Promise.all([
-                    fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
-                    fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
-                    fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }})
+                    fetchWithTimeout(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                    fetchWithTimeout(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}),
+                    fetchWithTimeout(`${API_URL}/api/onboarding/questions/${subject}?week=${week}&student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }})
                 ]);
                 
                 const student = await stdRes.json();
@@ -1029,66 +1111,7 @@ import Mascot from '../../components/Mascot.astro';
 
             updateTimerUI();
             
-            if (window.MiawMascot){
-                await window.MiawMascot.init({
-                    mode: 'peek',
-                    animations: { 
-                        PEEK_IN: { path: '/CAT LOTTIE/SHOWING CAT.json', loop: false, speed: 1.0, lottieDuration: 3000 },
-                        PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.2, lottieDuration: 2000 },
-                        IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0 },
-                        CLICK: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 1500 }
-                        },
-                    texts: { 
-                        entering: () => `Haloo <strong>${currentStudentName}</strong>! Semangat ngerjain tugasnya ya!`, 
-                        idleArrive: () => {
-                            const menit = Math.floor(timeLeft / 60);
-                            if (menit > 0) return `Miaw! Sisa waktu tinggal <strong>${menit} menit</strong> lagi! Jangan sampai kehabisan.`;
-                            return `Gawat <strong>${currentStudentName}</strong>! Waktunya kurang dari semenit, buruan!`;
-                        }, 
-                        idlePhrases: [
-                            () => {
-                                if (timeLeft <= 10) return `AYO CEPETAN <strong>${currentStudentName}</strong>!!!! Tinggal ${timeLeft} detik!`;
-                                if (timeLeft <= 30) return `Awas <strong>${currentStudentName}</strong>! Waktunya tinggal ${timeLeft} detik lagi!`;
-                                const menit = Math.floor(timeLeft / 60);
-                                if (menit > 0 && menit <= 2) return `Ayo cepetan <strong>${currentStudentName}</strong>! Waktunya sisa <strong>${menit} menitan</strong> lho!`;
-                                
-                                if (window.isDoubleScoreActive) return `Asiik! Sihir <strong>Double Poin ✨</strong> lagi aktif! Maksimalkan nilaimu <strong>${currentStudentName}</strong>!`;
-                                if (window.isShieldActive) return `Miaw! Tenang aja <strong>${currentStudentName}</strong>, <strong>Perisai 🛡️</strong> kamu siap menahan serangan!`;
-                                if (studentInventory.item_extra_life > 0) return `Kamu pegang <strong>Extra Life 💖</strong>! Santai aja <strong>${currentStudentName}</strong>, nanti bisa perbaiki 1 yang salah.`;
-                                return `Fokus <strong>${currentStudentName}</strong>! Teliti lagi jawabannya ya!`;
-                            },
-                            () => `Miaw! <strong>${currentStudentName}</strong>, kalau bingung dilewatin dulu aja!`,
-                            () => window.isShieldActive ? `Poinmu aman <strong>${currentStudentName}</strong> karena ada <strong>Perisai 🛡️</strong>!` : `Hati-hati <strong>${currentStudentName}</strong>, koinmu bisa dicuri kalau nggak beli <strong>Perisai 🛡️</strong>!`,
-                            () => {
-                                const answeredBlocks = [];
-                                document.querySelectorAll('.question-block').forEach((block, index) => {
-                                    const qId = block.dataset.id; const type = block.dataset.type || 'pilgan'; let answerText = null;
-                                    if (type === 'pilgan' || type === 'tf') {
-                                        const checked = block.querySelector(`input[name="q-${qId}"]:checked`);
-                                        if (checked) { if (type === 'tf') answerText = checked.value === 'A' ? 'BENAR' : 'SALAH'; else { const span = checked.nextElementSibling; if (span) answerText = span.innerText; } }
-                                    } else if (type === 'drag') {
-                                        const slots = block.querySelectorAll('.blank-slot'); let answered = []; slots.forEach(s => { if (s.innerText) answered.push(s.innerText); }); if (answered.length > 0) answerText = answered.join(' ');
-                                    } else if (type === 'urutan') {
-                                        const val = document.getElementById(`ans-${qId}`)?.value; if (val && val !== '[]' && val !== '') answerText = "susunan puzzle yang itu";
-                                    }
-                                    if (answerText) answeredBlocks.push({ nomor: index + 1, jawaban: answerText });
-                                });
-                                if (answeredBlocks.length > 0) {
-                                    const randomPick = answeredBlocks[Math.floor(Math.random() * answeredBlocks.length)];
-                                    let textJawaban = randomPick.jawaban; if (textJawaban.length > 25) textJawaban = textJawaban.substring(0, 25) + '...';
-                                    const doubtPhrases = [
-                                        `Hah masa nomor <strong>${randomPick.nomor}</strong> jawabannya <strong>"${textJawaban}"</strong> sih... coba cek lagi deh <strong>${currentStudentName}</strong>!`,
-                                        `Miaw! Yakin nomor <strong>${randomPick.nomor}</strong> itu <strong>"${textJawaban}"</strong>? Kayaknya ada yang aneh deh...`,
-                                        `Psst <strong>${currentStudentName}</strong>, masa nomor <strong>${randomPick.nomor}</strong> jawabannya <strong>"${textJawaban}"</strong>? Diteliti lagi coba!`
-                                    ];
-                                    return doubtPhrases[Math.floor(Math.random() * doubtPhrases.length)];
-                                }
-                                return `Ayo mulai kerjain <strong>${currentStudentName}</strong>! Miaw tungguin nih!`;
-                            }
-                        ] 
-                    }
-                });
-            }
+            // [OPTIMASI] AWAIT KUCING DIHAPUS DARI SINI! Pindah ke startTest agar loading awal secepat kilat.
 
             renderQuestions();
             restoreDraftAnswers();
@@ -1109,12 +1132,17 @@ import Mascot from '../../components/Mascot.astro';
 
         } catch (e) {
             console.error(e); 
-            window.showToast?.('danger', 'Error', 'Gagal memuat Tugas.');
+            // [OPTIMASI] Deteksi error Timeout AbortError
+            const errMsg = e.name === 'AbortError' ? 'Sinyal lambat. Silakan muat ulang halaman.' : 'Gagal memuat Tugas.';
+            window.showToast?.('danger', 'Error', errMsg);
+            
             const btnStartLobby = document.getElementById('btnStart');
             if (btnStartLobby) {
-                btnStartLobby.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Gagal Memuat Data';
+                btnStartLobby.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${e.name === 'AbortError' ? 'Coba Lagi' : 'Gagal Memuat'}`;
                 btnStartLobby.classList.replace('text-gray-400', 'text-red-500');
                 btnStartLobby.classList.replace('bg-gray-200', 'bg-red-100');
+                btnStartLobby.disabled = false;
+                btnStartLobby.onclick = () => window.location.reload();
             }
         }
     };
@@ -1166,12 +1194,22 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
+    // [BARU] Fungsi Fetch dengan batas waktu (Timeout) 15 detik
+    const fetchWithTimeout = async (resource, options = {}) => {
+        const { timeout = 15000 } = options;
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(resource, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    };
+
     const generateMediaHtml = (q) => {
         if (!q.image_url) return '';
         return `
             <div class="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-100 flex items-center justify-center min-h-[80px]">
                 <div class="img-skeleton absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center"><i class="fa-solid fa-image text-gray-300 text-2xl"></i></div>
-                <img src="${q.image_url.trim()}" class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300" alt="Visual Soal" onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';" onerror="this.closest('.relative').style.display='none'">
+                <img loading="lazy" src="${q.image_url.trim()}" class="relative w-full h-auto max-h-56 object-contain mx-auto opacity-0 transition-opacity duration-300" alt="Visual Soal" onload="this.classList.replace('opacity-0','opacity-100');this.previousElementSibling.style.display='none';" onerror="this.closest('.relative').style.display='none'">
             </div>`;
     };
 
@@ -1194,7 +1232,9 @@ import Mascot from '../../components/Mascot.astro';
         const arr = Array.isArray(q.options) ? [...q.options] : Object.values(q.options);
         const shuffled = shuffleArray(arr.map((text, i) => ({ text, num: i + 1 })));
         const cards = shuffled.map((item) => `<div class="flex-1 max-w-[56px] min-w-[38px] h-14 rounded-xl flex items-center justify-center text-xl font-black cursor-grab select-none transition-all duration-200 active:cursor-grabbing border-2 border-b-[6px] active:border-b-2 active:translate-y-1 touch-none urutan-card" style="background-color: ${colors[(item.num - 1) % 4].bg}; color: ${colors[(item.num - 1) % 4].text}; border-color: ${colors[(item.num - 1) % 4].border};" data-val="${item.text.replace(/"/g, '&quot;')}">${item.num}</div>`).join('');
-        return `<div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="urutan"><div class="flex justify-between items-start gap-4"><p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p><span class="px-2 py-1 bg-teal-50 text-teal-600 text-[9px] font-black rounded-lg border border-teal-100 uppercase tracking-tighter shrink-0">Puzzle</span></div>${generateMediaHtml(q)}<div class="p-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-4"><div class="sortable-list flex flex-nowrap justify-center items-center gap-2 sm:gap-3 w-full min-h-[70px]" id="sortable-${q.id}">${cards}</div></div><input type="hidden" name="q-${q.id}" id="ans-${q.id}" value='${JSON.stringify(shuffled.map(s => s.text)).replace(/"/g, '&quot;')}'></div>`;
+        
+        // [FIX] Ubah value='...' menjadi value="..." agar kutip satu (') pada teks soal tidak merusak format JSON HTML
+        return `<div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4 question-block" data-id="${q.id}" data-type="urutan"><div class="flex justify-between items-start gap-4"><p class="text-sm font-bold text-gray-800 leading-relaxed">${idx+1}. ${q.question}</p><span class="px-2 py-1 bg-teal-50 text-teal-600 text-[9px] font-black rounded-lg border border-teal-100 uppercase tracking-tighter shrink-0">Puzzle</span></div>${generateMediaHtml(q)}<div class="p-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-4"><div class="sortable-list flex flex-nowrap justify-center items-center gap-2 sm:gap-3 w-full min-h-[70px]" id="sortable-${q.id}">${cards}</div></div><input type="hidden" name="q-${q.id}" id="ans-${q.id}" value="${JSON.stringify(shuffled.map(s => s.text)).replace(/"/g, '&quot;')}"></div>`;
     };
 
     const renderQuestions = () => {
@@ -1456,26 +1496,47 @@ import Mascot from '../../components/Mascot.astro';
 
     const startTest = async (isNewSession = true) => {
 
+        // [FIX BUG] Logika Pengecekan Deadline & Dispensasi disamakan dengan index.astro
         if (isPRMode && isNewSession) {
             try {
                 const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const prDetail = await res.json();
                 
-                if (prDetail.data && prDetail.data.deadline_at) {
+                const prData = Array.isArray(prDetail.data) ? prDetail.data[0] : prDetail.data;
+
+                if (prData) {
                     const now = new Date();
-                    const deadline = new Date(prDetail.data.deadline_at);
                     
-                    if (now > deadline) {
-                        const hasExt = prDetail.data.extended_students?.includes(studentId);
-                        if (!hasExt) {
+                    // Parse data dispensasi biar aman
+                    let extendedList = prData.extended_students;
+                    try {
+                        while (typeof extendedList === 'string') {
+                            extendedList = JSON.parse(extendedList);
+                        }
+                    } catch(e) {}
+                    if (!Array.isArray(extendedList)) extendedList = [];
+                    
+                    // Cari record dispensasi anak ini (karena bentuknya array of objects)
+                    const extRecord = extendedList.find(ext => ext.student_id === studentId);
+
+                    if (extRecord) {
+                        // KASUS 1: PUNYA DISPENSASI (Cek batas waktu dispensasinya)
+                        const extDeadline = new Date(extRecord.until);
+                        if (now > extDeadline) {
+                            window.showConfirm('Waktu Habis!', 'Waktu dispensasi PR kamu juga sudah habis!', () => window.close(), 'danger');
+                            return; // STOP! Gak boleh masuk
+                        }
+                        window.showToast?.('info', 'Dispensasi Aktif', 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!');
+                    } else if (prData.deadline_at) {
+                        // KASUS 2: GAK PUNYA DISPENSASI (Cek batas waktu normal)
+                        const originalDeadline = new Date(prData.deadline_at);
+                        if (now > originalDeadline) {
                             window.showConfirm('Waktu Habis!', 'Batas waktu PR ini sudah lewat. Minta dispensasi ke Kak Aziz dulu ya!', () => window.close(), 'danger');
-                            return; 
-                        } else {
-                            window.showToast?.('info', 'Dispensasi Aktif', 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!');
+                            return; // STOP! Gak boleh masuk
                         }
                     }
                 }
-            } catch(e) { console.log("Gagal cek deadline"); }
+            } catch(e) { console.log("Gagal cek deadline", e); }
         }
 
         if (isNewSession) {
@@ -1488,7 +1549,7 @@ import Mascot from '../../components/Mascot.astro';
         const shopWrapper = document.getElementById('shopDrawerWrapper');
         if (shopWrapper) { shopWrapper.style.transform = 'translateY(100%)'; shopWrapper.style.opacity = '0'; setTimeout(() => { shopWrapper.style.display = 'none'; }, 500); }
         document.getElementById('testContent').classList.remove('hidden');
-        
+
         const header = document.getElementById('mainHeader');
         header.classList.add('-translate-y-full', 'opacity-0');
         setTimeout(() => { 
@@ -1503,18 +1564,79 @@ import Mascot from '../../components/Mascot.astro';
 
         if (window.MiawMascot) {
             if (window.isMiawHidden) {
+                // Preventive Lottie Download: Nol KB tersedot jika disembunyikan
                 window.MiawMascot.show = () => {};
                 window.MiawMascot.say = () => {};
                 const mascotContainer = document.getElementById('mascotContainer') || document.querySelector('.mascot-wrapper');
                 if (mascotContainer) mascotContainer.style.display = 'none';
             } else {
-                setTimeout(() => window.MiawMascot.show(), 500);
+                // Jangan pakai await! Biar sistem tidak berhenti nunggu kucing selesai didownload
+                window.MiawMascot.init({
+                    mode: 'peek',
+                    animations: { 
+                        PEEK_IN: { path: '/CAT LOTTIE/SHOWING CAT.json', loop: false, speed: 1.0, lottieDuration: 3000 },
+                        PEEK_OUT: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.2, lottieDuration: 2000 },
+                        IDLE: { path: '/CAT LOTTIE/IDDLE SHOW.json', loop: true, speed: 1.0 },
+                        CLICK: { path: '/CAT LOTTIE/BACK TO HIDDEN.json', loop: false, speed: 1.0, lottieDuration: 1500 }
+                    },
+                    texts: { 
+                        entering: () => `Haloo <strong>${currentStudentName}</strong>! Semangat ngerjain tugasnya ya!`, 
+                        idleArrive: () => {
+                            const menit = Math.floor(timeLeft / 60);
+                            if (menit > 0) return `Miaw! Sisa waktu tinggal <strong>${menit} menit</strong> lagi! Jangan sampai kehabisan.`;
+                            return `Gawat <strong>${currentStudentName}</strong>! Waktunya kurang dari semenit, buruan!`;
+                        }, 
+                        idlePhrases: [
+                            () => {
+                                if (timeLeft <= 10) return `AYO CEPETAN <strong>${currentStudentName}</strong>!!!! Tinggal ${timeLeft} detik!`;
+                                if (timeLeft <= 30) return `Awas <strong>${currentStudentName}</strong>! Waktunya tinggal ${timeLeft} detik lagi!`;
+                                const menit = Math.floor(timeLeft / 60);
+                                if (menit > 0 && menit <= 2) return `Ayo cepetan <strong>${currentStudentName}</strong>! Waktunya sisa <strong>${menit} menitan</strong> lho!`;
+                                
+                                if (window.isDoubleScoreActive) return `Asiik! Sihir <strong>Double Poin ✨</strong> lagi aktif! Maksimalkan nilaimu <strong>${currentStudentName}</strong>!`;
+                                if (window.isShieldActive) return `Miaw! Tenang aja <strong>${currentStudentName}</strong>, <strong>Perisai 🛡️</strong> kamu siap menahan serangan!`;
+                                if (studentInventory.item_extra_life > 0) return `Kamu pegang <strong>Extra Life 💖</strong>! Santai aja <strong>${currentStudentName}</strong>, nanti bisa perbaiki 1 yang salah.`;
+                                return `Fokus <strong>${currentStudentName}</strong>! Teliti lagi jawabannya ya!`;
+                            },
+                            () => `Miaw! <strong>${currentStudentName}</strong>, kalau bingung dilewatin dulu aja!`,
+                            () => window.isShieldActive ? `Poinmu aman <strong>${currentStudentName}</strong> karena ada <strong>Perisai 🛡️</strong>!` : `Hati-hati <strong>${currentStudentName}</strong>, koinmu bisa dicuri kalau nggak beli <strong>Perisai 🛡️</strong>!`,
+                            () => {
+                                const answeredBlocks = [];
+                                document.querySelectorAll('.question-block').forEach((block, index) => {
+                                    const qId = block.dataset.id; const type = block.dataset.type || 'pilgan'; let answerText = null;
+                                    if (type === 'pilgan' || type === 'tf') {
+                                        const checked = block.querySelector(`input[name="q-${qId}"]:checked`);
+                                        if (checked) { if (type === 'tf') answerText = checked.value === 'A' ? 'BENAR' : 'SALAH'; else { const span = checked.nextElementSibling; if (span) answerText = span.innerText; } }
+                                    } else if (type === 'drag') {
+                                        const slots = block.querySelectorAll('.blank-slot'); let answered = []; slots.forEach(s => { if (s.innerText) answered.push(s.innerText); }); if (answered.length > 0) answerText = answered.join(' ');
+                                    } else if (type === 'urutan') {
+                                        const val = document.getElementById(`ans-${qId}`)?.value; if (val && val !== '[]' && val !== '') answerText = "susunan puzzle yang itu";
+                                    }
+                                    if (answerText) answeredBlocks.push({ nomor: index + 1, jawaban: answerText });
+                                });
+                                if (answeredBlocks.length > 0) {
+                                    const randomPick = answeredBlocks[Math.floor(Math.random() * answeredBlocks.length)];
+                                    let textJawaban = randomPick.jawaban; if (textJawaban.length > 25) textJawaban = textJawaban.substring(0, 25) + '...';
+                                    const doubtPhrases = [
+                                        `Hah masa nomor <strong>${randomPick.nomor}</strong> jawabannya <strong>"${textJawaban}"</strong> sih... coba cek lagi deh <strong>${currentStudentName}</strong>!`,
+                                        `Miaw! Yakin nomor <strong>${randomPick.nomor}</strong> itu <strong>"${textJawaban}"</strong>? Kayaknya ada yang aneh deh...`,
+                                        `Psst <strong>${currentStudentName}</strong>, masa nomor <strong>${randomPick.nomor}</strong> jawabannya <strong>"${textJawaban}"</strong>? Diteliti lagi coba!`
+                                    ];
+                                    return doubtPhrases[Math.floor(Math.random() * doubtPhrases.length)];
+                                }
+                                return `Ayo mulai kerjain <strong>${currentStudentName}</strong>! Miaw tungguin nih!`;
+                            }
+                        ] 
+                    }
+                }).then(() => {
+                    setTimeout(() => window.MiawMascot.show(), 500);
+                }).catch(err => console.warn("Gagal inisialisasi kucing:", err));
             }
         }
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         if (timeLeft <= 0) return;
-        
+
         timerInterval = setInterval(() => {
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000); 
             updateTimerUI();
@@ -1528,8 +1650,13 @@ import Mascot from '../../components/Mascot.astro';
                 if(window.MiawMascot) window.MiawMascot.say('large', `AYO CEPETAN <strong>${currentStudentName}</strong>!!!! Tinggal 10 detik!`, null, 'warning', 5000);
             }
 
-            if (window.isCallFriendActive && !window.hasCalledFriend && timeLeft < (parsedWeek === 1 ? 100 : 175)) {
-                if (Math.random() < 0.1) window.triggerCallFriend(); 
+            if (window.pendingCallFriend) {
+                window.pendingCallFriendCount++;
+                // Tunggu minimal 5 detik, setelah itu ada chance 30% per detik dia nongol
+                if (window.pendingCallFriendCount >= 5 && Math.random() < 0.3) {
+                    window.pendingCallFriend = false; // Matikan timer pencariannya
+                    window.triggerCallFriend(); 
+                }
             }
 
             if (isPreview && localStorage.getItem('sim_bully_pending') === 'true') {
@@ -1629,32 +1756,36 @@ import Mascot from '../../components/Mascot.astro';
         
         if (itemKey === 'item_tambah_waktu') {
             const timeContainer = document.getElementById('buyTimeContainer');
+            
+            // [FIX] Bikin komponen tombol dinamis, mati kalau uang gak cukup
+            const renderTimeBtn = (mins, baseCost) => {
+                const cost = window.isDiscountActive ? Math.floor(baseCost/2) : baseCost;
+                const isDisabled = studentWallet < cost;
+                
+                const btnClass = isDisabled 
+                    ? "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 bg-gray-50 opacity-50 grayscale cursor-not-allowed" 
+                    : "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group cursor-pointer";
+                
+                const textClass = isDisabled ? "font-black text-gray-500" : "font-black text-gray-700 group-hover:text-teal-700";
+                
+                return `
+                <button ${isDisabled ? 'disabled' : `onclick="executeBuyTime(${mins}, ${cost})"`} class="${btnClass}">
+                    <span class="${textClass}">+ ${mins} Menit ${mins === 5 ? '(Max)' : ''}</span>
+                    <span class="text-xs font-bold ${isDisabled ? 'bg-gray-200 text-gray-500' : 'bg-amber-100 text-amber-600'} px-2 py-1 rounded">💰 ${cost}</span>
+                </button>
+                `;
+            };
+
             timeContainer.innerHTML = `
-                <button onclick="executeBuyTime(1, ${getPrice('item_tambah_waktu') === 'Variatif' ? 100 : getPrice('item_tambah_waktu')})" class="w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group">
-                    <span class="font-black text-gray-700 group-hover:text-teal-700">+ 1 Menit</span>
-                    <span class="text-xs font-bold bg-amber-100 text-amber-600 px-2 py-1 rounded">💰 ${window.isDiscountActive ? 50 : 100}</span>
-                </button>
-                <button onclick="executeBuyTime(2, ${window.isDiscountActive ? 100 : 200})" class="w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group">
-                    <span class="font-black text-gray-700 group-hover:text-teal-700">+ 2 Menit</span>
-                    <span class="text-xs font-bold bg-amber-100 text-amber-600 px-2 py-1 rounded">💰 ${window.isDiscountActive ? 100 : 200}</span>
-                </button>
-                <button onclick="executeBuyTime(3, ${window.isDiscountActive ? 175 : 350})" class="w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group">
-                    <span class="font-black text-gray-700 group-hover:text-teal-700">+ 3 Menit</span>
-                    <span class="text-xs font-bold bg-amber-100 text-amber-600 px-2 py-1 rounded">💰 ${window.isDiscountActive ? 175 : 350}</span>
-                </button>
-                <button onclick="executeBuyTime(4, ${window.isDiscountActive ? 240 : 480})" class="w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group">
-                    <span class="font-black text-gray-700 group-hover:text-teal-700">+ 4 Menit</span>
-                    <span class="text-xs font-bold bg-amber-100 text-amber-600 px-2 py-1 rounded">💰 ${window.isDiscountActive ? 240 : 480}</span>
-                </button>
-                <button onclick="executeBuyTime(5, ${window.isDiscountActive ? 250 : 500})" class="w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group">
-                    <span class="font-black text-gray-700 group-hover:text-teal-700">+ 5 Menit (Max)</span>
-                    <span class="text-xs font-bold bg-amber-100 text-amber-600 px-2 py-1 rounded">💰 ${window.isDiscountActive ? 250 : 500}</span>
-                </button>
+                ${renderTimeBtn(1, 100)}
+                ${renderTimeBtn(2, 200)}
+                ${renderTimeBtn(3, 350)}
+                ${renderTimeBtn(4, 480)}
+                ${renderTimeBtn(5, 500)}
             `;
             document.getElementById('modalBuyTime').classList.replace('hidden', 'flex');
             return;
         }
-
         if (itemKey === 'item_bullying') {
             currentAttackMode = 'bully';
             openAttackModal();
@@ -1669,23 +1800,12 @@ import Mascot from '../../components/Mascot.astro';
 
         if (itemKey === 'item_call_friend') {
             const today = new Date().toDateString();
-            
             if (!isPreview && localStorage.getItem(`call_friend_${studentId}`) === today) {
                 window.showToast?.('warning', 'Sudah Dipakai', 'Kamu sudah pakai Kuota Nanya Teman hari ini!');
                 return;
             }
-            
-            window.isCallFriendActive = true;
-            window.hasCalledFriend = false; 
-            
-            if (!isPreview) {
-                localStorage.setItem(`call_friend_${studentId}`, today);
-            }
-            
-            window.showToast?.('success', 'Bantuan Aktif', 'Nanti temanmu bakal muncul ngasih bocoran. Tungguin aja ya!');
-            updateShopUI();
-            
-            if (isPreview) window.toggleShopDrawer(); 
+            // Munculkan popup konfirmasi
+            document.getElementById('modalCallFriendConfirm').classList.replace('hidden', 'flex');
             return;
         }
 
@@ -1707,6 +1827,24 @@ import Mascot from '../../components/Mascot.astro';
         } else {
             previewItem(itemKey);
         }
+    };
+
+    window.confirmCallFriend = () => {
+        const today = new Date().toDateString();
+        window.isCallFriendActive = true;
+        window.hasCalledFriend = false; 
+        window.pendingCallFriend = true;   // Penanda minta bantuan
+        window.pendingCallFriendCount = 0; // Waktu tunggu
+        
+        if (!isPreview) {
+            localStorage.setItem(`call_friend_${studentId}`, today);
+        }
+        
+        document.getElementById('modalCallFriendConfirm').classList.replace('flex', 'hidden');
+        window.showToast?.('success', 'Bantuan Aktif!', 'Sip! Tungguin temenmu muncul pas lagi ngerjain soal ya.');
+        updateShopUI();
+        
+        if (isPreview) window.toggleShopDrawer(); 
     };
 
     window.executeSellItem = async (itemKey, sellPrice) => {
@@ -1838,8 +1976,9 @@ import Mascot from '../../components/Mascot.astro';
             // ===============================================
             // LOGIKA SPESIAL: ITEM SEKALI PAKAI (TIDAK MASUK TAS)
             // ===============================================
-            if (key === 'item_tambah_waktu' || key === 'item_bullying') {
-                 if (studentWallet < getPrice(key) && key !== 'item_tambah_waktu') {
+            if (key === 'item_tambah_waktu') {
+                const minTimePrice = window.isDiscountActive ? 50 : 100; // Harga termurah 1 menit
+                if (studentWallet < minTimePrice) {
                     btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
                     btn.disabled = true;
                 } else {
@@ -1848,6 +1987,29 @@ import Mascot from '../../components/Mascot.astro';
                 }
                 titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight";
                 titleEl.innerHTML = defaultName;
+                return;
+            }
+
+            if (key === 'item_bullying') {
+                if (isBought) {
+                    // Kalo udah dipakai sesi ini, disable
+                    btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
+                    titleEl.className = "text-[8px] font-black text-gray-500 mt-1 uppercase tracking-widest item-title text-center leading-tight"; 
+                    btn.disabled = true;
+                    titleEl.innerText = "TERPAKAI";
+                } else if (studentWallet < getPrice(key)) {
+                    // Belum dipakai tapi uang gak cukup
+                    btn.classList.add('bg-gray-100', 'border-gray-200', 'opacity-50', 'grayscale', 'cursor-not-allowed'); 
+                    btn.disabled = true;
+                    titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight";
+                    titleEl.innerHTML = defaultName;
+                } else {
+                    // Bisa dipakai
+                    btn.classList.add('cursor-pointer');
+                    btn.disabled = false;
+                    titleEl.className = "text-[8px] font-bold text-gray-700 mt-0.5 item-title text-center leading-tight";
+                    titleEl.innerHTML = defaultName;
+                }
                 return;
             }
 
@@ -1929,21 +2091,41 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
+    // [BARU] State untuk filter Bully
+    window.bullyFilterMode = 'khusus';
+
+    window.setBullyFilter = (mode) => {
+        window.bullyFilterMode = mode;
+        if (mode === 'khusus') {
+            document.getElementById('btnFilterKhusus').className = 'flex-1 py-2 text-[10px] font-black rounded-lg bg-white text-purple-600 shadow-sm transition-all';
+            document.getElementById('btnFilterUmum').className = 'flex-1 py-2 text-[10px] font-black rounded-lg text-gray-400 hover:text-gray-600 transition-all';
+        } else {
+            document.getElementById('btnFilterUmum').className = 'flex-1 py-2 text-[10px] font-black rounded-lg bg-white text-purple-600 shadow-sm transition-all';
+            document.getElementById('btnFilterKhusus').className = 'flex-1 py-2 text-[10px] font-black rounded-lg text-gray-400 hover:text-gray-600 transition-all';
+        }
+        openAttackModal(); // Render ulang list temannya
+    };
+
     window.openAttackModal = async () => {
         const listContainer = document.getElementById('attackTargetList'); 
         listContainer.innerHTML = '<div class="text-center p-4 text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><br>Mencari target...</div>'; 
         
+        const toggleContainer = document.getElementById('bullyToggleContainer');
+
         if (currentAttackMode === 'gift') {
+            toggleContainer.classList.add('hidden');
             document.getElementById('attackIconBox').innerText = '🎁';
             document.getElementById('attackIconBox').className = "w-16 h-16 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-pink-100 shadow-inner";
             document.getElementById('attackTitle').innerText = 'Kirim Hadiah';
             document.getElementById('attackDesc').innerText = `Kirim ${ITEM_DB[selectedItemToBuy].name} ke temanmu.`;
         } else if (currentAttackMode === 'bully') {
+            toggleContainer.classList.remove('hidden'); // Munculin Toggle-nya
             document.getElementById('attackIconBox').innerText = '😈';
             document.getElementById('attackIconBox').className = "w-16 h-16 bg-purple-50 text-purple-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-purple-100 shadow-inner";
             document.getElementById('attackTitle').innerText = 'Bully Teman';
-            document.getElementById('attackDesc').innerText = 'Pilih target untuk disembunyikan soalnya! (Hanya kena jika dia sedang ngerjain)';
+            document.getElementById('attackDesc').innerText = 'Pilih target untuk disembunyikan soalnya!';
         } else {
+            toggleContainer.classList.add('hidden');
             document.getElementById('attackIconBox').innerText = '⚔️';
             document.getElementById('attackIconBox').className = "w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border border-red-100 shadow-inner";
             document.getElementById('attackTitle').innerText = 'Serang Teman';
@@ -1962,7 +2144,11 @@ import Mascot from '../../components/Mascot.astro';
                     { id: '3', name: 'Rudi Tabuti', has_shield: false, poin: 0 }
                 ]; 
             } else { 
-                const res = await fetch(`${API_URL}/api/shop/peers?student_id=${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }}); 
+                // [FIX] Tembak API sekalian bawa data mode (khusus/umum), subject, dan week
+                const modeKirim = currentAttackMode === 'bully' ? window.bullyFilterMode : 'umum';
+                const res = await fetch(`${API_URL}/api/shop/peers?student_id=${studentId}&mode=${modeKirim}&subject=${subject}&week=${week}`, { 
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }); 
                 peers = (await res.json()).data || []; 
             }
 
@@ -1973,7 +2159,6 @@ import Mascot from '../../components/Mascot.astro';
 
             listContainer.innerHTML = peers.map(p => {
                 const targetPoints = p.poin || 0;
-                
                 let isDisabled = false;
                 let btnText = '';
                 let btnClass = '';
@@ -1982,8 +2167,9 @@ import Mascot from '../../components/Mascot.astro';
                     btnText = 'KIRIM 🎁';
                     btnClass = 'bg-pink-500 text-white hover:bg-pink-600 shadow-md shadow-pink-500/30';
                 } else if (currentAttackMode === 'bully') {
-                    isDisabled = studentWallet < getPrice('item_bullying'); 
-                    btnText = isDisabled ? 'Koin Kurang' : 'BULLY 😈';
+                    const cost = getPrice('item_bullying');
+                    isDisabled = studentWallet < cost || p.has_shield; 
+                    btnText = p.has_shield ? 'Aman 🛡️' : (studentWallet < cost ? 'Koin Kurang' : 'BULLY 😈');
                     btnClass = isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:bg-purple-600 active:scale-95 shadow-md shadow-purple-500/30';
                 } else {
                     const isBroke = targetPoints <= 0;
@@ -1993,7 +2179,7 @@ import Mascot from '../../components/Mascot.astro';
                 }
 
                 return `
-                    <div class="flex items-center justify-between p-3 rounded-xl border ${isDisabled && currentAttackMode !== 'bully' && currentAttackMode !== 'gift' ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm transition-all hover:border-gray-200'}">
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${isDisabled && currentAttackMode !== 'gift' ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm transition-all hover:border-gray-200'}">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${p.has_shield ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}">
                                 ${p.name.substring(0,2).toUpperCase()}
@@ -2039,6 +2225,7 @@ import Mascot from '../../components/Mascot.astro';
                         window.showToast?.('success', 'Berhasil Dikirim', `Hadiah terkirim ke ${targetName}!`);
                     } else if (currentAttackMode === 'bully') {
                         studentWallet -= cost;
+                        boughtItemsThisSession.item_bullying = true;
                         window.showToast?.('success', 'BULLY BERHASIL!', `Soal ${targetName} diumpetin!`); 
                     } else {
                         studentInventory.item_serang -= 1; 
@@ -2074,6 +2261,7 @@ import Mascot from '../../components/Mascot.astro';
                     const data = await res.json();
                     if(data.status === 'success') {
                         studentWallet = data.data.new_poin;
+                        boughtItemsThisSession.item_bullying = true; // [FIX] Tandai sudah dipakai
                         window.showToast?.('success', 'Korban Terbully 😈', `Soal ${targetName} disembunyikan!`);
                         updateShopUI();
                     } else throw new Error(data.message);
@@ -2277,7 +2465,14 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
+    window.isSubmittingData = false;
+
     const proceedSubmit = async () => {
+        // Kalau fungsi ini lagi jalan (loading), blokir eksekusi selanjutnya!
+        if (window.isSubmittingData) return;
+        window.isSubmittingData = true;
+
+        // [FIX UX 2] Tombol Submit jadi abu-abu dan disabled mencegah double click
         btnSubmitGlobal.disabled = true; 
         btnSubmitGlobal.className = 'w-full py-5 bg-gray-200 text-gray-400 font-bold rounded-2xl cursor-not-allowed transition-all text-lg shadow-sm mb-12 relative overflow-hidden';
         btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sedang Mengoreksi...';
@@ -2461,12 +2656,23 @@ import Mascot from '../../components/Mascot.astro';
             btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-check"></i> Selesai'; 
             btnSubmitGlobal.className = 'w-full py-5 bg-gray-800 text-white font-bold rounded-2xl transition-all text-lg shadow-sm mb-12 relative overflow-hidden';
             document.getElementById('modalResult').classList.replace('hidden', 'flex');
-        } catch (e) {
-            console.error(e); window.showToast?.('danger', 'Error', 'Gagal mengirim data. Coba lagi.'); 
             
+            // Lepas kunci karena udah selesai
+            window.isSubmittingData = false;
+            
+        } catch (e) {
+            console.error(e); 
+            // Kalau gagal karena API nolak (misal gara-gara double submit), munculin pesan dari API
+            const errMsg = e.message || 'Gagal mengirim data. Coba lagi.';
+            window.showToast?.('danger', 'Error', errMsg); 
+            
+            // [FIX UX] Balikin tombol hijau kalau gagal ngirim biar bisa dicoba lagi
             btnSubmitGlobal.disabled = false;
             btnSubmitGlobal.className = 'w-full py-5 bg-green-600 text-white font-bold rounded-2xl shadow-sm mb-12 relative overflow-hidden active:scale-95 cursor-pointer transition-all text-lg';
             btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban'; 
+            
+            // Lepas kunci biar user bisa nyoba pencet lagi
+            window.isSubmittingData = false;
         }
     };
 
