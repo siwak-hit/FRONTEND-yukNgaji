@@ -904,9 +904,14 @@ let defaultDeadline = new Date();
                     <!-- [PERBAIKAN UX] PANEL AKSI (Salin Link + Deadline) - Hanya muncul jika isLocked = true -->
                     <div id="prActionPanel-${week}-${subject}" class="${isLocked ? 'block' : 'hidden'} w-full pt-3 border-t border-indigo-100/50 relative z-10 space-y-3 animate-slide-up">
                         
-                        <button onclick="copyPRLink('${subject}', ${week})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-4 py-3 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-copy"></i> Salin Link PR ke Grup WA
-                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copyPRLink('${subject}', ${week})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-[11px] font-bold px-2 py-3 rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5" title="Link PR Normal">
+                                <i class="fa-solid fa-link"></i> Link Biasa
+                            </button>
+                            <button onclick="copyResetLink('${subject}', ${week})" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-[10px] sm:text-[11px] font-bold px-2 py-3 rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5" title="Link darurat untuk reset waktu">
+                                <i class="fa-solid fa-clock-rotate-left"></i> Link Reset Waktu
+                            </button>
+                        </div>
 
                         <div class="bg-white/50 p-3 rounded-xl border border-indigo-100/50 space-y-3">
                             <div>
@@ -1500,6 +1505,16 @@ let defaultDeadline = new Date();
             window.showToast?.('success', 'Link Disalin!', `Link PR ${subject.toUpperCase()} Pert. ${week} berhasil disalin. Silakan paste di Grup WA.`);
         }).catch(err => {
             // Fallback kalau browser gak support auto-copy
+            prompt('Copy link ini manual:', link);
+        });
+    };
+
+    window.copyResetLink = (subject, week) => {
+        const frontendUrl = window.location.origin;
+        const link = `${frontendUrl}/consultations?subject=${subject}&week=${week}&pr=true&pr_token=${token}&reset_waktu=true`;
+        navigator.clipboard.writeText(link).then(() => {
+            window.showToast?.('success', 'Link Reset Disalin!', `Kirimkan link ini KHUSUS ke siswa yang kehabisan waktu agar timernya ter-reset.`);
+        }).catch(err => {
             prompt('Copy link ini manual:', link);
         });
     };

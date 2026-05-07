@@ -624,11 +624,20 @@ import Mascot from '../../components/Mascot.astro';
     const qKey = `qs_${studentId}_${subject}_${week}`;
     const psychKey = `psych_${studentId}_${subject}_${week}`;
 
+    // Reset Full (Bawaan Lama)
     if (urlParams.get('reset') === 'true') {
         localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
         window.location.replace(window.location.pathname + `?id=${studentId}&subject=${subject}&week=${week}${isPRMode ? '&pr=true' : ''}`);
     }
 
+    // [BARU] 1. Reset Waktu Jalur Link Sakti
+    if (urlParams.get('reset_waktu') === 'true') {
+        localStorage.removeItem(timeKey); // Cuma hapus waktu, jawaban aman!
+        window.location.replace(window.location.pathname + `?id=${studentId}&subject=${subject}&week=${week}${isPRMode ? '&pr=true' : ''}`);
+    }
+    
+    let secretTapCount = 0;
+    let secretTapTimer = null;
     let questions = [];
     let timeLeft = parsedWeek === 1 ? 105 : 180; 
     let finalTimeTaken = 0;
@@ -674,6 +683,7 @@ import Mascot from '../../components/Mascot.astro';
     let hasClaimedBonusGlobal = false;
     let unreadLogIds = [];
     let currentAttackMode = 'serang'; 
+    let isBullyAnimationRunning = false;
 
     const ITEM_DB = {
         item_double_score: { name: "Double Nilai", price: 50, icon: "✨", desc: "Mendongkrak nilaimu di akhir ujian! Semakin kecil nilaimu, semakin besar tambahan poinnya." },
@@ -739,6 +749,26 @@ import Mascot from '../../components/Mascot.astro';
             document.body.classList.remove('animate-pulse');
         }
     };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const headerInitials = document.getElementById('headerInitials');
+        if (headerInitials) {
+            headerInitials.addEventListener('click', () => {
+                secretTapCount++;
+                clearTimeout(secretTapTimer);
+                
+                if (secretTapCount >= 5) {
+                    localStorage.removeItem(timeKey); // Hapus memori waktu
+                    window.showToast?.('success', 'Waktu Direset!', 'Mulai ulang dalam 2 detik...');
+                    setTimeout(() => window.location.reload(), 2000);
+                    secretTapCount = 0;
+                } else {
+                    // Kalau jeda ketukan lebih dari 1.5 detik, reset ke 0 lagi
+                    secretTapTimer = setTimeout(() => { secretTapCount = 0; }, 1500);
+                }
+            });
+        }
+    });
 
     let globalConfirmCallback = null;
     window.showConfirm = (title, message, onConfirm, type = 'primary') => {
@@ -840,7 +870,9 @@ import Mascot from '../../components/Mascot.astro';
         window.toggleShopDrawer(); 
     };
 
+    const originalPlayBully = window.playBullyAnimation;
     window.playBullyAnimation = async (attackerName) => {
+        isBullyAnimationRunning = true;
         const overlay = document.getElementById('bullyOverlay');
         const char = document.getElementById('bullyCharacter');
         const speech = document.getElementById('bullySpeech');
@@ -1636,7 +1668,7 @@ import Mascot from '../../components/Mascot.astro';
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
         if (timeLeft <= 0) return;
-        let notificationCheckCounter = 0;
+        let bullyCheckCounter = 0;
 
         timerInterval = setInterval(() => {
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000); 
@@ -1645,10 +1677,13 @@ import Mascot from '../../components/Mascot.astro';
             // =======================================================
             // [FIX REAL-TIME BULLY] Cek notifikasi setiap 5 detik
             // =======================================================
-            notificationCheckCounter++;
-            if (!isPreview && notificationCheckCounter >= 5) {
-                checkRealNotifications();
-                notificationCheckCounter = 0; // Reset counter
+            bullyCheckCounter++;
+            if (!isPreview && bullyCheckCounter >= 5) {
+                // Cek hanya jika animasi TIDAK sedang jalan
+                if (!isBullyAnimationRunning) {
+                    executeBullyPolling();
+                }
+                bullyCheckCounter = 0;
             }
             // =======================================================
 
@@ -1685,6 +1720,30 @@ import Mascot from '../../components/Mascot.astro';
                 if (!isEvaluatingExtraLife) disableAcademicSection(); 
             }
         }, 1000);
+    };
+
+    window.executeBullyPolling = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/check-bully-status?student_id=${studentId}&t=${Date.now()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (data.status === 'success' && data.trigger_bully === true) {
+                
+                // [FIX] Tangkap nama pelakunya dari Backend
+                const pelaku = data.attacker_name || "Seseorang"; 
+
+                // Jika user punya perisai
+                if (window.isShieldActive) {
+                    window.showToast?.('info', 'Perisai Memantul!', `${pelaku} mencoba menjahilimu, tapi gagal!`);
+                    return;
+                }
+                
+                // Jalanin aksi bully dengan nama pelaku aslinya!
+                playBullyAnimation(pelaku);
+            }
+        } catch (e) { console.warn("Gagal polling bully"); }
     };
 
     // ==========================================
