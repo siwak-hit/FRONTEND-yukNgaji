@@ -632,8 +632,13 @@ import Mascot from '../../components/Mascot.astro';
 
     // [BARU] 1. Reset Waktu Jalur Link Sakti
     if (urlParams.get('reset_waktu') === 'true') {
-        localStorage.removeItem(timeKey); // Cuma hapus waktu, jawaban aman!
-        window.location.replace(window.location.pathname + `?id=${studentId}&subject=${subject}&week=${week}${isPRMode ? '&pr=true' : ''}`);
+        localStorage.removeItem(timeKey); // Hapus memori waktu lama
+        
+        // Bersihkan URL biar gak nge-loop reset terus-terusan
+        const cleanUrl = window.location.pathname + `?id=${studentId}&subject=${subject}&week=${week}${isPRMode ? '&pr=true' : ''}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+        
+        console.log("Waktu berhasil direset via Jembatan Lobby!");
     }
     
     let secretTapCount = 0;

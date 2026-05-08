@@ -1511,9 +1511,11 @@ let defaultDeadline = new Date();
 
     window.copyResetLink = (subject, week) => {
         const frontendUrl = window.location.origin;
+        // [UPDATE] Balik ke /consultations biar tetep lewat lobby/scan wajah
         const link = `${frontendUrl}/consultations?subject=${subject}&week=${week}&pr=true&pr_token=${token}&reset_waktu=true`;
+        
         navigator.clipboard.writeText(link).then(() => {
-            window.showToast?.('success', 'Link Reset Disalin!', `Kirimkan link ini KHUSUS ke siswa yang kehabisan waktu agar timernya ter-reset.`);
+            window.showToast?.('success', 'Link Reset Disalin!', `Anak tetep harus scan wajah dulu, baru nanti timernya ke-reset di halaman soal.`);
         }).catch(err => {
             prompt('Copy link ini manual:', link);
         });

@@ -253,6 +253,23 @@ import Toast from '../../components/Toast.astro';
         satpamLoopId: null
     };
 
+    // [BARU] Logika Jembatan: Oper parameter reset_waktu ke halaman berikutnya
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isResetRequest = urlParams.get('reset_waktu') === 'true';
+
+        if (isResetRequest) {
+            // Cari tombol yang ngarahin ke fill.astro (biasanya id="btnStart")
+            const btnStart = document.getElementById('btnStart');
+            if (btnStart) {
+                // Ambil link aslinya (misal: /consultations/fill?id=xxx...)
+                let currentHref = btnStart.getAttribute('href');
+                // Tempelin reset_waktu di ujungnya
+                btnStart.setAttribute('href', currentHref + '&reset_waktu=true');
+            }
+        }
+    });
+
     // =======================================================================
     // 2. SETUP UI AWAL (MODE GURU VS MODE MURID)
     // =======================================================================
