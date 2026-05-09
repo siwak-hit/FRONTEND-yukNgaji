@@ -118,7 +118,7 @@ import Mascot from '../../components/Mascot.astro';
           </div>
           <button class="text-gray-300 hover:text-amber-500 transition-colors" title="Tandai Ragu-ragu"><i class="fa-regular fa-flag text-lg"></i></button>
         </div>
-        <div id="imageContainer" class="hidden q-image-wrap"><img id="questionImage" src="" class="q-image" /></div>
+        <div id="imageContainer" class="hidden q-image-wrap"><img id="questionImage" src="" class="q-image" loading="lazy" decoding="async" /></div>
         <h2 id="questionText" class="q-text">Memuat pertanyaan...</h2>
       </div>
       <div class="options-grid" id="optionsGrid"></div>
@@ -171,7 +171,7 @@ import Mascot from '../../components/Mascot.astro';
   <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
     <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
         
-        <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="auto" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+        <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="none" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
         
         <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
             
@@ -371,10 +371,46 @@ import Mascot from '../../components/Mascot.astro';
     </div>
   </div>
 
+  <div id="modalPermissionGuide" class="fixed inset-0 z-[600] hidden items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 text-center shadow-2xl animate-slide-up border-4 border-red-500 flex flex-col relative overflow-hidden">
+            
+            <h3 class="text-2xl font-black text-gray-800 mb-1">Akses Terblokir!</h3>
+            <p class="text-[10px] font-bold text-gray-500 mb-4 leading-relaxed">
+                Sistem butuh akses <strong id="guideType" class="text-red-600 uppercase">Kamera</strong>. Ikuti 3 langkah ini:
+            </p>
+
+            <div class="bg-gray-100 rounded-2xl overflow-hidden mb-4 border border-gray-200 relative shadow-inner aspect-[4/3] flex items-center justify-center">
+                <img id="guideImage" src="" alt="Panduan" class="w-full h-full object-cover">
+                
+                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                    <div id="dot1" class="w-2 h-2 rounded-full transition-all"></div>
+                    <div id="dot2" class="w-2 h-2 rounded-full transition-all"></div>
+                    <div id="dot3" class="w-2 h-2 rounded-full transition-all"></div>
+                </div>
+            </div>
+
+            <div class="text-[11px] font-bold text-gray-700 mb-5 bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[4.5rem] flex items-center justify-center">
+                <p id="guideText">Memuat panduan...</p>
+            </div>
+
+            <button id="btnNextGuide" onclick="nextGuideStep()" class="btn-3d btn-indigo w-full py-4 text-sm font-black flex items-center justify-center gap-2">
+                <span id="btnNextGuideText">Lanjut ke Langkah 2</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            
+            <button id="btnReloadGuide" onclick="window.location.reload()" class="hidden btn-3d btn-green w-full py-4 text-sm font-black items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> <span>Muat Ulang Sekarang</span>
+            </button>
+            
+            <button onclick="document.getElementById('modalPermissionGuide').classList.replace('flex', 'hidden')" class="mt-4 text-[10px] font-black text-gray-400 hover:text-gray-600 underline shrink-0">
+                Nanti Saja / Tutup
+            </button>
+        </div>
+    </div>
+
   <Toast />
 </Layout>
 
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline defer></script>
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const examId = window.location.pathname.split('/').pop();
@@ -411,6 +447,7 @@ import Mascot from '../../components/Mascot.astro';
 
     window.isTimeStoppedByCat = false;
     window.miawToastTimer = null; 
+    let isSubmitting = false;
 
     const relaxQuotes = [
         "Tarik napas perlahan... Kamu pasti bisa menyelesaikannya!",
@@ -591,8 +628,84 @@ import Mascot from '../../components/Mascot.astro';
             }, 1000);
             
         } catch (err) {
-            status.innerText = "Akses mikrofon ditolak! Izinkan di browser.";
-            status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-red-500 bg-red-50 border-red-100';
+            // JIKA DITOLAK: Panggil Modal Gambar Panduan
+            window.showPermissionGuide('Mikrofon');
+            
+            const status = document.getElementById('recordStatus');
+            status.innerText = "Akses mikrofon ditolak! Lihat panduan.";
+            status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-red-500 bg-red-50 border-red-100 animate-pulse';
+            
+            const btnMain = document.getElementById('btnMainAction');
+            btnMain.disabled = false;
+            btnMain.classList.replace('btn-indigo', 'btn-red');
+            btnMain.innerHTML = `<i class="fa-solid fa-microphone"></i> <span>Izinkan Mikrofon</span>`;
+        }
+    };
+
+// ==========================================
+    // LOGIKA SLIDER PANDUAN IZIN
+    // ==========================================
+    let currentGuideStep = 1;
+    let currentGuideType = 'kamera'; // Default 'kamera' atau 'mikrofon'
+
+    // Fungsi dipanggil saat izin ditolak (dari catch blok)
+    window.showPermissionGuide = (type) => {
+        currentGuideType = type.toLowerCase();
+        currentGuideStep = 1; // Selalu mulai dari slide 1
+        
+        document.getElementById('guideType').innerText = type;
+        updateGuideUI(); // Render tampilan
+        
+        document.getElementById('modalPermissionGuide').classList.replace('hidden', 'flex');
+    };
+
+    // Fungsi pindah slide saat klik Next
+    window.nextGuideStep = () => {
+        if (currentGuideStep < 3) {
+            currentGuideStep++;
+            updateGuideUI();
+        }
+    };
+
+// Fungsi Update Tampilan Slide
+window.updateGuideUI = () => {
+        const img = document.getElementById('guideImage');
+        const text = document.getElementById('guideText');
+        const btnNext = document.getElementById('btnNextGuide');
+        const btnNextText = document.getElementById('btnNextGuideText');
+        const btnReload = document.getElementById('btnReloadGuide');
+        
+        // Atur warna dots indikator
+        document.getElementById('dot1').className = `w-2 h-2 rounded-full ${currentGuideStep >= 1 ? 'bg-white' : 'bg-white/40'}`;
+        document.getElementById('dot2').className = `w-2 h-2 rounded-full ${currentGuideStep >= 2 ? 'bg-white' : 'bg-white/40'}`;
+        document.getElementById('dot3').className = `w-2 h-2 rounded-full ${currentGuideStep >= 3 ? 'bg-white' : 'bg-white/40'}`;
+
+        // [UBAH DI SINI] Fotonya digabung! Cukup ambil 3 foto universal aja
+        const imgPath = `/images/panduan-izin-${currentGuideStep}.jpeg`;
+        const placeholderImg = `https://placehold.co/400x300/e2e8f0/475569?text=Gambar+Langkah+${currentGuideStep}`;
+        
+        img.src = imgPath; 
+        // Fallback jika gambar belum kamu masukkan ke folder public
+        img.onerror = () => { img.src = placeholderImg; }; 
+
+        if (currentGuideStep === 1) {
+            text.innerHTML = `Langkah 1:<br>Klik ikon 🔒 <strong>Gembok</strong> atau <strong>(Aa)</strong> di sebelah kiri alamat web bagian atas.`;
+            btnNext.classList.replace('hidden', 'flex');
+            btnNextText.innerText = `Lanjut Langkah 2`;
+            btnReload.classList.replace('flex', 'hidden'); // Sembunyikan tombol reload
+            
+        } else if (currentGuideStep === 2) {
+            // Teksnya tetap dinamis biar anak nggak bingung
+            const menuName = currentGuideType === 'kamera' ? 'Kamera (Camera)' : 'Mikrofon (Microphone)';
+            text.innerHTML = `Langkah 2:<br>Cari pengaturan <strong>${menuName}</strong>, lalu ubah izinnya menjadi <strong>Izinkan (Allow)</strong>.`;
+            btnNext.classList.replace('hidden', 'flex');
+            btnNextText.innerText = `Lanjut Langkah Terakhir`;
+            btnReload.classList.replace('flex', 'hidden'); // Sembunyikan tombol reload
+            
+        } else if (currentGuideStep === 3) {
+            text.innerHTML = `Langkah 3:<br>Hebat! Jika sudah diizinkan, silakan tekan tombol <strong>Muat Ulang</strong> di bawah ini.`;
+            btnNext.classList.replace('flex', 'hidden');   // Sembunyikan tombol next
+            btnReload.classList.replace('hidden', 'flex'); // MUNCULKAN TOMBOL RELOAD
         }
     };
 
@@ -742,59 +855,34 @@ import Mascot from '../../components/Mascot.astro';
     // ==========================================================
     const init = async () => {
         try {
+            // [OPTIMASI 1] Lottie Mascot Background
             if (window.MiawMascot) {
-                await window.MiawMascot.init({
+                window.MiawMascot.init({
                     texts: {
                         idlePhrases: ["Pelan-pelan aja bacanya... miaw", "Fokus, fokus... Waktu terus berjalan lho."],
                         warnings: ["Miaw... kamu asik sendiri ya? Kok aku gak diajak main."],
                         prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal nyembunyiin jawaban ujiannya! Mwehehehe~",
                         threatExecute: "Yaudah aku pergi! Tapi rasain nih waktu ujianmu aku cepetin!",
                     },
-                    actions: {
-                        onPrank: () => {
-                            const qCard = document.getElementById('questionCard');
-                            const qOptions = document.getElementById('optionsGrid');
-                            if(qCard && qOptions) {
-                                qCard.style.transition = 'opacity 1.5s ease, filter 1.5s ease'; 
-                                qOptions.style.transition = 'opacity 1.5s ease, filter 1.5s ease';
-                                qCard.style.opacity = '0'; qOptions.style.opacity = '0';
-                                qCard.style.pointerEvents = 'none'; qOptions.style.pointerEvents = 'none';
-                            }
-                        },
-                        onPrankRevert: () => {
-                            const qCard = document.getElementById('questionCard');
-                            const qOptions = document.getElementById('optionsGrid');
-                            if(qCard && qOptions) {
-                                qCard.style.opacity = '1'; qOptions.style.opacity = '1';
-                                qCard.style.pointerEvents = 'auto'; qOptions.style.pointerEvents = 'auto';
-                            }
-                        },
-                        onThreatExecute: () => {
-                            timeLeft = Math.max(0, timeLeft - 60);
-                            updateTimerUI();
-                            const tc = document.getElementById('timerContainer');
-                            if (tc) {
-                                tc.style.transform = 'scale(1.3)'; tc.classList.add('bg-red-200', 'animate-pulse');
-                                setTimeout(() => { tc.style.transform = 'scale(1)'; tc.classList.remove('bg-red-200', 'animate-pulse'); }, 800);
-                            }
-                            runExamTimer(500); 
-                            setTimeout(() => { document.getElementById('modalMiawLetter')?.classList.replace('hidden', 'flex'); }, 1500);
-                        },
-                        onThreatRevert: () => { runExamTimer(1000); clearTimeout(window.miawToastTimer); },
-                        onHelpExecute: (doneCallback) => {
-                            window.isTimeStoppedByCat = true;
-                            const tc = document.getElementById('timerContainer');
-                            if (tc) { tc.style.background = "#3b82f6"; tc.style.color = "white"; tc.style.borderColor = "#2563eb"; document.getElementById('timerText').innerText = "BEKU!"; }
-                            setTimeout(() => {
-                                window.isTimeStoppedByCat = false;
-                                if (tc) { tc.style.background = ""; tc.style.color = ""; tc.style.borderColor = ""; updateTimerUI(); }
-                                doneCallback(); 
-                            }, 7000);
-                        }
-                    }
-                });
+                    actions: {}
+                }).catch(e => console.log("Mascot dimuat di background", e));
+            }
+            
+            // [BARU] Ambil Progress & Identitas Murid dari Local Storage
+            const savedProgress = localStorage.getItem(`exam_progress_${examId}`);
+            const savedStudentId = localStorage.getItem(`active_student_${examId}`);
+            
+            if (savedProgress) {
+                studentAnswers = JSON.parse(savedProgress);
+                currentIndex = Object.keys(studentAnswers).length > 0 ? Object.keys(studentAnswers).length - 1 : 0;
             }
 
+            // Pulihkan ID murid jika ada
+            if (savedStudentId) {
+                activeStudentId = savedStudentId;
+            }
+
+            // [OPTIMASI 2] Ambil Data Ujian
             const exRes = await fetch(`${API_URL}/api/exams/${examId}`, { headers: { 'Authorization': `Bearer ${token}` }});
             if (!exRes.ok) throw new Error("Gagal mengambil data ujian");
             const exData = await exRes.json();
@@ -810,7 +898,7 @@ import Mascot from '../../components/Mascot.astro';
                 const validKeys = ['A', 'B', 'C', 'D'].filter(k => q.options[k] && q.options[k].trim() !== '');
                 q.shuffledKeys = shuffleArray(validKeys); 
             });
-            
+
             document.getElementById('examSubject').innerText = `UJIAN ${examData.subject}`;
             document.getElementById('lobbyExamTitle').innerText = examData.title;
             
@@ -826,34 +914,51 @@ import Mascot from '../../components/Mascot.astro';
                 document.getElementById('studentInitials').innerText = "PR";
                 document.getElementById('startStudentName').innerText = "Simulasi Ustadz";
                 
-                // [FIX] Ubah teks tombol batal khusus buat Ustadz
                 const btnBack = document.getElementById('btnBackLobby');
                 if (btnBack) {
                     btnBack.innerText = "Batal Simulasi";
-                    btnBack.classList.remove('hidden'); // Pastikan tombolnya muncul
+                    btnBack.classList.remove('hidden');
                 }
                 
                 document.getElementById('loadingScreen').classList.add('hidden');
                 document.getElementById('startScreen').classList.replace('hidden', 'flex');
             } else {
-                // JIKA MURID -> Masuk ke Lobby
-                
-                // 1. Fetch Daftar Siswa
-                let stdRes = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}));
-                
-                // 2. Fetch Siswa yang Udah Mengerjakan Ujian Ini
-                const resRes = await fetch(`${API_URL}/api/exams/${examId}/results`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}));
-
-                // 3. [BARU] Fetch Siswa yang Udah Mengerjakan Pertemuan 5 
-                // (Ini jadi Syarat/Prerequisite)
-                const qualRes = await fetch(`${API_URL}/api/onboarding/status?subject=${examData.subject}&week=5`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}));
+                // [OPTIMASI 3] Fetch Data Murid & Hasil Paralel
+                const [stdRes, resRes, qualRes] = await Promise.all([
+                    fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
+                    fetch(`${API_URL}/api/exams/${examId}/results`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
+                    fetch(`${API_URL}/api/onboarding/status?subject=${examData.subject}&week=5`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}))
+                ]);
 
                 allStudents = stdRes.data || [];
                 completedStudentIds = (resRes.data || []).map(r => r.student_id); 
-                qualifiedStudentIds = qualRes.data || []; // Ambil data siswa yang lolos Minggu 5
+                qualifiedStudentIds = qualRes.data || [];
                 
-                renderLobbyGrid();
+                // =======================================================
+                // [LOGIKA BYPASS LOBBY & LANJUT MISI]
+                // =======================================================
+                if (activeStudentId) {
+                    const hasSubmitted = completedStudentIds.includes(activeStudentId);
+                    
+                    if (hasSubmitted) {
+                        // KASUS 1: Dipaksa mundur dari Wrapped karena belum rekam suara
+                        document.getElementById('loadingScreen').classList.add('hidden');
+                        // Tampilkan langsung modal akhir tempat mereka harus merekam suara
+                        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex'); 
+                        window.showToast?.('warning', 'Lanjut Misi!', 'Ayo selesaikan rekaman suaramu!');
+                        return; 
+                    } else {
+                        // KASUS 2: Ujian belum di-submit, ga sengaja ke-refresh HP-nya
+                        document.getElementById('loadingScreen').classList.add('hidden');
+                        // Bypass Lobby, langsung masuk ke layar ujian
+                        document.getElementById('startScreen').classList.replace('hidden', 'flex'); 
+                        return;
+                    }
+                }
+                // =======================================================
 
+                // Jika tidak ada memori tersimpan, tampilkan Lobby normal
+                renderLobbyGrid();
                 document.getElementById('loadingScreen').classList.add('hidden');
                 document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
             }
@@ -935,6 +1040,7 @@ import Mascot from '../../components/Mascot.astro';
 
     window.selectStudent = (id, name) => {
         activeStudentId = id;
+        localStorage.setItem(`active_student_${examId}`, id);
         document.getElementById('studentNameDisplay').innerText = name;
         document.getElementById('studentInitials').innerText = name.substring(0, 2).toUpperCase();
         document.getElementById('startStudentName').innerText = name;
@@ -998,41 +1104,71 @@ import Mascot from '../../components/Mascot.astro';
         isExamActive = false; window.location.href = `/exams/${examId}`;
     };
 
-    window.triggerCountdown = (btn) => {
-        if (btn) btn.disabled = true;
-        initCamera();
+    window.triggerCountdown = async (btn) => {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengakses Kamera...';
+        }
 
-        document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
-        document.getElementById('countdownScreen')?.classList.replace('hidden', 'flex');
-        
-        const countEl = document.getElementById('countdownNumber');
-        if (!countEl) return;
-        
-        let count = 3; countEl.innerText = count;
-        const intv = setInterval(() => {
-            count--;
-            countEl.classList.remove('countdown-pop'); void countEl.offsetWidth; countEl.classList.add('countdown-pop');
+        try {
+            // [GERBANG 1] Paksa minta izin kamera SEBELUM ujian dimulai
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+            document.getElementById('hiddenVideo').srcObject = cameraStream;
             
-            if (count > 0) { countEl.innerText = count; } 
-            else if (count === 0) { countEl.innerText = 'GO!'; countEl.style.color = '#4ade80'; } 
-            else {
-                clearInterval(intv);
-                document.getElementById('countdownScreen')?.classList.replace('flex', 'hidden');
-                document.getElementById('examMainContainer')?.classList.remove('hidden'); 
-                startTimer();
-                renderQuestion();
+            // JIKA DIIZINKAN: Lanjut ke hitungan mundur
+            document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
+            document.getElementById('countdownScreen')?.classList.replace('hidden', 'flex');
+            
+            const countEl = document.getElementById('countdownNumber');
+            if (!countEl) return;
+            
+            let count = 3; countEl.innerText = count;
+            const intv = setInterval(() => {
+                count--;
+                countEl.classList.remove('countdown-pop'); void countEl.offsetWidth; countEl.classList.add('countdown-pop');
+                
+                if (count > 0) { countEl.innerText = count; } 
+                else if (count === 0) { countEl.innerText = 'GO!'; countEl.style.color = '#4ade80'; } 
+                else {
+                    clearInterval(intv);
+                    document.getElementById('countdownScreen')?.classList.replace('flex', 'hidden');
+                    document.getElementById('examMainContainer')?.classList.remove('hidden'); 
+                    startTimer();
+                    renderQuestion();
+                }
+            }, 1000);
+
+        } catch (err) {
+            // JIKA DITOLAK: Panggil Modal Gambar Panduan
+            window.showPermissionGuide('Kamera');
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Coba Izinkan Lagi'; 
+                btn.classList.replace('btn-indigo', 'btn-red');
             }
-        }, 1000);
+        }
     };
 
     window.addEventListener('beforeunload', (e) => { 
-        if (isExamActive || window.isEasterEggActive) { e.preventDefault(); e.returnValue = ''; } 
+        if (isExamActive || window.isEasterEggActive) { 
+            e.preventDefault(); 
+            e.returnValue = 'Tunggu! Misi terakhirmu belum selesai. Yakin mau keluar?'; 
+        } 
     });
 
     window.addEventListener('popstate', (e) => {
-        if (isExamActive) {
+        // Kunci jika ujian masih berjalan ATAU jika sedang di fase Easter Egg
+        if (isExamActive || window.isEasterEggActive) {
+            // Paksa kembalikan state URL agar mereka tidak bisa mundur
             window.history.pushState(null, null, window.location.href);
-            document.getElementById('modalCheatWarning')?.classList.replace('hidden', 'flex');
+            
+            if (window.isEasterEggActive) {
+                // Beri peringatan khusus buat yang mau kabur dari Easter Egg
+                window.showToast?.('warning', 'Eits, Mau Kemana?', 'Selesaikan rekamannya dulu supaya kamu bisa lihat hasil akhirnya!');
+            } else {
+                document.getElementById('modalCheatWarning')?.classList.replace('hidden', 'flex');
+            }
         }
     });
 
@@ -1104,16 +1240,30 @@ import Mascot from '../../components/Mascot.astro';
     };
 
     window.jumpTo = (i) => { currentIndex = i; renderQuestion(); };
-    window.selectOption = (qId, opt) => { studentAnswers[qId] = opt; renderQuestion(); };
+    window.selectOption = (questionId, choice) => {
+        studentAnswers[questionId] = choice;
+        
+        // [OPTIMASI] Simpan ke Local Storage agar tidak hilang saat Back/Refresh
+        localStorage.setItem(`exam_progress_${examId}`, JSON.stringify(studentAnswers));
+        
+        renderQuestion();
+    };
 
     window.navigate = (dir) => {
+        // [OPTIMASI] Kalau lagi proses ngirim data, matikan fungsi navigasi
+        if (isSubmitting) return; 
+
         if (window.MiawMascot && window.MiawMascot.getState().isPranking) {
-            window.showToast?.('danger', 'Ups!', 'Jawabannya dibawa kabur Miaw! Panggil dia dulu gih.'); return;
+            window.showToast?.('danger', 'Ups!', 'Jawabannya dibawa kabur Miaw! Panggil dia dulu gih.');
+            return;
         }
 
-        if (dir === 1 && currentIndex === questions.length - 1) { submitExam(); return; }
+        if (dir === 1 && currentIndex === questions.length - 1) { 
+            submitExam();
+            return; 
+        }
+        
         if (currentIndex === 0 && dir === 1 && window.MiawMascot) window.MiawMascot.show();
-
         proceedNavigation(dir);
     };
 
@@ -1185,73 +1335,97 @@ import Mascot from '../../components/Mascot.astro';
     window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
 
     const submitExam = async () => {
-        clearInterval(timerInterval);
-        isExamActive = false;
-        localStorage.removeItem('cat_help_used');
-        let correct = 0, skipped = 0;
-        questions.forEach(q => {
-            if (!studentAnswers[q.id]) skipped++;
-            else if (studentAnswers[q.id] === q.correct_answer) correct++;
-        });
-        const wrong = questions.length - correct - skipped;
-        const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+        // [OPTIMASI] Cegah double klik. Kalau isSubmitting true, tolak klik selanjutnya.
+        if (isSubmitting) return;
+        isSubmitting = true; 
 
+        // Ubah tombol next/submit jadi efek loading biar murid tahu sistem lagi mikir
+        const btnNext = document.getElementById('btnNext');
+        if (btnNext) {
+            btnNext.disabled = true;
+            btnNext.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Memproses...</span>';
+            btnNext.classList.replace('btn-indigo', 'btn-gray');
+            btnNext.classList.replace('btn-green', 'btn-gray');
+        }
+
+        // Hentikan ujian dan bersihkan timer 
+        clearInterval(timerInterval); 
+        isExamActive = false; 
+        localStorage.removeItem('cat_help_used'); 
+        
+        // Kalkulasi nilai berdasarkan jawaban 
+        let correct = 0, skipped = 0; 
+        questions.forEach(q => { 
+            if (!studentAnswers[q.id]) skipped++; 
+            else if (studentAnswers[q.id] === q.correct_answer) correct++; 
+        }); 
+        const wrong = questions.length - correct - skipped; 
+        const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0; 
+
+        // Update antarmuka modal hasil 
         try {
-            document.getElementById('statCorrect').innerText = correct;
-            document.getElementById('statWrong').innerText = wrong;
-            document.getElementById('statSkip').innerText = skipped;
-            document.getElementById('resultScore').innerText = score;
+            document.getElementById('statCorrect').innerText = correct; 
+            document.getElementById('statWrong').innerText = wrong; 
+            document.getElementById('statSkip').innerText = skipped; 
+            document.getElementById('resultScore').innerText = score; 
             
-            const circ = 326.72; const rf = document.getElementById('ringFill');
+            const circ = 326.72; const rf = document.getElementById('ringFill'); 
             if(rf) setTimeout(() => { rf.style.strokeDashoffset = circ - (score/100)*circ; }, 400);
 
-            const emoji = document.getElementById('resultEmoji'), title = document.getElementById('resultTitle');
-            if (score >= 80) {
-                if(emoji) emoji.innerText = '🌟'; if(title) title.innerText = 'Luar Biasa!'; if(rf) rf.style.stroke = '#22c55e';
-                if(typeof confetti !== 'undefined') confetti({ particleCount: 200, spread: 100, origin: {y:0.5}, colors:['#6366f1','#22c55e','#f59e0b'] });
-            } else if (score >= 60) {
-                if(emoji) emoji.innerText = '👍'; if(title) title.innerText = 'Kerja Bagus!'; if(rf) rf.style.stroke = '#3b82f6';
+            const emoji = document.getElementById('resultEmoji'), title = document.getElementById('resultTitle'); 
+            
+            // Atur emoji dan ucapan sesuai nilai 
+            if (score >= 80) { 
+                if(emoji) emoji.innerText = '🌟'; 
+                if(title) title.innerText = 'Luar Biasa!'; if(rf) rf.style.stroke = '#22c55e'; 
+                if(typeof confetti !== 'undefined') confetti({ particleCount: 200, spread: 100, origin: {y:0.5}, colors:['#6366f1','#22c55e','#f59e0b'] }); 
+            } else if (score >= 60) { 
+                if(emoji) emoji.innerText = '👍'; 
+                if(title) title.innerText = 'Kerja Bagus!'; if(rf) rf.style.stroke = '#3b82f6'; 
             } else {
-                if(emoji) emoji.innerText = '💪'; if(title) title.innerText = 'Tetap Semangat!'; if(rf) rf.style.stroke = '#f97316';
+                if(emoji) emoji.innerText = '💪'; 
+                if(title) title.innerText = 'Tetap Semangat!'; if(rf) rf.style.stroke = '#f97316'; 
             }
 
-            if (isPreview) {
-                document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database.";
-                if (capturedBase64) {
-                    document.getElementById('previewCameraResult')?.classList.remove('hidden');
-                    document.getElementById('previewCapturedImg').src = capturedBase64;
+            // Tampilan khusus jika mode preview Ustadz 
+            if (isPreview) { 
+                document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database."; 
+                if (capturedBase64) { 
+                    document.getElementById('previewCameraResult')?.classList.remove('hidden'); 
+                    document.getElementById('previewCapturedImg').src = capturedBase64; 
                 }
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error(err); } 
 
-        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex');
-        
-        if (!isPreview) {
+        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex'); 
+
+        // Proses penyimpanan ke backend jika bukan mode preview 
+        if (!isPreview) { 
             try {
                 // Tampilkan indikator loading di tombol Tutup
-                const btnRet = document.getElementById('btnReturnHome');
+                const btnRet = document.getElementById('btnReturnHome'); 
                 if(btnRet) { btnRet.disabled = true; btnRet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
 
-                const res = await fetch(`${API_URL}/api/exams/${examId}/submit`, {
-                    method: 'POST',
+                const res = await fetch(`${API_URL}/api/exams/${examId}/submit`, { 
+                    method: 'POST', 
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: activeStudentId, subject: examData ? examData.subject : "Ujian", score: score, capture_base64: capturedBase64 })
-                });
-                
-                const data = await res.json();
-                
-                // Tangkap Sinyal Easter Egg dari Backend
-                isAllExamsDone = data.is_all_completed === true;
+                    body: JSON.stringify({ student_id: activeStudentId, subject: examData ? examData.subject : "Ujian", score: score, capture_base64: capturedBase64 }) 
+                }); 
 
-                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; }
-            } catch(e) { 
+                const data = await res.json(); 
+                
+                // Tangkap Sinyal Easter Egg dari Backend 
+                isAllExamsDone = data.is_all_completed === true; 
+
+                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; } 
+            } catch(e) {  
                 console.error(e); 
-                const btnRet = document.getElementById('btnReturnHome');
-                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; }
+                const btnRet = document.getElementById('btnReturnHome'); 
+                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; } 
             }
         } else {
-            // JIKA PREVIEW: SELALU PAKSA MUNCUL EASTER EGG!
-            isAllExamsDone = true; 
+            // JIKA PREVIEW: SELALU PAKSA MUNCUL EASTER EGG! 
+            isAllExamsDone = true;
         }
     };
 

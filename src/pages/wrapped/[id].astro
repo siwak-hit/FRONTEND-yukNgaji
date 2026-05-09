@@ -343,6 +343,17 @@ import Toast from '../../components/Toast.astro';
       </div>
   </div>
 
+  <div id="modalForceRecord" class="fixed inset-0 z-[999] hidden items-center justify-center bg-slate-900/95 backdrop-blur-md p-6">
+    <div class="bg-white rounded-[2rem] p-8 text-center max-w-sm w-full shadow-2xl animate-pop-in">
+        <div class="text-6xl mb-4 animate-bounce">🛑</div>
+        <h2 class="text-2xl font-black text-red-600 mb-2">Tunggu Dulu!</h2>
+        <p class="text-sm font-bold text-slate-600 mb-6 leading-relaxed">Kamu belum menyelesaikan misi terakhir ujian (Rekaman Suara 30 Detik). Hasil Wrapped-mu masih ditahan oleh Ustadz!</p>
+        <button onclick="window.history.back()" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all">
+            <i class="fa-solid fa-arrow-rotate-left mr-2"></i> Kembali & Selesaikan Misi
+        </button>
+    </div>
+</div>
+
   <Toast />
 </Layout>
 
@@ -373,6 +384,16 @@ import Toast from '../../components/Toast.astro';
     // INITIALIZATION & FETCH DATA
     // ========================================================
     const initData = async () => {
+
+        if (!isPreview && !base64Audio) {
+            // 1. Sembunyikan seluruh UI Wrapped
+            document.getElementById('wrappedContainer').style.display = 'none';
+            // 2. Munculkan tembok peringatan
+            document.getElementById('modalForceRecord').classList.replace('hidden', 'flex');
+            // 3. STOP proses! Jangan ambil data apapun dari database.
+            return; 
+        }
+        
         bgMusic = document.getElementById('bgMusic');
         userAudio = document.getElementById('userAudio');
         bgMusic.volume = 0.5;

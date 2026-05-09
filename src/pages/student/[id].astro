@@ -848,7 +848,7 @@ import Toast from '../../components/Toast.astro';
       { id: 1, name: "An-Nas", ayahs: 6 },
       { id: 2, name: "Al-Falaq", ayahs: 5 },
       { id: 3, name: "Al-Ikhlas", ayahs: 4 },
-      { id: 4, name: "Al-Masad", ayahs: 5 },
+      { id: 4, name: "Al-Lahab", ayahs: 5 },
       { id: 5, name: "An-Nasr", ayahs: 3 },
       { id: 6, name: "Al-Kafirun", ayahs: 6 },
       { id: 7, name: "Al-Kausar", ayahs: 3 },
@@ -2446,26 +2446,65 @@ doc.setFontSize(10);
         if (pendingSusulanUrl) window.location.href = pendingSusulanUrl;
     };
 
-// ================================================================
+    // ================================================================
     // LOGIKA MUROJAAH KHUSUS (Sistem Level & Filter Surat)
     // ================================================================
     
-    // Kita bagi jadi beberapa paket/level
     const MUROJAAH_PACKAGES = [
         {
             id: 1,
             name: "Level 1 (An-Nas - Al-Qari'ah)",
-            targets: ["Al-Qari'ah", "At-Takasur", "Al-'Asr", "Al-Humazah", "Al-Fil", "Quraisy", "Al-Ma'un", "Al-Kausar", "Al-Kafirun", "An-Nasr", "Al-Masad", "Al-Ikhlas", "Al-Falaq", "An-Nas", "Al-Insyirah"]
+            targets: [
+                "An-Nas",
+                "Al-Falaq",
+                "Al-Ikhlas",
+                "Al-Lahab",
+                "An-Nasr",
+                "Al-Kafirun",
+                "Al-Kausar",
+                "Al-Ma'un",
+                "Quraisy",
+                "Al-Fil",
+                "Al-Humazah",
+                "Al-'Asr",
+                "At-Takasur",
+                "Al-Qari'ah"
+            ]
         },
         {
             id: 2,
-            name: "Level 2 (Ad-Duha - Al-Gasyiyah)",
-            targets: ["Ad-Duha", "Al-Lail", "Asy-Syams", "Al-Balad", "Al-Fajr", "Al-Gasyiyah"]
+            name: "Level 2 (Al-'Adiyat - Al-Gasyiyah)",
+            targets: [
+                "Al-'Adiyat",
+                "Az-Zalzalah",
+                "Al-Bayyinah",
+                "Al-Qadr",
+                "Al-'Alaq",
+                "At-Tin",
+                "Al-Insyirah",
+                "Ad-Duha",
+                "Al-Lail",
+                "Asy-Syams",
+                "Al-Balad",
+                "Al-Fajr",
+                "Al-Gasyiyah"
+            ]
         },
         {
             id: 3,
             name: "Level 3 (Al-A'la - An-Naba')",
-            targets: ["Al-A'la", "At-Tariq", "Al-Buruj", "Al-Insyiqaq", "Al-Mutaffifin", "Al-Infitar", "At-Takwir", "Abasa", "An-Nazi'at", "An-Naba'"]
+            targets: [
+                "Al-A'la",
+                "At-Tariq",
+                "Al-Buruj",
+                "Al-Insyiqaq",
+                "Al-Mutaffifin",
+                "Al-Infitar",
+                "At-Takwir",
+                "Abasa",
+                "An-Nazi'at",
+                "An-Naba'"
+            ]
         }
     ];
 
