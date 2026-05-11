@@ -1432,7 +1432,7 @@ let defaultDeadline = new Date();
         const formData = new FormData();
         formData.append('file', file);
         try {
-            const res = await fetch(`${API_URL}/api/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+            const res = await fetch(`${API_URL}/api/onboarding/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
             const result = await res.json();
             if (res.ok) {
                 const finalImageUrl = result.data.url;
@@ -1473,7 +1473,7 @@ let defaultDeadline = new Date();
         const formData = new FormData();
         formData.append('file', file);
         try {
-            const res = await fetch(`${API_URL}/api/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+            const res = await fetch(`${API_URL}/api/onboarding/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
             const result = await res.json();
             if (res.ok) {
                 const finalImageUrl = result.data.url;
