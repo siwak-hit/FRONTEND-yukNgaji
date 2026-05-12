@@ -528,7 +528,7 @@ import Mascot from '../../components/Mascot.astro';
             <h3 class="font-black text-gray-800 text-2xl mb-2">Pengumuman!</h3>
             <p class="text-sm text-gray-600 mb-6 leading-relaxed font-medium">
                 Selamat! Kamu sudah menyelesaikan 5 pertemuan berturut-turut. <br><br>
-                Jangan lupa besok <b>Ujian <span id="examReminderSubject" class="uppercase text-indigo-600 font-black">Mapel</span></b>. <br>
+                Jangan lupa minggu depan <b>Ujian <span id="examReminderSubject" class="uppercase text-indigo-600 font-black">Mapel</span></b>. <br>
                 Pelajari lagi materi yang telah diajarkan ya!
             </p>
             <button onclick="closeExamReminder()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-95 transition-all text-sm uppercase tracking-widest">
@@ -826,7 +826,9 @@ import Mascot from '../../components/Mascot.astro';
     };
     window.exitPreview = executeExit;
     window.closeBuyModal = () => document.getElementById('modalBuyItem').classList.replace('flex', 'hidden');
-    window.closeExamReminder = executeExit;
+    window.closeExamReminder = () => {
+        redirectAfterExam(); 
+    };
 
     document.getElementById('btnGiftItem').onclick = () => {
         document.getElementById('modalBuyItem').classList.replace('flex', 'hidden');
@@ -2746,7 +2748,10 @@ import Mascot from '../../components/Mascot.astro';
             if (isPreview) { msgEl.innerText = "Simulasi Selesai. Data tidak tersimpan."; const btnHome = document.getElementById('btnReturnResult'); if (btnHome) { btnHome.innerText = "Kembali ke Editor"; btnHome.onclick = () => window.location.replace('/bank-soal'); } }
             if (!isPreview) {
                 if (!completedWeeksForSubject.includes(parsedWeek)) completedWeeksForSubject.push(parsedWeek);
-                if ([1, 2, 3, 4, 5].every(w => completedWeeksForSubject.includes(w)) && !localStorage.getItem(`exam_reminder_${studentId}_${subject}`)) { localStorage.setItem(`exam_reminder_${studentId}_${subject}`, 'true'); window.shouldShowExamReminder = true; }
+                if ([1, 2, 3, 4, 5].every(w => completedWeeksForSubject.includes(w)) && !localStorage.getItem(`exam_reminder_${studentId}_${subject}`)) { 
+                    localStorage.setItem(`exam_reminder_${studentId}_${subject}`, 'true'); 
+                    window.shouldShowExamReminder = true;
+                }
             }
 
             localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
@@ -2773,21 +2778,29 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
-    window.closeResultAndCheckReminder = () => {
-        document.getElementById('modalResult').classList.replace('flex', 'hidden');
-        
+    const redirectAfterExam = () => {
         if (isPRMode) {
             window.location.replace(`/leaderboard-pr?subject=${subject}&week=${week}&student_id=${studentId}`);
-            return;
+        } else {
+            window.location.replace('/consultations');
         }
+    };
 
+    window.closeResultAndCheckReminder = () => {
+        document.getElementById('modalResult').classList.replace('flex', 'hidden');
+
+        // Jika anak ini sudah beres minggu 1-5 untuk mapel INI, munculkan modal
         if (window.shouldShowExamReminder) {
-            document.getElementById('modalExamReminder').classList.replace('hidden', 'flex'); 
+            document.getElementById('modalExamReminder').classList.replace('hidden', 'flex');
+            
+            // Teks mapel akan otomatis menyesuaikan (Misal: Ujian TAJWID)
             document.getElementById('examReminderSubject').innerText = subject; 
+            
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
             setTimeout(() => { confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 }, colors: ['#4f46e5', '#818cf8', '#ffffff'] }); }, 300);
         } else {
-            window.location.replace('/consultations');
+            // Jika belum beres 1-4, langsung keluar tanpa modal
+            redirectAfterExam();
         }
     };
 
