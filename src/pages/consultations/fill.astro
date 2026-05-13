@@ -1737,17 +1737,18 @@ import Mascot from '../../components/Mascot.astro';
             const data = await res.json();
 
             if (data.status === 'success' && data.trigger_bully === true) {
-                
-                // [FIX] Tangkap nama pelakunya dari Backend
                 const pelaku = data.attacker_name || "Seseorang"; 
 
                 // Jika user punya perisai
                 if (window.isShieldActive) {
-                    window.showToast?.('info', 'Perisai Memantul!', `${pelaku} mencoba menjahilimu, tapi gagal!`);
+                    // [PERBAIKAN] Hancurkan perisainya setelah menahan
+                    window.showToast?.('info', 'Perisai Hancur!', `${pelaku} mencoba menjahilimu. Perisaimu menahannya namun kini hancur!`);
+                    window.isShieldActive = false;
+                    boughtItemsThisSession.item_perisai = false; // Boleh beli perisai lagi
+                    updateShopUI();
                     return;
                 }
                 
-                // Jalanin aksi bully dengan nama pelaku aslinya!
                 playBullyAnimation(pelaku);
             }
         } catch (e) { console.warn("Gagal polling bully"); }
@@ -1796,8 +1797,15 @@ import Mascot from '../../components/Mascot.astro';
                 window.showToast?.('info', 'Perisai Aktif', 'Layar birumu menandakan Perisai aktif hingga malam ini!');
                 if (!isPreview) fetch(`${API_URL}/api/shop/use-item`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, item_type: 'item_perisai' }) }).catch(e=>e);
             });
-        } else if (itemKey === 'item_double_score') {
-            window.isDoubleScoreActive = true; studentInventory.item_double_score -= 1; boughtItemsThisSession.item_double_score = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
+        } 
+        // [PERBAIKAN] Tambahkan logika item_serang di sini
+        else if (itemKey === 'item_serang') {
+            currentAttackMode = 'serang';
+            openAttackModal();
+        } 
+        else if (itemKey === 'item_double_score') {
+            window.isDoubleScoreActive = true;
+            studentInventory.item_double_score -= 1; boughtItemsThisSession.item_double_score = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Double Poin otomatis bekerja di akhir!');
         } else if (itemKey === 'item_double_coin') {
             if (window.isTripleCoinActive) {
                 window.isTripleCoinActive = false;
@@ -1807,7 +1815,7 @@ import Mascot from '../../components/Mascot.astro';
                 window.showToast?.('success', 'Sihir Aktif', 'Koinmu akan di-double di akhir!');
             }
             window.isDoubleCoinActive = true; 
-            studentInventory.item_double_coin -= 1; 
+            studentInventory.item_double_coin -= 1;
             boughtItemsThisSession.item_double_coin = true; 
             updateShopUI(); 
         } else if (itemKey === 'item_triple_coin') {
@@ -1819,11 +1827,12 @@ import Mascot from '../../components/Mascot.astro';
                 window.showToast?.('success', 'Sihir Aktif', 'Jackpot! Koinmu akan dikali 3 di akhir!');
             }
             window.isTripleCoinActive = true; 
-            studentInventory.item_triple_coin -= 1; 
+            studentInventory.item_triple_coin -= 1;
             boughtItemsThisSession.item_triple_coin = true; 
             updateShopUI(); 
         } else if (itemKey === 'item_diskon') {
-            window.isDiscountActive = true; studentInventory.item_diskon -= 1; boughtItemsThisSession.item_diskon = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Semua harga di Toko dipotong 50%!');
+            window.isDiscountActive = true;
+            studentInventory.item_diskon -= 1; boughtItemsThisSession.item_diskon = true; updateShopUI(); window.showToast?.('success', 'Sihir Aktif', 'Semua harga di Toko dipotong 50%!');
         }
     };
 
@@ -1833,18 +1842,11 @@ import Mascot from '../../components/Mascot.astro';
         
         if (itemKey === 'item_tambah_waktu') {
             const timeContainer = document.getElementById('buyTimeContainer');
-            
-            // [FIX] Bikin komponen tombol dinamis, mati kalau uang gak cukup
             const renderTimeBtn = (mins, baseCost) => {
                 const cost = window.isDiscountActive ? Math.floor(baseCost/2) : baseCost;
                 const isDisabled = studentWallet < cost;
-                
-                const btnClass = isDisabled 
-                    ? "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 bg-gray-50 opacity-50 grayscale cursor-not-allowed" 
-                    : "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group cursor-pointer";
-                
+                const btnClass = isDisabled ? "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 bg-gray-50 opacity-50 grayscale cursor-not-allowed" : "w-full flex justify-between items-center p-3 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 transition-all group cursor-pointer";
                 const textClass = isDisabled ? "font-black text-gray-500" : "font-black text-gray-700 group-hover:text-teal-700";
-                
                 return `
                 <button ${isDisabled ? 'disabled' : `onclick="executeBuyTime(${mins}, ${cost})"`} class="${btnClass}">
                     <span class="${textClass}">+ ${mins} Menit ${mins === 5 ? '(Max)' : ''}</span>
@@ -1852,7 +1854,6 @@ import Mascot from '../../components/Mascot.astro';
                 </button>
                 `;
             };
-
             timeContainer.innerHTML = `
                 ${renderTimeBtn(1, 100)}
                 ${renderTimeBtn(2, 200)}
@@ -1863,14 +1864,10 @@ import Mascot from '../../components/Mascot.astro';
             document.getElementById('modalBuyTime').classList.replace('hidden', 'flex');
             return;
         }
+
+
         if (itemKey === 'item_bullying') {
             currentAttackMode = 'bully';
-            openAttackModal();
-            return;
-        }
-
-        if (itemKey === 'item_serang') {
-            currentAttackMode = 'serang';
             openAttackModal();
             return;
         }
@@ -1893,7 +1890,6 @@ import Mascot from '../../components/Mascot.astro';
             document.getElementById('ownedItemIcon').innerText = item.icon;
             document.getElementById('ownedItemName').innerText = item.name;
             document.getElementById('sellPriceText').innerText = sellPrice;
-
             document.getElementById('btnSellItem').onclick = () => executeSellItem(itemKey, sellPrice);
             document.getElementById('btnUseItem').onclick = () => {
                 document.getElementById('modalOwnedItemAction').classList.replace('flex', 'hidden');
@@ -1904,6 +1900,7 @@ import Mascot from '../../components/Mascot.astro';
         } else {
             previewItem(itemKey);
         }
+    };
     };
 
     window.confirmCallFriend = () => {
@@ -2371,16 +2368,18 @@ import Mascot from '../../components/Mascot.astro';
                 const bullyLogs = data.data.filter(l => l.action_type === 'bully');
                 if (bullyLogs.length > 0) {
                     const log = bullyLogs[0];
-                    
-                    // Mark read dulu di sistem agar tidak ke-trigger berkali-kali pas polling selanjutnya
                     fetch(`${API_URL}/api/shop/notifications/read`, { 
                         method: 'POST', 
                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
                         body: JSON.stringify({ log_ids: [log.id] }) 
                     }).catch(e => console.warn("Gagal mark read bully"));
-
+                    
                     if (window.isShieldActive) {
-                        window.showToast?.('info', 'Perisai Memantul!', `Perisaimu menahan serangan usil dari ${log.attacker_name}!`);
+                        // [PERBAIKAN] Hancurkan perisainya setelah menahan
+                        window.showToast?.('info', 'Perisai Hancur!', `Perisaimu menahan serangan usil dari ${log.attacker_name} dan kini hancur!`);
+                        window.isShieldActive = false;
+                        boughtItemsThisSession.item_perisai = false; // Boleh beli perisai lagi
+                        updateShopUI();
                     } else {
                         playBullyAnimation(log.attacker_name);
                     }

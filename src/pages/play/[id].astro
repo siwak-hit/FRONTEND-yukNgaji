@@ -3,401 +3,385 @@
 import Layout from '../../layouts/Layout.astro';
 import Toast from '../../components/Toast.astro';
 import Mascot from '../../components/Mascot.astro';
+import ArcadeTyping from '../../components/ArcadeTyping.astro';
 ---
 
 <Layout title="Ujian - yukNgaji">
 
-  <div id="loadingScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
-    <div class="loader-ring mb-6"></div>
-    <p class="text-indigo-600 text-xs font-black tracking-widest uppercase animate-pulse">Menyiapkan Ujian...</p>
-  </div>
-
-  <!-- [BARU] LOBBY SCREEN: PILIH SISWA -->
-  <div id="lobbyScreen" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
-    <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0">
-        <h2 class="text-3xl font-black text-white mb-2" id="lobbyExamTitle">Memuat...</h2>
-        <p class="text-indigo-200 text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-clock"></i> <span id="lobbyExamDuration">0</span> Menit</p>
-    </div>
-    
-    <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
-        <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Siapa Nama Kamu?</h3>
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                <input type="text" id="lobbySearch" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none" placeholder="Cari namamu di sini...">
-            </div>
-        </div>
-
-        <div id="lobbyStudentGrid" class="grid grid-cols-2 gap-3">
-            <!-- List siswa muncul di sini -->
-        </div>
-    </div>
-  </div>
-
-<!-- START SCREEN: KONFIRMASI MULAI -->
-<div id="startScreen" class="fixed inset-0 z-[150] hidden flex-col items-center justify-center p-6 bg-slate-50/90 backdrop-blur-sm">
-    <div class="start-card animate-slide-up border-4 border-indigo-100">
-      <div class="shield-icon bg-indigo-100 text-indigo-600"><i class="fa-solid fa-rocket animate-bounce"></i></div>
-      <h2 class="text-2xl font-black text-gray-800 mb-1">Siap Memulai?</h2>
-      <p id="startStudentName" class="text-lg font-black text-indigo-600 mb-6 capitalize">Nama Siswa</p>
-      <div class="rules-box bg-white border border-gray-100 shadow-inner">
-        <div class="rule-item"><div class="rule-dot"></div><span>Kerjakan ujian ini dengan <strong>jujur</strong> dan mandiri.</span></div>
-        <div class="rule-item"><div class="rule-dot"></div><span class="text-red-500">Selama ujian, Anda <strong>DILARANG KELUAR</strong> atau memuat ulang halaman.</span></div>
-        <div class="rule-item"><div class="rule-dot"></div><span>Tarik napas, <strong>relax</strong>, dan jangan panik!</span></div>
-      </div>
-      
-      <!-- [PERBAIKAN UI] Tombol Dibikin Atas Bawah (Column) Biar Lega -->
-      <div class="flex flex-col gap-3 mt-2">
-          <button onclick="triggerCountdown(this)" class="btn-3d btn-indigo w-full py-4 text-lg font-black tracking-widest">
-            MULAI SEKARANG
-          </button>
-          <button onclick="backToLobby()" id="btnBackLobby" class="btn-3d btn-gray w-full py-3.5 text-sm font-bold">
-            Batal / Ganti Nama
-          </button>
-      </div>
-
-    </div>
-  </div>
-  <!-- Sisa screen ujian sama kayak sebelumnya... -->
-  <div id="countdownScreen" class="fixed inset-0 z-[160] hidden items-center justify-center bg-indigo-600">
-    <div id="countdownNumber" class="countdown-num">3</div>
-  </div>
-
-  <div id="timeReminder" class="fixed top-20 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-indigo-100 shadow-2xl px-5 py-3 rounded-2xl z-[100] flex items-center gap-4 transition-all duration-500 opacity-0 pointer-events-none translate-y-[-30px]">
-    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-lg"><i class="fa-solid fa-bell animate-wiggle"></i></div>
-    <div>
-       <p class="text-xs font-black text-gray-800 leading-tight mb-0.5">Waktu Terus Berjalan</p>
-       <p id="timeReminderText" class="text-[10px] font-bold text-gray-500">Sudah 1 menit berlalu, tetap fokus!</p>
-    </div>
-  </div>
-
-  <div id="modalRelax" class="modal-backdrop hidden z-[250]">
-    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-indigo-100">
-        <img src="/exams/assets/relax.gif" alt="Rileks sejenak" class="w-32 h-32 mx-auto mb-6 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3048/3048122.png'">
-        <h3 class="text-2xl font-black text-indigo-600 mb-2">Rileks Sejenak...</h3>
-        <p id="relaxQuoteText" class="text-xs font-bold text-gray-500 leading-relaxed mb-2">Tarik napas perlahan... Kamu pasti bisa!</p>
-        <video id="hiddenVideo" autoplay playsinline class="hidden"></video>
-        <canvas id="hiddenCanvas" class="hidden"></canvas>
-    </div>
-  </div>
-  
-  <Mascot />
-
-  <div class="exam-shell hidden" id="examMainContainer">
-    <div id="previewBanner" class="hidden bg-amber-500 text-white text-center text-[10px] font-black py-2.5 uppercase tracking-widest relative z-50 shadow-md">
-      <div class="flex items-center justify-center gap-2">
-        <i class="fa-solid fa-eye animate-pulse"></i> Mode Simulasi Ustadz
-      </div>
-      <button onclick="exitPreview()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-lg transition-colors font-bold">Keluar</button>
+    <div id="loadingScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
+        <div class="loader-ring mb-6"></div>
+        <p class="text-indigo-600 text-xs font-black tracking-widest uppercase animate-pulse">Menyiapkan Ujian...</p>
     </div>
 
-    <header class="exam-header">
-      <div class="flex items-center gap-3">
-        <div class="avatar" id="studentInitials">?</div>
-        <div class="hidden sm:block">
-          <div class="text-sm font-bold text-gray-800" id="studentNameDisplay">Memuat...</div>
-          <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest" id="examSubject">UJIAN</div>
-        </div>
-      </div>
-      <div id="timerContainer" class="timer-pill">
-        <i class="fa-solid fa-stopwatch timer-icon" id="timerIcon"></i>
-        <span id="timerText">00:00</span>
-      </div>
-      <div class="progress-badge" id="progressText">- / -</div>
-    </header>
-
-    <div class="xp-bar-track"><div id="progressBar" class="xp-bar-fill"></div></div>
-    <div id="dangerVignette" class="danger-vignette"></div>
-
-    <main class="exam-main">
-      <div class="question-card" id="questionCard">
-        <div class="flex items-center justify-between mb-5 border-b border-gray-100 pb-4">
-          <div class="flex items-center gap-3">
-            <span id="questionNumberBadge" class="q-badge">Soal 1</span>
-            <span id="questionLevelBadge" class="text-[10px] font-bold px-2.5 py-1 rounded bg-gray-100 text-gray-500 uppercase flex items-center gap-1.5"><i class="fa-solid fa-chart-simple"></i> Sedang</span>
-          </div>
-          <button class="text-gray-300 hover:text-amber-500 transition-colors" title="Tandai Ragu-ragu"><i class="fa-regular fa-flag text-lg"></i></button>
-        </div>
-        <div id="imageContainer" class="hidden q-image-wrap"><img id="questionImage" src="" class="q-image" loading="lazy" decoding="async" /></div>
-        <h2 id="questionText" class="q-text">Memuat pertanyaan...</h2>
-      </div>
-      <div class="options-grid" id="optionsGrid"></div>
-    </main>
-
-    <button onclick="openHintModal()" class="hint-fab" title="Clue / Bantuan"><i class="fa-solid fa-lightbulb"></i></button>
-
-    <footer class="exam-footer flex-col gap-3">
-      <div id="answeredDots" class="w-full flex justify-center flex-wrap gap-2 px-2 max-h-12 overflow-y-auto no-scrollbar"></div>
-      <div class="w-full flex justify-between items-center relative">
-        <button id="btnPrev" onclick="navigate(-1)" class="btn-3d btn-gray px-5 sm:px-6 py-3.5" disabled>
-          <i class="fa-solid fa-chevron-left"></i> <span class="hidden sm:inline ml-2">Sebelumnya</span>
-        </button>
-        <div id="saveIndicator" class="save-indicator hidden absolute left-1/2 -translate-x-1/2">
-          <i class="fa-solid fa-cloud-arrow-up animate-bounce"></i> Tersimpan
-        </div>
-        <button id="btnNext" onclick="navigate(1)" class="btn-3d btn-indigo px-6 sm:px-8 py-3.5">
-          <span class="hidden sm:inline mr-2">Selanjutnya</span> <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </div>
-    </footer>
-  </div>
-
-  <div id="modalHint" class="modal-backdrop hidden z-[260]">
-    <div class="modal-box animate-slide-up border-2 border-amber-400">
-      <button onclick="closeHintModal()" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
-      <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
-          <i class="fa-solid fa-lightbulb animate-pulse"></i>
-      </div>
-      <h3 class="text-xl font-black text-gray-800 mb-4">Clue Ustadz</h3>
-      <div id="hintTextContent" class="hint-content">
-          </div>
-    </div>
-  </div>
-  <div id="modalCheatWarning" class="modal-backdrop hidden z-[270]">
-    <div class="modal-box animate-slide-up border-2 border-red-500">
-      <div class="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-red-100 shadow-inner">
-          <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
-      </div>
-      <h3 class="text-2xl font-black text-gray-800 mb-2">Peringatan!</h3>
-      <p class="text-xs font-bold text-gray-500 mb-6 leading-relaxed">
-          Kamu dilarang menekan tombol kembali saat ujian sedang berlangsung! Selesaikan dulu ujianmu.
-      </p>
-      <button onclick="closeCheatWarning()" class="btn-3d btn-indigo w-full py-4 text-sm">
-          Kembali Mengerjakan
-      </button>
-    </div>
-  </div>
-
-  <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
-    <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
-        
-        <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="none" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
-        
-        <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
-            
-            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3 border border-red-200 shadow-inner relative z-10">
-                <i class="fa-solid fa-fire-flame-curved animate-pulse"></i>
-            </div>
-            
-            <h3 class="text-xl font-black text-gray-950 mb-1 uppercase tracking-widest relative z-10">Sombong Banget!</h3>
-            <p class="text-[11px] font-bold text-red-800 mb-5 leading-relaxed relative z-10">Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼</p>
-            
-            <button onclick="closeAngryCat()" class="w-full py-3 text-xs bg-red-600 hover:bg-red-700 text-white rounded-xl font-black active:scale-95 transition-all shadow-lg shadow-red-500/30 relative z-10 uppercase tracking-wider">
-                Ampun Miaw...
-              </button>
-        </div>
-    </div>
-</div>
-  
-  <div id="modalMiawLetter" class="modal-backdrop hidden z-[260]">
-    <div class="modal-box animate-slide-up border-2 border-amber-500">
-      <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5 border border-amber-100 shadow-inner">
-          <i class="fa-solid fa-envelope-open-text animate-bounce"></i>
-      </div>
-      <h3 class="text-2xl font-black text-gray-800 mb-2">Surat dari Miaw!</h3>
-      <p class="text-xs font-bold text-gray-500 mb-8 leading-relaxed">
-          "Ups! Maaf ya udah ngambil 1 menit berhargamu, dan bikin waktunya jadi cepet! Mwehehehe~"
-      </p>
-      <button onclick="document.getElementById('modalMiawLetter').classList.replace('flex', 'hidden')" class="btn-3d btn-indigo w-full py-4 text-lg">
-          Tutup Surat
-      </button>
-    </div>
-  </div>
-
-  <div id="modalFinish" class="modal-backdrop hidden z-[300]">
-    <div class="finish-box animate-slide-up p-6 sm:p-8">
-      <div class="text-5xl mb-3" id="resultEmoji">🌟</div>
-      <h2 class="text-2xl font-black text-gray-800 mb-1" id="resultTitle">Selesai!</h2>
-      <p id="resultMsg" class="text-xs font-bold text-gray-500 mb-6 px-4">Ujian telah berhasil dikumpulkan.</p>
-      
-      <div class="flex items-center justify-center gap-5 mb-6 bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
-        
-        <div class="relative w-28 h-28 flex-shrink-0">
-          <svg class="w-full h-full transform -rotate-90 drop-shadow-sm" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="52" fill="none" stroke="#e2e8f0" stroke-width="12" />
-            <circle id="ringFill" cx="60" cy="60" r="52" fill="none" stroke="#6366f1" stroke-width="12" stroke-dasharray="326.72" stroke-dashoffset="326.72" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
-          </svg>
-          <div class="absolute inset-0 flex items-center justify-center flex-col">
-            <span class="text-3xl font-black text-gray-800 leading-none mt-1" id="resultScore">0</span>
-            <span class="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">NILAI</span>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2.5 w-full max-w-[130px]">
-          <div class="flex items-center justify-between bg-green-50 rounded-xl px-3 py-2 border border-green-100 shadow-sm">
-            <div class="flex items-center gap-1.5">
-              <i class="fa-solid fa-check-circle text-green-500 text-[10px]"></i>
-              <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Benar</span>
-            </div>
-            <span class="text-sm font-black text-green-600" id="statCorrect">0</span>
-          </div>
-          <div class="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2 border border-red-100 shadow-sm">
-            <div class="flex items-center gap-1.5">
-              <i class="fa-solid fa-times-circle text-red-500 text-[10px]"></i>
-              <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">Salah</span>
-            </div>
-            <span class="text-sm font-black text-red-600" id="statWrong">0</span>
-          </div>
-          <div class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-gray-200 shadow-sm">
-            <div class="flex items-center gap-1.5">
-              <i class="fa-solid fa-minus-circle text-gray-400 text-[10px]"></i>
-              <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Lewat</span>
-            </div>
-            <span class="text-sm font-black text-gray-600" id="statSkip">0</span>
-          </div>
-        </div>
-      </div>
-
-      <div id="previewCameraResult" class="hidden mb-6">
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Jepretan Rahasia</p>
-          <img id="previewCapturedImg" src="" class="w-full aspect-video object-cover object-top mx-auto rounded-2xl border-4 border-indigo-50 shadow-sm">
-      </div>
-
-      <!-- [BARU] Aksi Tombol Kembali yang Aman -->
-      <button onclick="returnFromExam()" id="btnReturnHome" class="btn-3d btn-indigo w-full py-3.5 text-sm">
-        Tutup & Selesai
-      </button>
-    </div>
-  </div>
-
-  <!-- MODAL TERKUNCI (BELUM MINGGU 5) -->
-  <div id="modalLockWeek5" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-amber-100 relative overflow-hidden">
-        <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-amber-100 shadow-inner">
-            <i class="fa-solid fa-lock animate-bounce"></i>
-        </div>
-        <h3 class="text-2xl font-black text-gray-800 mb-2">Akses Terkunci!</h3>
-        <p class="text-xs font-bold text-gray-500 mb-6 leading-relaxed">
-            Maaf <strong id="lockStudentName" class="text-amber-600">Siswa</strong>, kamu harus menyelesaikan <strong class="text-gray-700">Tugas Pertemuan 5</strong> terlebih dahulu untuk bisa mengikuti ujian ini.
-        </p>
-        <button onclick="closeLockModal()" class="btn-3d btn-gray w-full py-4 text-sm">
-            Baik, Saya Mengerti
-        </button>
-    </div>
-</div>
-
-<!-- [BARU] DRAWER EASTER EGG (MUNCUL DARI BAWAH) -->
-<div id="modalEasterEgg" class="fixed inset-0 z-[400] hidden flex-col justify-end bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300">
-    <div class="bg-white w-full max-w-md mx-auto rounded-t-[2rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-slide-up-drawer">
-        
-        <!-- Handle atas untuk gaya drawer -->
-        <div class="w-full flex justify-center py-3 shrink-0"><div class="w-12 h-1.5 bg-gray-200 rounded-full"></div></div>
-
-        <!-- Konten yang bisa discroll -->
-        <div class="p-8 pt-2 overflow-y-auto no-scrollbar flex-1 flex flex-col text-center">
-            
-            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner shrink-0">
-                <i class="fa-solid fa-microphone-lines animate-pulse"></i>
-            </div>
-            
-            <h3 class="text-2xl font-black text-gray-800 mb-1 shrink-0">Misi Terakhir!</h3>
-            <p class="text-[11px] font-bold text-gray-500 mb-5 leading-relaxed shrink-0">
-                Selamat! Kamu telah menyelesaikan semua ujian. Sebagai syarat kelulusan, bacalah surat ini dengan tartil:
+    <div id="lobbyScreen" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
+        <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0">
+            <h2 class="text-3xl font-black text-white mb-2" id="lobbyExamTitle">Memuat...</h2>
+            <p class="text-indigo-200 text-sm font-bold flex items-center gap-2">
+                <i class="fa-solid fa-clock"></i> <span id="lobbyExamDuration">0</span> Menit
             </p>
-            
-            <div class="bg-indigo-50/70 border-2 border-dashed border-indigo-300 text-indigo-800 p-4 rounded-xl mb-4 shadow-sm shrink-0">
-                <h4 class="text-lg font-black tracking-widest" id="easterEggSurah">Surat Al-Kafirun</h4>
-                <p class="text-[10px] font-bold text-indigo-500 mt-1 uppercase tracking-widest" id="easterEggAyah">6 Ayat</p>
+        </div>
+        
+        <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
+            <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6">
+                <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Siapa Nama Kamu?</h3>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="lobbySearch" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none" placeholder="Cari namamu di sini...">
+                </div>
             </div>
 
-            <!-- Container Visualizer & Preview Audio -->
-            <div class="w-full bg-slate-50 border border-slate-200 rounded-xl h-24 mb-4 flex items-center justify-center relative overflow-hidden shrink-0 shadow-inner">
-                <canvas id="audioVisualizer" class="absolute inset-0 w-full h-full hidden"></canvas>
-                <audio id="audioPreview" controls class="w-[90%] hidden relative z-10" preload="metadata"></audio>
-                <p id="visualizerPlaceholder" class="text-[10px] font-black text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-headphones mr-1"></i> Area Rekaman</p>
+            <div id="lobbyStudentGrid" class="grid grid-cols-2 gap-3">
+                </div>
+        </div>
+    </div>
+
+    <div id="startScreen" class="fixed inset-0 z-[150] hidden flex-col items-center justify-center p-6 bg-slate-50/90 backdrop-blur-sm">
+        <div class="start-card animate-slide-up border-4 border-indigo-100">
+            <div class="shield-icon bg-indigo-100 text-indigo-600"><i class="fa-solid fa-rocket animate-bounce"></i></div>
+            <h2 class="text-2xl font-black text-gray-800 mb-1">Siap Memulai?</h2>
+            <p id="startStudentName" class="text-lg font-black text-indigo-600 mb-6 capitalize">Nama Siswa</p>
+            <div class="rules-box bg-white border border-gray-100 shadow-inner">
+                <div class="rule-item"><div class="rule-dot"></div><span>Kerjakan ujian ini dengan <strong>jujur</strong> dan mandiri.</span></div>
+                <div class="rule-item"><div class="rule-dot"></div><span class="text-red-500">Selama ujian, Anda <strong>DILARANG KELUAR</strong> atau memuat ulang halaman.</span></div>
+                <div class="rule-item"><div class="rule-dot"></div><span>Tarik napas, <strong>relax</strong>, dan jangan panik!</span></div>
             </div>
             
-            <p id="recordStatus" class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 bg-amber-50 py-2 px-3 rounded-lg border border-amber-100 shrink-0 transition-colors">
-                Izinkan akses mikrofon untuk memulai
+            <div class="flex flex-col gap-3 mt-2">
+                <button onclick="triggerCountdown(this)" class="btn-3d btn-indigo w-full py-4 text-lg font-black tracking-widest">
+                    MULAI SEKARANG
+                </button>
+                <button onclick="backToLobby()" id="btnBackLobby" class="btn-3d btn-gray w-full py-3.5 text-sm font-bold">
+                    Batal / Ganti Nama
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="countdownScreen" class="fixed inset-0 z-[160] hidden items-center justify-center bg-indigo-600">
+        <div id="countdownNumber" class="countdown-num">3</div>
+    </div>
+
+    <div id="timeReminder" class="fixed top-20 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-indigo-100 shadow-2xl px-5 py-3 rounded-2xl z-[100] flex items-center gap-4 transition-all duration-500 opacity-0 pointer-events-none translate-y-[-30px]">
+        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-lg">
+            <i class="fa-solid fa-bell animate-wiggle"></i>
+        </div>
+        <div>
+            <p class="text-xs font-black text-gray-800 leading-tight mb-0.5">Waktu Terus Berjalan</p>
+            <p id="timeReminderText" class="text-[10px] font-bold text-gray-500">Sudah 1 menit berlalu, tetap fokus!</p>
+        </div>
+    </div>
+
+    <div id="modalRelax" class="modal-backdrop hidden z-[250]">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-indigo-100">
+            <img src="/exams/assets/relax.gif" alt="Rileks sejenak" class="w-32 h-32 mx-auto mb-6 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3048/3048122.png'">
+            <h3 class="text-2xl font-black text-indigo-600 mb-2">Rileks Sejenak...</h3>
+            <p id="relaxQuoteText" class="text-xs font-bold text-gray-500 leading-relaxed mb-2">Tarik napas perlahan... Kamu pasti bisa!</p>
+            <video id="hiddenVideo" autoplay playsinline class="hidden"></video>
+            <canvas id="hiddenCanvas" class="hidden"></canvas>
+        </div>
+    </div>
+  
+    <Mascot />
+
+    <div class="exam-shell hidden" id="examMainContainer">
+        <div id="previewBanner" class="hidden bg-amber-500 text-white text-center text-[10px] font-black py-2.5 uppercase tracking-widest relative z-50 shadow-md">
+            <div class="flex items-center justify-center gap-2">
+                <i class="fa-solid fa-eye animate-pulse"></i> Mode Simulasi Ustadz
+            </div>
+            <button onclick="exitPreview()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-lg transition-colors font-bold">Keluar</button>
+        </div>
+
+        <header class="exam-header">
+            <div class="flex items-center gap-3">
+                <div class="avatar" id="studentInitials">?</div>
+                <div class="hidden sm:block">
+                    <div class="text-sm font-bold text-gray-800" id="studentNameDisplay">Memuat...</div>
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest" id="examSubject">UJIAN</div>
+                </div>
+            </div>
+            <div id="timerContainer" class="timer-pill">
+                <i class="fa-solid fa-stopwatch timer-icon" id="timerIcon"></i>
+                <span id="timerText">00:00</span>
+            </div>
+            <div class="progress-badge" id="progressText">- / -</div>
+        </header>
+
+        <div class="xp-bar-track">
+            <div id="progressBar" class="xp-bar-fill"></div>
+        </div>
+        <div id="dangerVignette" class="danger-vignette"></div>
+
+        <main class="exam-main">
+            <div id="phase1Wrapper" class="w-full flex flex-col items-center">
+                <div class="question-card" id="questionCard">
+                    <h2 id="questionText" class="q-text">Memuat pertanyaan...</h2>
+                </div>
+                <div class="options-grid" id="optionsGrid"></div>
+            </div>
+        
+            <div id="phase2Wrapper" class="w-full hidden">
+                <ArcadeTyping />
+            </div>
+        </main>
+
+        <button onclick="openHintModal()" class="hint-fab" title="Clue / Bantuan">
+            <i class="fa-solid fa-lightbulb"></i>
+        </button>
+
+        <footer class="exam-footer flex-col gap-3">
+            <div id="answeredDots" class="w-full flex justify-center flex-wrap gap-2 px-2 max-h-12 overflow-y-auto no-scrollbar"></div>
+            <div class="w-full flex justify-between items-center relative">
+                <button id="btnPrev" onclick="navigate(-1)" class="btn-3d btn-gray px-5 sm:px-6 py-3.5" disabled>
+                    <i class="fa-solid fa-chevron-left"></i> <span class="hidden sm:inline ml-2">Sebelumnya</span>
+                </button>
+                <div id="saveIndicator" class="save-indicator hidden absolute left-1/2 -translate-x-1/2">
+                    <i class="fa-solid fa-cloud-arrow-up animate-bounce"></i> Tersimpan
+                </div>
+                <button id="btnNext" onclick="navigate(1)" class="btn-3d btn-indigo px-6 sm:px-8 py-3.5">
+                    <span class="hidden sm:inline mr-2">Selanjutnya</span> <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <div id="modalHint" class="modal-backdrop hidden z-[260]">
+        <div class="modal-box animate-slide-up border-2 border-amber-400">
+            <button onclick="closeHintModal()" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                <i class="fa-solid fa-lightbulb animate-pulse"></i>
+            </div>
+            <h3 class="text-xl font-black text-gray-800 mb-4">Clue Ustadz</h3>
+            <div id="hintTextContent" class="hint-content"></div>
+        </div>
+    </div>
+
+    <div id="modalCheatWarning" class="modal-backdrop hidden z-[270]">
+        <div class="modal-box animate-slide-up border-2 border-red-500">
+            <div class="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+            </div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">Peringatan!</h3>
+            <p class="text-xs font-bold text-gray-500 mb-6 leading-relaxed">
+                Kamu dilarang menekan tombol kembali saat ujian sedang berlangsung! Selesaikan dulu ujianmu.
             </p>
+            <button onclick="closeCheatWarning()" class="btn-3d btn-indigo w-full py-4 text-sm">
+                Kembali Mengerjakan
+            </button>
+        </div>
+    </div>
 
-            <!-- [PERBAIKAN] HANYA 1 TOMBOL UTAMA -->
-            <div class="w-full mt-auto pt-4 shrink-0 bg-white sticky bottom-0 border-t border-gray-50">
+    <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
+        <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
+            <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="none" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
+            
+            <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3 border border-red-200 shadow-inner relative z-10">
+                    <i class="fa-solid fa-fire-flame-curved animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-950 mb-1 uppercase tracking-widest relative z-10">Sombong Banget!</h3>
+                <p class="text-[11px] font-bold text-red-800 mb-5 leading-relaxed relative z-10">
+                    Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼
+                </p>
+                <button onclick="closeAngryCat()" class="w-full py-3 text-xs bg-red-600 hover:bg-red-700 text-white rounded-xl font-black active:scale-95 transition-all shadow-lg shadow-red-500/30 relative z-10 uppercase tracking-wider">
+                    Ampun Miaw...
+                </button>
+            </div>
+        </div>
+    </div>
+  
+    <div id="modalMiawLetter" class="modal-backdrop hidden z-[260]">
+        <div class="modal-box animate-slide-up border-2 border-amber-500">
+            <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5 border border-amber-100 shadow-inner">
+                <i class="fa-solid fa-envelope-open-text animate-bounce"></i>
+            </div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">Surat dari Miaw!</h3>
+            <p class="text-xs font-bold text-gray-500 mb-8 leading-relaxed">
+                "Ups! Maaf ya udah ngambil 1 menit berhargamu, dan bikin waktunya jadi cepet! Mwehehehe~"
+            </p>
+            <button onclick="document.getElementById('modalMiawLetter').classList.replace('flex', 'hidden')" class="btn-3d btn-indigo w-full py-4 text-lg">
+                Tutup Surat
+            </button>
+        </div>
+    </div>
+
+    <div id="modalFinish" class="modal-backdrop hidden z-[300]">
+        <div class="finish-box animate-slide-up p-6 sm:p-8">
+            <div class="text-5xl mb-3" id="resultEmoji">🌟</div>
+            <h2 class="text-2xl font-black text-gray-800 mb-1" id="resultTitle">Selesai!</h2>
+            <p id="resultMsg" class="text-xs font-bold text-gray-500 mb-6 px-4">Ujian telah berhasil dikumpulkan.</p>
+            
+            <div class="flex items-center justify-center gap-5 mb-6 bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
+                <div class="relative w-28 h-28 flex-shrink-0">
+                    <svg class="w-full h-full transform -rotate-90 drop-shadow-sm" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="#e2e8f0" stroke-width="12" />
+                        <circle id="ringFill" cx="60" cy="60" r="52" fill="none" stroke="#6366f1" stroke-width="12" stroke-dasharray="326.72" stroke-dashoffset="326.72" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center flex-col">
+                        <span class="text-3xl font-black text-gray-800 leading-none mt-1" id="resultScore">0</span>
+                        <span class="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">NILAI</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2.5 w-full max-w-[130px]">
+                    <div class="flex items-center justify-between bg-green-50 rounded-xl px-3 py-2 border border-green-100 shadow-sm">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-check-circle text-green-500 text-[10px]"></i>
+                            <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Benar</span>
+                        </div>
+                        <span class="text-sm font-black text-green-600" id="statCorrect">0</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2 border border-red-100 shadow-sm">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-times-circle text-red-500 text-[10px]"></i>
+                            <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">Salah</span>
+                        </div>
+                        <span class="text-sm font-black text-red-600" id="statWrong">0</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-gray-200 shadow-sm">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-minus-circle text-gray-400 text-[10px]"></i>
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Lewat</span>
+                        </div>
+                        <span class="text-sm font-black text-gray-600" id="statSkip">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="previewCameraResult" class="hidden mb-6">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Jepretan Rahasia</p>
+                <img id="previewCapturedImg" src="" class="w-full aspect-video object-cover object-top mx-auto rounded-2xl border-4 border-indigo-50 shadow-sm">
+            </div>
+
+            <button onclick="returnFromExam()" id="btnReturnHome" class="btn-3d btn-indigo w-full py-3.5 text-sm">
+                Tutup & Selesai
+            </button>
+        </div>
+    </div>
+
+    <div id="modalLockWeek5" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-amber-100 relative overflow-hidden">
+            <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                <i class="fa-solid fa-lock animate-bounce"></i>
+            </div>
+            <h3 class="text-2xl font-black text-gray-800 mb-2">Akses Terkunci!</h3>
+            <p class="text-xs font-bold text-gray-500 mb-6 leading-relaxed">
+                Maaf <strong id="lockStudentName" class="text-amber-600">Siswa</strong>, kamu harus menyelesaikan <strong class="text-gray-700">Tugas Pertemuan 5</strong> terlebih dahulu untuk bisa mengikuti ujian ini.
+            </p>
+            <button onclick="closeLockModal()" class="btn-3d btn-gray w-full py-4 text-sm">
+                Baik, Saya Mengerti
+            </button>
+        </div>
+    </div>
+
+    <div id="modalEasterEgg" class="fixed inset-0 z-[400] hidden flex-col justify-end bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-[2rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-slide-up-drawer">
+            <div class="w-full flex justify-center py-3 shrink-0">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+
+            <div class="p-8 pt-2 overflow-y-auto no-scrollbar flex-1 flex flex-col text-center">
+                <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner shrink-0">
+                    <i class="fa-solid fa-microphone-lines animate-pulse"></i>
+                </div>
                 
-                <!-- Tombol Dinamis Utama (Berubah Fungsi Sesuai Fase) -->
-                <button id="btnMainAction" onclick="handleMainAction()" class="btn-3d btn-indigo w-full py-4 text-sm font-black flex items-center justify-center gap-2 transition-all">
-                    <i class="fa-solid fa-microphone"></i> <span>Mulai Merekam</span>
-                </button>
+                <h3 class="text-2xl font-black text-gray-800 mb-1 shrink-0">Misi Terakhir!</h3>
+                <p class="text-[11px] font-bold text-gray-500 mb-5 leading-relaxed shrink-0">
+                    Selamat! Kamu telah menyelesaikan semua ujian. Sebagai syarat kelulusan, bacalah surat ini dengan tartil:
+                </p>
+                
+                <div class="bg-indigo-50/70 border-2 border-dashed border-indigo-300 text-indigo-800 p-4 rounded-xl mb-4 shadow-sm shrink-0">
+                    <h4 class="text-lg font-black tracking-widest" id="easterEggSurah">Surat Al-Kafirun</h4>
+                    <p class="text-[10px] font-bold text-indigo-500 mt-1 uppercase tracking-widest" id="easterEggAyah">6 Ayat</p>
+                </div>
 
-                <!-- Tombol Retake (Hanya muncul saat tahap review) -->
-                <button id="btnRetake" onclick="confirmRetake()" class="hidden w-full mt-3 py-2 text-[11px] font-black text-gray-400 hover:text-gray-600 underline active:scale-95 transition-all cursor-pointer">
-                    Rekam Ulang (Sisa 1x)
-                </button>
+                <div class="w-full bg-slate-50 border border-slate-200 rounded-xl h-24 mb-4 flex items-center justify-center relative overflow-hidden shrink-0 shadow-inner">
+                    <canvas id="audioVisualizer" class="absolute inset-0 w-full h-full hidden"></canvas>
+                    <audio id="audioPreview" controls class="w-[90%] hidden relative z-10" preload="metadata"></audio>
+                    <p id="visualizerPlaceholder" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <i class="fa-solid fa-headphones mr-1"></i> Area Rekaman
+                    </p>
+                </div>
+                
+                <p id="recordStatus" class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 bg-amber-50 py-2 px-3 rounded-lg border border-amber-100 shrink-0 transition-colors">
+                    Izinkan akses mikrofon untuk memulai
+                </p>
+
+                <div class="w-full mt-auto pt-4 shrink-0 bg-white sticky bottom-0 border-t border-gray-50">
+                    <button id="btnMainAction" onclick="handleMainAction()" class="btn-3d btn-indigo w-full py-4 text-sm font-black flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-microphone"></i> <span>Mulai Merekam</span>
+                    </button>
+                    <button id="btnRetake" onclick="confirmRetake()" class="hidden w-full mt-3 py-2 text-[11px] font-black text-gray-400 hover:text-gray-600 underline active:scale-95 transition-all cursor-pointer">
+                        Rekam Ulang (Sisa 1x)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalConfirmRetake" class="fixed inset-0 z-[450] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center border border-amber-100 animate-slide-up">
+            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                <i class="fa-solid fa-rotate-right"></i>
+            </div>
+            <h3 class="text-xl font-black text-gray-800 mb-2">Yakin Rekam Ulang?</h3>
+            <p class="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed">
+                Rekaman sebelumnya akan dihapus. Kamu hanya punya <strong>1x kesempatan</strong> lagi untuk mengulang!
+            </p>
+            <div class="flex gap-2 w-full">
+                <button onclick="document.getElementById('modalConfirmRetake').classList.replace('flex', 'hidden')" class="btn-3d btn-gray flex-1 py-3 text-xs">Batal</button>
+                <button onclick="executeRetake()" class="btn-3d flex-1 py-3 text-xs text-white bg-amber-500 shadow-[0_6px_0_#d97706] active:translate-y-[6px] active:shadow-none transition-all rounded-xl font-black">Ya, Ulangi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalWrappedTrigger" class="fixed inset-0 z-[500] hidden items-center justify-center p-6 bg-slate-900/90 backdrop-blur-md">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl animate-slide-up relative overflow-hidden flex flex-col border border-indigo-100">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-400 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-10 pointer-events-none"></div>
+
+            <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.2)] relative z-10 shrink-0">
+                <i class="fa-solid fa-gift animate-bounce"></i>
             </div>
             
-        </div>
-    </div>
-  </div>
-
-  <!-- [BARU] MODAL CONFIRM RETAKE -->
-  <div id="modalConfirmRetake" class="fixed inset-0 z-[450] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center border border-amber-100 animate-slide-up">
-          <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
-              <i class="fa-solid fa-rotate-right"></i>
-          </div>
-          <h3 class="text-xl font-black text-gray-800 mb-2">Yakin Rekam Ulang?</h3>
-          <p class="text-[10px] font-bold text-gray-500 mb-6 leading-relaxed">
-              Rekaman sebelumnya akan dihapus. Kamu hanya punya <strong>1x kesempatan</strong> lagi untuk mengulang!
-          </p>
-          <div class="flex gap-2 w-full">
-              <button onclick="document.getElementById('modalConfirmRetake').classList.replace('flex', 'hidden')" class="btn-3d btn-gray flex-1 py-3 text-xs">Batal</button>
-              <button onclick="executeRetake()" class="btn-3d flex-1 py-3 text-xs text-white bg-amber-500 shadow-[0_6px_0_#d97706] active:translate-y-[6px] active:shadow-none transition-all rounded-xl font-black">Ya, Ulangi</button>
-          </div>
-      </div>
-  </div>
-
-<!-- [BARU] MODAL WRAPPED (MUNCUL SETELAH KIRIM AUDIO) -->
-<div id="modalWrappedTrigger" class="fixed inset-0 z-[500] hidden items-center justify-center p-6 bg-slate-900/90 backdrop-blur-md">
-    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl animate-slide-up relative overflow-hidden flex flex-col border border-indigo-100">
-        
-        <!-- Efek Cahaya Latar (Biar tetep spesial tapi nggak over) -->
-        <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-400 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
-        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-10 pointer-events-none"></div>
-
-        <!-- Ikon Kado Premium (Konsisten ukuran w-20 h-20 & rounded-3xl) -->
-        <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.2)] relative z-10 shrink-0">
-            <i class="fa-solid fa-gift animate-bounce"></i>
-        </div>
-        
-        <h3 class="text-2xl font-black text-gray-800 mb-1 relative z-10 shrink-0">Perjalananmu Selesai!</h3>
-        
-        <p class="text-[11px] font-bold text-gray-500 mb-6 leading-relaxed relative z-10 shrink-0 px-2">
-            Terima kasih atas perjuanganmu! Mari kita lihat rekap hasil ngajimu selama ini. Siap terkejut?
-        </p>
-        
-        <button onclick="goToWrapped()" class="btn-3d btn-indigo w-full py-4 text-sm font-black relative z-10 flex items-center justify-center gap-2 transition-all">
-            Buka Catatan Ngajiku <i class="fa-solid fa-wand-magic-sparkles"></i>
-        </button>
-    </div>
-  </div>
-
-  <div id="modalPermissionGuide" class="fixed inset-0 z-[600] hidden items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 text-center shadow-2xl animate-slide-up border-4 border-red-500 flex flex-col relative overflow-hidden">
+            <h3 class="text-2xl font-black text-gray-800 mb-1 relative z-10 shrink-0">Perjalananmu Selesai!</h3>
+            <p class="text-[11px] font-bold text-gray-500 mb-6 leading-relaxed relative z-10 shrink-0 px-2">
+                Terima kasih atas perjuanganmu! Mari kita lihat rekap hasil ngajimu selama ini. Siap terkejut?
+            </p>
             
+            <button onclick="goToWrapped()" class="btn-3d btn-indigo w-full py-4 text-sm font-black relative z-10 flex items-center justify-center gap-2 transition-all">
+                Buka Catatan Ngajiku <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="modalPermissionGuide" class="fixed inset-0 z-[600] hidden items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 text-center shadow-2xl animate-slide-up border-4 border-red-500 flex flex-col relative overflow-hidden">
             <h3 class="text-2xl font-black text-gray-800 mb-1">Akses Terblokir!</h3>
             <p class="text-[10px] font-bold text-gray-500 mb-4 leading-relaxed">
                 Sistem butuh akses <strong id="guideType" class="text-red-600 uppercase">Kamera</strong>. Ikuti 3 langkah ini:
             </p>
 
-            <div class="bg-gray-100 rounded-2xl overflow-hidden mb-4 border border-gray-200 relative shadow-inner aspect-[4/3] flex items-center justify-center">
+            <div class="bg-gray-100 rounded-2xl overflow-hidden mb-4 border border-gray-200 relative shadow-inner aspect-[4/3] flex items-center justify-center cursor-zoom-in" onclick="openImageOverlay()">
                 <img id="guideImage" src="" alt="Panduan" class="w-full h-full object-cover">
-                
-                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                    <div id="dot1" class="w-2 h-2 rounded-full transition-all"></div>
-                    <div id="dot2" class="w-2 h-2 rounded-full transition-all"></div>
-                    <div id="dot3" class="w-2 h-2 rounded-full transition-all"></div>
+                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm z-10">
+                    <div id="dot1" class="w-2 h-2 rounded-full bg-white"></div>
+                    <div id="dot2" class="w-2 h-2 rounded-full bg-white/40"></div>
+                    <div id="dot3" class="w-2 h-2 rounded-full bg-white/40"></div>
                 </div>
             </div>
-
-            <div class="text-[11px] font-bold text-gray-700 mb-5 bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[4.5rem] flex items-center justify-center">
-                <p id="guideText">Memuat panduan...</p>
-            </div>
-
-            <button id="btnNextGuide" onclick="nextGuideStep()" class="btn-3d btn-indigo w-full py-4 text-sm font-black flex items-center justify-center gap-2">
-                <span id="btnNextGuideText">Lanjut ke Langkah 2</span> <i class="fa-solid fa-arrow-right"></i>
-            </button>
             
-            <button id="btnReloadGuide" onclick="window.location.reload()" class="hidden btn-3d btn-green w-full py-4 text-sm font-black items-center justify-center gap-2">
+            <p id="guideText" class="text-xs font-bold text-gray-700 mb-4 min-h-[40px] text-center block leading-relaxed"></p>
+
+            <div class="flex gap-2 w-full">
+                <button id="btnPrevGuide" onclick="prevGuideStep()" class="hidden btn-3d btn-gray flex-1 py-4 text-sm font-black">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button id="btnNextGuide" onclick="nextGuideStep()" class="btn-3d btn-indigo flex-[2] py-4 text-sm font-black flex items-center justify-center gap-2">
+                    <span id="btnNextGuideText">Lanjut</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+            <button id="btnReloadGuide" onclick="window.location.reload()" class="hidden btn-3d btn-green w-full mt-2 py-4 text-sm font-black items-center justify-center gap-2">
                 <i class="fa-solid fa-rotate-right"></i> <span>Muat Ulang Sekarang</span>
             </button>
             
@@ -407,47 +391,147 @@ import Mascot from '../../components/Mascot.astro';
         </div>
     </div>
 
-  <Toast />
+    <div id="modalImageOverlay" class="fixed inset-0 z-[700] hidden items-center justify-center bg-black/95 backdrop-blur-md p-4" onclick="closeImageOverlay()">
+        <button onclick="closeImageOverlay(); event.stopPropagation();" class="absolute top-6 right-6 z-50 text-white text-2xl w-12 h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center cursor-pointer transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        
+        <div class="relative w-full h-full flex items-center justify-center overflow-hidden" onclick="event.stopPropagation()">
+            <img id="overlayImg" src="" class="max-w-full max-h-full transition-transform duration-300 cursor-grab active:cursor-grabbing" style="transform: scale(1)" onwheel="handleZoom(event)">
+            
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 bg-white/10 p-2 rounded-2xl backdrop-blur-lg">
+                <button onclick="changeZoom(-0.5)" class="w-12 h-12 bg-white/20 text-white rounded-xl"><i class="fa-solid fa-minus"></i></button>
+                <button onclick="changeZoom(0.5)" class="w-12 h-12 bg-white/20 text-white rounded-xl"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shopPanel" class="fixed bottom-6 right-6 z-[300] hidden">
+        <button onclick="toggleShopDrawer()" title="Buka Toko Sihir" class="w-14 h-14 bg-indigo-600 text-white rounded-[1.25rem] shadow-[0_8px_20px_rgba(79,70,229,0.4)] flex items-center justify-center text-xl hover:bg-indigo-700 hover:-translate-y-1 active:scale-95 transition-all outline-none border-2 border-indigo-400/50">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </button>
+    </div>
+    
+    <div id="shopDrawer" class="fixed inset-0 z-[400] hidden items-end justify-center pointer-events-none">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onclick="toggleShopDrawer()"></div>
+        <div id="drawerContent" class="relative w-full max-w-md bg-white rounded-t-[2.5rem] p-8 transform translate-y-full transition-transform duration-500 pointer-events-auto border-t-4 border-indigo-500">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-gray-800 text-xl">Pasar Sihir 🔮</h3>
+                <div class="bg-amber-100 px-4 py-2 rounded-2xl border-2 border-amber-200 flex items-center gap-2">
+                    <span>💰</span> <span id="shopWallet" class="font-black text-amber-600">500</span>
+                </div>
+            </div>
+        
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                 <button onclick="window.buyTime(1, 100)" class="p-3 rounded-2xl border-2 border-slate-100 hover:bg-indigo-50 active:scale-95 transition-all text-left">
+                    <span class="block font-black text-sm text-gray-800">+1 Menit</span>
+                    <span class="text-[10px] font-bold text-amber-600 mt-1 block">💰 100 Koin</span>
+                 </button>
+                 <button onclick="window.buyTime(2, 200)" class="p-3 rounded-2xl border-2 border-slate-100 hover:bg-indigo-50 active:scale-95 transition-all text-left">
+                    <span class="block font-black text-sm text-gray-800">+2 Menit</span>
+                    <span class="text-[10px] font-bold text-amber-600 mt-1 block">💰 200 Koin</span>
+                 </button>
+                 <button onclick="window.buyTime(5, 500)" class="p-3 rounded-2xl border-2 border-slate-100 hover:bg-indigo-50 active:scale-95 transition-all text-left">
+                    <span class="block font-black text-sm text-gray-800">+5 Menit</span>
+                    <span class="text-[10px] font-bold text-amber-600 mt-1 block">💰 500 Koin</span>
+                 </button>
+                 <button onclick="window.buyTime(10, 1000)" class="p-3 rounded-2xl border-2 border-slate-100 hover:bg-indigo-50 active:scale-95 transition-all text-left">
+                    <span class="block font-black text-sm text-gray-800">+10 Menit</span>
+                    <span class="text-[10px] font-bold text-amber-600 mt-1 block">💰 1000 Koin</span>
+                 </button>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Beli Bebas (1 Mnt = 100 Koin)</p>
+                <div class="flex gap-2">
+                    <input type="number" id="customTimeInput" min="1" placeholder="Berapa menit?" class="w-full px-4 py-3 text-sm font-bold bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" oninput="window.updateCustomPrice()">
+                    <button id="btnBuyCustom" onclick="window.buyCustomTime()" disabled class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-black text-xs whitespace-nowrap active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Beli
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="toggleShopDrawer()" class="w-full py-3 bg-gray-100 rounded-xl text-gray-500 font-bold text-xs hover:bg-gray-200 transition-colors">Tutup Toko</button>
+        </div>
+    </div>
+
+    <Toast />
 </Layout>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline defer></script>
 <script>
+    // ==========================================================
+    // 1. KONFIGURASI & VARIABEL GLOBAL
+    // ==========================================================
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const examId = window.location.pathname.split('/').pop();
     const urlParams = new URLSearchParams(window.location.search);
     
-    // TANGKAP TOKEN DARI URL
+    // Auth & Preview State
     const urlToken = urlParams.get('token');
-    if (urlToken) {
-        sessionStorage.setItem('temp_exam_token', urlToken);
-    }
+    if (urlToken) sessionStorage.setItem('temp_exam_token', urlToken);
     const token = urlToken || sessionStorage.getItem('temp_exam_token') || localStorage.getItem('token');
     
     if (!token) {
         window.location.replace('/');
         throw new Error("Token tidak valid.");
     }
-
     const isPreview = urlParams.get('preview') === 'true';
-    
-    // State Global
-    let activeStudentId = null; 
+
+    // State Murid & Lobby
+    let activeStudentId = null;
     let allStudents = [];
     let completedStudentIds = [];
-    
-    let examData = null, questions = [], currentIndex = 0;
-    let studentAnswers = {}, timeLeft = 0, timerInterval = null, totalDurationSeconds = 0;
+    let qualifiedStudentIds = [];
+    let studentPoin = 0;
+
+    // State Ujian
+    let examData = null;
+    let questions = [];
+    let phase1Questions = [];
+    let phase2Questions = [];
+    let currentPhase = 1; // 1 = PG, 2 = Arcade
+    let currentIndex = 0;
+    let studentAnswers = {};
+    let phase2Answers = [];
     let isExamActive = false;
+    let isSubmitting = false;
+    let isAllExamsDone = false;
+
+    // State Waktu
+    let timeLeft = 0;
+    let timerInterval = null;
+    let totalDurationSeconds = 0;
+    window.isTimeStoppedByCat = false;
+
+    // State Kamera & Keamanan
     let cameraStream = null;
     let hasCapturedPhoto = false; 
     let capturedBase64 = null;
+    let hasTriggeredAngryCat = false;
 
-    let isAllExamsDone = false;
+    // State Audio / Easter Egg
     window.isEasterEggActive = false;
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordTimer;
+    let recordSeconds = 0;
+    let easterEggAudioBlob = null;
+    let retakesLeft = 1;
+    let audioCtx;
+    let analyser;
+    let visAnimationId;
+    let streamRef; 
+    let currentRecordPhase = 'start'; // 'start' -> 'recording' -> 'review'
 
-    window.isTimeStoppedByCat = false;
-    window.miawToastTimer = null; 
-    let isSubmitting = false;
+    // Kunci Storage
+    const getStorageKey = () => isPreview ? `preview_progress_${examId}` : `exam_progress_${examId}`;
+    const getTimerKey = () => isPreview ? `preview_timer_${examId}` : `exam_timer_${examId}`;
+
+    if (isPreview) {
+        localStorage.removeItem(`preview_progress_${examId}`);
+        localStorage.removeItem(`preview_timer_${examId}`);
+    }
 
     const relaxQuotes = [
         "Tarik napas perlahan... Kamu pasti bisa menyelesaikannya!",
@@ -455,6 +539,9 @@ import Mascot from '../../components/Mascot.astro';
         "Tenang, waktu masih berjalan. Pertahankan semangatmu!"
     ];
 
+    // ==========================================================
+    // 2. FUNGSI UTILITAS & HELPER
+    // ==========================================================
     const shuffleArray = (array) => {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -464,30 +551,259 @@ import Mascot from '../../components/Mascot.astro';
         return arr;
     };
 
-    window.returnFromExam = () => {
-        isExamActive = false; 
+    window.showShopButton = () => {
+        const panel = document.getElementById('shopPanel');
+        if (panel) {
+            panel.classList.remove('hidden');
+            panel.classList.add('animate-slide-up');
+        }
+    };
+
+    window.hideShopButton = () => {
+        const panel = document.getElementById('shopPanel');
+        if (panel) {
+            panel.classList.add('hidden');
+            panel.classList.remove('animate-slide-up');
+        }
+    };
+
+    window.toggleShopDrawer = () => {
+        const drawer = document.getElementById('shopDrawer');
+        const content = document.getElementById('drawerContent');
+        if (drawer.classList.contains('hidden')) {
+            drawer.classList.replace('hidden', 'flex');
+            setTimeout(() => content.classList.remove('translate-y-full'), 10);
+        } else {
+            content.classList.add('translate-y-full');
+            setTimeout(() => drawer.classList.replace('flex', 'hidden'), 500);
+        }
+    };
+
+    window.showToastAlert = (type, title, msg) => {
+        if (window.showToast) window.showToast(type, title, msg);
+    };
+
+    // ==========================================================
+    // 3. INISIALISASI (INIT) & FETCH DATA
+    // ==========================================================
+    const init = async () => {
+        try {
+            // Animasi Maskot
+            if (window.MiawMascot) {
+                window.MiawMascot.init({
+                    texts: {
+                        idlePhrases: ["Pelan-pelan aja bacanya... miaw", "Fokus, fokus... Waktu terus berjalan lho."],
+                        warnings: ["Miaw... kamu asik sendiri ya? Kok aku gak diajak main."],
+                        prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal nyembunyiin jawaban ujiannya! Mwehehehe~",
+                        threatExecute: "Yaudah aku pergi! Tapi rasain nih waktu ujianmu aku cepetin!",
+                    },
+                    actions: {}
+                }).catch(e => console.log("Mascot dimuat di background", e));
+            }
+            
+            // Cek Progress Storage
+            const savedProgress = localStorage.getItem(getStorageKey());
+            const savedStudentId = localStorage.getItem(`active_student_${examId}`);
+            
+            if (savedProgress) {
+                studentAnswers = JSON.parse(savedProgress);
+                currentIndex = Object.keys(studentAnswers).length > 0 ? Object.keys(studentAnswers).length - 1 : 0;
+            } else {
+                studentAnswers = {};
+                currentIndex = 0; 
+            }
+
+            if (savedStudentId) activeStudentId = savedStudentId;
+
+            // Fetch Data Ujian
+            const exRes = await fetch(`${API_URL}/api/exams/${examId}`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (!exRes.ok) throw new Error("Gagal mengambil data ujian");
+            const exData = await exRes.json();
+            examData = exData.data;
+
+            // Pemisahan Fase Soal
+            phase1Questions = [];
+            phase2Questions = [];
+            let rawQuestions = shuffleArray(examData.questions || []);
+            
+            rawQuestions.forEach(q => {
+                if (q.question_type === 'fill_in_blanks') {
+                    if (typeof q.correct_answer === 'string') {
+                        try { q.correct_answer = JSON.parse(q.correct_answer); } catch(e) {}
+                    }
+                    phase2Questions.push(q);
+                } else {
+                    const validKeys = ['A', 'B', 'C', 'D'].filter(k => q.options && q.options[k] && q.options[k].trim() !== '');
+                    q.shuffledKeys = shuffleArray(validKeys); 
+                    phase1Questions.push(q);
+                }
+            });
+
+            // Set Aktif Berdasarkan Ketersediaan Soal
+            if (phase1Questions.length > 0) {
+                questions = phase1Questions;
+                currentPhase = 1;
+            } else if (phase2Questions.length > 0) {
+                questions = phase2Questions;
+                currentPhase = 2;
+                document.getElementById('phase1Wrapper')?.classList.add('hidden');
+                document.getElementById('phase2Wrapper')?.classList.remove('hidden');
+            } else {
+                questions = [];
+                currentPhase = 1;
+            }
+
+            if (!examData.questions || examData.questions.length === 0) {
+                document.getElementById('loadingScreen').innerHTML = '<p class="text-red-500 font-bold px-6 text-center text-sm">Ujian ini belum memiliki soal.</p>';
+                return;
+            }
+
+            // Setup UI Lobby Info
+            document.getElementById('examSubject').innerText = `UJIAN ${examData.subject}`;
+            document.getElementById('lobbyExamTitle').innerText = examData.title;
+            const duration = examData.duration_minutes > 0 ? examData.duration_minutes : 60;
+            document.getElementById('lobbyExamDuration').innerText = duration;
+            totalDurationSeconds = duration * 60;
+            
+            const savedTime = localStorage.getItem(getTimerKey());
+            timeLeft = (savedTime && !isNaN(savedTime)) ? parseInt(savedTime) : totalDurationSeconds;
+
+            // Mode Preview vs Mode Murid
+            if (isPreview) {
+                // Mode Ustadz: Langsung ke Start Screen
+                activeStudentId = "preview_mode";
+                studentPoin = 500;
+                document.getElementById('studentNameDisplay').innerText = "Mode Ustadz";
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('startScreen').classList.replace('hidden', 'flex');
+                window.showShopButton(); 
+            } else {
+                // Mode Siswa: Ambil data dan WAJIB tampilkan Lobby Grid
+                const [stdRes, resRes, qualRes] = await Promise.all([
+                    fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
+                    fetch(`${API_URL}/api/exams/${examId}/results`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
+                    fetch(`${API_URL}/api/onboarding/status?subject=${examData.subject}&week=5`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}))
+                ]);
+
+                allStudents = stdRes.data || [];
+                completedStudentIds = (resRes.data || []).map(r => r.student_id); 
+                qualifiedStudentIds = qualRes.data || [];
+
+                // Render Lobby dan tampilkan layar Lobby (Bypass dihapus agar user bisa pilih nama)
+                renderLobbyGrid();
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+                window.hideShopButton(); // Pastikan toko tersembunyi di Lobby
+            }
+            
+            const walletEl = document.getElementById('shopWallet');
+            if (walletEl) walletEl.innerText = studentPoin;
+
+        } catch (e) {
+            console.error(e);
+            window.showToastAlert('danger', 'Error', 'Gagal memuat ujian. Pastikan link dan token valid.');
+            document.getElementById('loadingScreen').innerHTML = '<p class="text-red-500 font-bold px-6 text-center text-sm">Gagal memuat ujian. Silakan reload halaman.</p>';
+        }
+    };
+
+    // ==========================================================
+    // 4. LOGIKA LOBBY & NAVIGASI AWAL
+    // ==========================================================
+    const renderLobbyGrid = () => {
+        const grid = document.getElementById('lobbyStudentGrid');
+        const query = document.getElementById('lobbySearch').value.toLowerCase();
         
-        // CEK APAKAH HARUS MUNCULIN EASTER EGG
-        if (isAllExamsDone) {
-            document.getElementById('modalFinish').classList.replace('flex', 'hidden');
-            showEasterEggTrigger();
+        let filtered = allStudents.filter(s => {
+            const nameStr = (s.name || '').toLowerCase(); 
+            return nameStr.includes(query);
+        });
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<p class="col-span-2 text-center py-8 text-gray-400 text-xs italic">Nama tidak ditemukan.</p>';
             return;
         }
 
-        if (isPreview) window.location.href = `/exams/${examId}`;
-        else window.location.replace(window.location.href.split('?')[0] + '?token=' + token);
+        grid.innerHTML = filtered.map(s => {
+            const isDone = completedStudentIds.includes(s.id);
+            const isQualified = qualifiedStudentIds.includes(s.id); 
+            const safeName = (s.name || 'Siswa').replace(/'/g, "\\'");
+            const initial = (s.name || '??').substring(0,2).toUpperCase();
+            
+            let cardClass = 'bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 transition-all ';
+            let onClick = '';
+            let badge = '';
+            let statusText = 'BELUM';
+            let statusColor = 'text-gray-400';
+
+            if (isDone) {
+                cardClass += 'opacity-50 grayscale pointer-events-none';
+                statusText = 'SELESAI';
+                statusColor = 'text-green-500';
+                badge = '<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs shadow-sm border-2 border-white"><i class="fa-solid fa-check"></i></div>';
+            } else if (!isQualified) {
+                cardClass += 'opacity-80 active:scale-95 cursor-pointer hover:border-amber-300';
+                onClick = `window.showLockModal('${safeName}')`;
+                statusText = 'TERKUNCI';
+                statusColor = 'text-amber-500';
+                badge = '<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm border-2 border-white"><i class="fa-solid fa-lock"></i></div>';
+            } else {
+                cardClass += 'active:scale-95 cursor-pointer hover:border-indigo-300';
+                onClick = `window.selectStudent('${s.id}', '${safeName}')`;
+            }
+
+            return `
+                <div class="${cardClass}" onclick="${onClick}">
+                    <div class="relative">
+                        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg font-black">${initial}</div>
+                        ${badge}
+                    </div>
+                    <div>
+                        <h4 class="font-black text-gray-800 text-[11px] line-clamp-1 capitalize">${s.name || 'Siswa'}</h4>
+                        <p class="text-[9px] font-bold mt-1 tracking-widest uppercase ${statusColor}">${statusText}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
     };
 
-    const initCamera = async () => {
-        try {
-            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-            document.getElementById('hiddenVideo').srcObject = cameraStream;
-        } catch (e) {
-            console.log("Kamera tidak diizinkan atau tidak tersedia.");
+    document.getElementById('lobbySearch')?.addEventListener('input', renderLobbyGrid);
+
+    window.selectStudent = (id, name) => {
+        activeStudentId = id;
+        localStorage.setItem(`active_student_${examId}`, id);
+        
+        // [PERBAIKAN BUG KOIN] Cari data murid di array allStudents dan ambil poinnya
+        const studentData = allStudents.find(s => s.id === id);
+        if (studentData) {
+            studentPoin = studentData.poin || 0;
+            
+            // Langsung update angka di dompet Toko Sihir
+            const walletEl = document.getElementById('shopWallet');
+            if (walletEl) walletEl.innerText = studentPoin;
         }
+
+        document.getElementById('studentNameDisplay').innerText = name;
+        document.getElementById('studentInitials').innerText = name.substring(0, 2).toUpperCase();
+        document.getElementById('startStudentName').innerText = name;
+        
+        document.getElementById('lobbyScreen').classList.replace('flex', 'hidden');
+        document.getElementById('startScreen').classList.replace('hidden', 'flex');
+        window.showShopButton(); // Munculkan tombol toko hanya di Start Screen
     };
 
-    let qualifiedStudentIds = []; // Array nyimpen ID anak yang udah lulus minggu ke-5
+    window.backToLobby = () => {
+        activeStudentId = null;
+        document.getElementById('startScreen').classList.replace('flex', 'hidden');
+        document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+        window.hideShopButton(); // Sembunyikan toko saat kembali ke Lobby
+    };
+
+    window.exitPreview = () => {
+        isExamActive = false;
+        localStorage.removeItem(`preview_progress_${examId}`);
+        localStorage.removeItem(`preview_timer_${examId}`);
+        window.location.href = `/exams/${examId}`;
+    };
 
     window.showLockModal = (studentName) => {
         document.getElementById('lockStudentName').innerText = studentName;
@@ -498,20 +814,26 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('modalLockWeek5').classList.replace('flex', 'hidden');
     };
 
+    // ==========================================================
+    // 5. LOGIKA WAKTU & TOKO SIHIR
+    // ==========================================================
     const runExamTimer = (speed = 1000) => {
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             if (window.isTimeStoppedByCat) return;
             timeLeft--;
+            
+            localStorage.setItem(getTimerKey(), timeLeft);
+
             if (timeLeft <= 0) { 
                 timeLeft = 0; clearInterval(timerInterval); 
-                window.showToast?.('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.'); 
+                window.showToastAlert('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.'); 
                 submitExam(); 
             } else {
                 updateTimerUI();
                 const elapsed = totalDurationSeconds - timeLeft;
                 if (elapsed > 0 && elapsed % 60 === 0 && timeLeft > 0 && speed === 1000) {
-                    showTimeReminder(Math.floor(elapsed / 60));
+                    window.showTimeReminder(Math.floor(elapsed / 60));
                 }
             }
         }, speed);
@@ -524,8 +846,522 @@ import Mascot from '../../components/Mascot.astro';
         runExamTimer(1000);
     };
 
-// ==========================================================
-    // LOGIKA EASTER EGG (DRAWER + 1 TOMBOL DINAMIS)
+    const updateTimerUI = () => {
+        const m = Math.floor(Math.max(0,timeLeft)/60).toString().padStart(2,'0');
+        const s = (Math.max(0,timeLeft)%60).toString().padStart(2,'0');
+        document.getElementById('timerText').innerText = `${m}:${s}`;
+        
+        const container = document.getElementById('timerContainer');
+        const icon = document.getElementById('timerIcon');
+        const vignette = document.getElementById('dangerVignette');
+        
+        if (timeLeft <= 60 && timeLeft > 0) {
+            if (container) container.classList.add('timer-danger');
+            if (icon) icon.classList.replace('text-gray-400', 'text-red-500');
+            if (vignette) vignette.classList.add('vignette-active');
+        } else {
+            if (container) container.classList.remove('timer-danger');
+            if (icon) icon.classList.replace('text-red-500', 'text-gray-400');
+            if (vignette) vignette.classList.remove('vignette-active');
+        }
+    };
+
+    window.showTimeReminder = (minutesPassed) => {
+        const popup = document.getElementById('timeReminder');
+        if (!popup) return;
+        document.getElementById('timeReminderText').innerText = `Sudah ${minutesPassed} menit berlalu. Terus semangat ya!`;
+        popup.classList.remove('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); 
+        popup.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => { 
+            popup.classList.remove('opacity-100', 'translate-y-0'); 
+            popup.classList.add('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); 
+        }, 4000);
+    };
+
+    // LOGIKA TOKO DENGAN TOAST SUKSES
+    window.buyTime = async (mins, cost) => {
+        if (studentPoin < cost) {
+            window.showToast?.('danger', 'Koin Kurang', 'Kumpulkan koin lebih banyak!');
+            return;
+        }
+
+        try {
+            if (!isPreview) {
+                const res = await fetch(`${API_URL}/api/exams/buy-time`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: activeStudentId, cost: cost, minutes: mins }) 
+                });
+                const result = await res.json();
+                if (result.status !== 'success') throw new Error(result.message);
+                studentPoin = result.data.new_poin;
+            } else {
+                studentPoin -= cost;
+            }
+
+            // Tambahkan waktu dan tampilkan Toast Sukses
+            timeLeft += (mins * 60);
+            localStorage.setItem(getTimerKey(), timeLeft);
+            
+            document.getElementById('shopWallet').innerText = studentPoin;
+            updateTimerUI();
+            window.toggleShopDrawer();
+            
+            // MUNCULKAN TOAST PENANDA
+            window.showToast?.('success', 'Sihir Berhasil!', `Waktu ujianmu bertambah ${mins} menit.`);
+            
+        } catch (error) {
+            window.showToast?.('danger', 'Transaksi Gagal', error.message);
+        }
+    };
+
+    // ==========================================================
+    // 6. MULAI UJIAN & KEAMANAN KAMERA
+    // ==========================================================
+    window.triggerCountdown = async (btn) => {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengakses Kamera...';
+        }
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+            document.getElementById('hiddenVideo').srcObject = cameraStream;
+            
+            document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
+            document.getElementById('countdownScreen')?.classList.replace('hidden', 'flex');
+            window.hideShopButton(); // Sembunyikan toko sihir
+            
+            const countEl = document.getElementById('countdownNumber');
+            if (!countEl) return;
+            
+            let count = 3; countEl.innerText = count;
+            const intv = setInterval(() => {
+                count--;
+                countEl.classList.remove('countdown-pop'); void countEl.offsetWidth; countEl.classList.add('countdown-pop');
+                
+                if (count > 0) { 
+                    countEl.innerText = count; 
+                } else if (count === 0) { 
+                    countEl.innerText = 'GO!'; countEl.style.color = '#4ade80'; 
+                } else {
+                    clearInterval(intv);
+                    document.getElementById('countdownScreen')?.classList.replace('flex', 'hidden');
+                    document.getElementById('examMainContainer')?.classList.remove('hidden'); 
+                    
+                    startTimer();
+                    
+                    if (currentPhase === 1) {
+                        renderQuestion();
+                    } else if (currentPhase === 2) {
+                        if (window.MiawMascot && typeof window.MiawMascot.hide === 'function') {
+                            window.MiawMascot.hide();
+                        }
+                        const mascotElements = document.querySelectorAll('.mascot-container, [id*="mascot" i], [class*="mascot" i]');
+                        mascotElements.forEach(el => {
+                            el.style.opacity = '0';
+                            el.style.pointerEvents = 'none';
+                        });
+                        document.querySelector('.hint-fab')?.classList.add('hidden');
+                        setupArcadeKeyboard();
+                        renderPhase2Question();
+                    }
+                }
+            }, 1000);
+        } catch (err) {
+            window.showPermissionGuide('Kamera');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Coba Izinkan Lagi'; 
+                btn.classList.replace('btn-indigo', 'btn-red');
+            }
+        }
+    };
+
+    const executeSecretCapture = (callback) => {
+        document.getElementById('relaxQuoteText').innerText = relaxQuotes[Math.floor(Math.random() * relaxQuotes.length)];
+        const modalRelax = document.getElementById('modalRelax');
+        if (modalRelax) modalRelax.classList.replace('hidden', 'flex');
+        
+        setTimeout(() => {
+            const video = document.getElementById('hiddenVideo');
+            const canvas = document.getElementById('hiddenCanvas');
+            
+            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                
+                if (isPreview) window.showToastAlert('success', 'Kamera Aktif', 'Berhasil menjepret wajah!');
+                if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+            }
+
+            if (modalRelax) modalRelax.classList.replace('flex', 'hidden');
+            callback(); 
+        }, 4000);
+    };
+
+    // ==========================================================
+    // 7. RENDER SOAL & NAVIGASI UJIAN
+    // ==========================================================
+    const renderQuestion = () => {
+        const q = questions[currentIndex];
+        
+        if (currentPhase === 1 && currentIndex === 1) {
+            if (window.MiawMascot) window.MiawMascot.show();
+        }
+        
+        document.getElementById('progressText').innerText = `${currentIndex + 1} / ${questions.length}`;
+        document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+        
+        const card = document.getElementById('questionCard');
+        if (card) { card.classList.remove('card-enter'); void card.offsetWidth; card.classList.add('card-enter'); }
+
+        const questionBadge = document.getElementById('questionNumberBadge');
+        if (questionBadge) questionBadge.innerText = `Soal ${currentIndex + 1}`;
+
+        const lvlBadge = document.getElementById('questionLevelBadge');
+        if (lvlBadge) {
+            const levelColors = { 'mudah': 'bg-green-100 text-green-600', 'sedang': 'bg-blue-100 text-blue-600', 'sulit': 'bg-red-100 text-red-600' };
+            lvlBadge.className = `text-[10px] font-bold px-2.5 py-1 rounded uppercase flex items-center gap-1.5 ${levelColors[q.difficulty_level] || 'bg-gray-100 text-gray-500'}`;
+            lvlBadge.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${q.difficulty_level || 'Sedang'}`;
+        }
+
+        document.getElementById('questionText').innerText = q.question;
+        
+        const aDots = document.getElementById('answeredDots');
+        if (aDots) {
+            aDots.innerHTML = questions.map((_, i) => {
+                let cls = 'dot';
+                if (i === currentIndex) cls += ' dot-current';
+                else if (studentAnswers[questions[i].id]) cls += ' dot-done';
+                return `<span class="${cls}" onclick="window.jumpTo(${i})" title="Ke soal ${i+1}"></span>`;
+            }).join('');
+        }
+
+        const imgCont = document.getElementById('imageContainer');
+        if (imgCont) {
+            if (q.image_url) { 
+                imgCont.classList.remove('hidden');
+                document.getElementById('questionImage').src = q.image_url; 
+            } else { 
+                imgCont.classList.add('hidden');
+            }
+        }
+
+        const displayLabels = ['A', 'B', 'C', 'D'];
+        const oGrid = document.getElementById('optionsGrid');
+        if (oGrid) {
+            oGrid.innerHTML = q.shuffledKeys.map((originalOptKey, idx) => {
+                const text = q.options[originalOptKey];
+                const sel = studentAnswers[q.id] === originalOptKey;
+                const label = displayLabels[idx]; 
+                return `
+                    <button onclick="window.selectOption('${q.id}','${originalOptKey}')" class="opt-btn ${sel ? 'selected' : ''}" style="animation-delay:${idx*50}ms">
+                        <div class="opt-letter">${label}</div><span class="opt-text">${text}</span>
+                        ${sel ? '<div class="opt-check"><i class="fa-solid fa-check text-[10px]"></i></div>' : ''}
+                    </button>`;
+            }).join('');
+        }
+        
+        document.getElementById('btnPrev').disabled = currentIndex === 0;
+        const btnNext = document.getElementById('btnNext');
+        if (btnNext) {
+            if (currentIndex === questions.length - 1) {
+                btnNext.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i><span>Kumpulkan</span>';
+                btnNext.className = 'btn-3d btn-green px-6 sm:px-8 py-3.5';
+            } else {
+                btnNext.innerHTML = '<span class="hidden sm:inline mr-2">Selanjutnya</span><i class="fa-solid fa-chevron-right"></i>';
+                btnNext.className = 'btn-3d btn-indigo px-6 sm:px-8 py-3.5';
+            }
+        }
+    };
+
+    window.jumpTo = (i) => { currentIndex = i; renderQuestion(); };
+    
+    window.selectOption = (questionId, choice) => {
+        studentAnswers[questionId] = choice;
+        localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
+        renderQuestion();
+    };
+
+    window.navigate = (dir) => {
+        if (isSubmitting) return;
+        if (dir === 1 && currentIndex === questions.length - 1) { 
+            if (currentPhase === 1 && phase2Questions.length > 0) {
+                transitionToPhase2();
+                return;
+            }
+            submitExam();
+            return;
+        }
+        proceedNavigation(dir);
+    };
+
+    const proceedNavigation = (dir) => {
+        const nextIndex = Math.max(0, Math.min(questions.length - 1, currentIndex + dir));
+        
+        if (dir === 1 && nextIndex === 4 && !hasCapturedPhoto) {
+            executeSecretCapture(() => { 
+                hasCapturedPhoto = true; 
+                currentIndex = nextIndex; 
+                if (currentPhase === 1) renderQuestion(); 
+                else renderPhase2Question();
+            });
+            return;
+        }
+        
+        currentIndex = nextIndex;
+        if (currentPhase === 1) renderQuestion();
+        else renderPhase2Question();
+    };
+
+    const transitionToPhase2 = () => {
+        const modalRelax = document.getElementById('modalRelax');
+        if (modalRelax) {
+            document.getElementById('relaxQuoteText').innerText = "Fase 1 Selesai! Tarik napas sebentar... Persiapkan jarimu untuk tantangan mengetik cepat!";
+            modalRelax.classList.replace('hidden', 'flex');
+        }
+
+        setTimeout(() => {
+            if (modalRelax) modalRelax.classList.replace('flex', 'hidden');
+
+            currentPhase = 2;
+            questions = phase2Questions; 
+            currentIndex = 0;
+            
+            document.getElementById('phase1Wrapper').classList.add('hidden');
+            document.getElementById('phase2Wrapper').classList.remove('hidden');
+            
+            if (window.MiawMascot && typeof window.MiawMascot.hide === 'function') {
+                window.MiawMascot.hide();
+            }
+            
+            const mascotElements = document.querySelectorAll('.mascot-container, [id*="mascot" i], [class*="mascot" i]');
+            mascotElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.pointerEvents = 'none';
+                el.style.position = 'absolute';
+                el.style.zIndex = '-100';
+            });
+
+            document.querySelector('.hint-fab')?.classList.add('hidden');
+            window.showToastAlert('success', 'LEVEL 2: TYPING ARCADE', 'Ketik kata yang tepat dan tekan SPASI!');
+            
+            setupArcadeKeyboard();
+            renderPhase2Question();
+        }, 4000); 
+    };
+
+    const renderPhase2Question = () => {
+        const q = questions[currentIndex];
+        document.getElementById('progressText').innerText = `Fase 2: ${currentIndex + 1} / ${questions.length}`;
+        document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+        document.getElementById('arcadeQuestionText').innerText = q.question;
+        
+        let savedAnswers = studentAnswers[q.id];
+        phase2Answers = Array.isArray(savedAnswers) ? [...savedAnswers] : new Array(q.correct_answer.length).fill(null);
+        
+        const blocksContainer = document.getElementById('arcadeTargetBlocks');
+        blocksContainer.innerHTML = q.correct_answer.map((ans, idx) => {
+            const isFilled = phase2Answers[idx] !== null;
+            const text = isFilled ? phase2Answers[idx] : ''; 
+            return `<div class="target-block ${isFilled ? 'filled' : ''}">${text}</div>`;
+        }).join('');
+
+        const filledCount = phase2Answers.filter(a => a !== null).length;
+        const totalBlanks = q.correct_answer.length;
+        const waterProgress = totalBlanks > 0 ? (filledCount / totalBlanks) * 100 : 0;
+        
+        document.getElementById('waterLevel').style.height = `${waterProgress}%`;
+
+        const arcInput = document.getElementById('arcadeInput');
+        arcInput.value = '';
+        arcInput.focus();
+
+        const aDots = document.getElementById('answeredDots');
+        if (aDots) aDots.innerHTML = ''; 
+
+        document.getElementById('btnPrev').disabled = currentIndex === 0;
+        const btnNext = document.getElementById('btnNext');
+        if (btnNext) {
+            if (currentIndex === questions.length - 1) {
+                btnNext.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i><span>Kumpulkan</span>';
+                btnNext.className = 'btn-3d btn-green px-6 sm:px-8 py-3.5';
+            } else {
+                btnNext.innerHTML = '<span class="hidden sm:inline mr-2">Selanjutnya</span><i class="fa-solid fa-chevron-right"></i>';
+                btnNext.className = 'btn-3d btn-indigo px-6 sm:px-8 py-3.5';
+            }
+        }
+    };
+
+    const setupArcadeKeyboard = () => {
+        const input = document.getElementById('arcadeInput');
+        const leak = document.getElementById('waterLeak');
+
+        input.addEventListener('input', () => {
+            input.classList.remove('animate-pop-box');
+            void input.offsetWidth;
+            input.classList.add('animate-pop-box');
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && input.value.length > 0) {
+                leak.classList.remove('animate-leak'); void leak.offsetWidth;
+                leak.classList.add('animate-leak');
+            }
+
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                const typedWord = input.value.trim().toLowerCase();
+                if (typedWord === '') return;
+
+                const q = questions[currentIndex];
+                const correctArray = Array.isArray(q.correct_answer) ? q.correct_answer.map(w => w.toLowerCase()) : [];
+                const matchedIndex = correctArray.findIndex((ans, idx) => ans === typedWord && phase2Answers[idx] === null);
+
+                if (matchedIndex !== -1) {
+                    phase2Answers[matchedIndex] = q.correct_answer[matchedIndex];
+                    studentAnswers[q.id] = [...phase2Answers];
+                    localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
+                    
+                    renderPhase2Question(); 
+                    
+                    if (!phase2Answers.includes(null)) {
+                        setTimeout(() => window.navigate(1), 800);
+                    }
+                } else {
+                    input.classList.add('animate-shake-error');
+                    setTimeout(() => input.classList.remove('animate-shake-error'), 400);
+                }
+            }
+        });
+    };
+
+    // ==========================================================
+    // 8. LOGIKA LAINNYA (HINT, KUCING, PANDUAN GAMBAR)
+    // ==========================================================
+    window.openHintModal = () => {
+        const q = questions[currentIndex];
+        const c = document.getElementById('hintTextContent');
+        if (c) {
+            if (q.hint && q.hint.trim() !== '') { 
+                c.innerHTML = `<i class="fa-solid fa-quote-left text-amber-300 mr-2 text-xl align-top"></i><span class="text-sm">${q.hint}</span><i class="fa-solid fa-quote-right text-amber-300 ml-2 text-xl align-bottom"></i>`;
+            } else { 
+                c.innerHTML = "Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅";
+            }
+        }
+        document.getElementById('modalHint')?.classList.replace('hidden','flex');
+    };
+    
+    window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
+
+    window.triggerAngryCat = () => {
+        if (hasTriggeredAngryCat) {
+            if (window.MiawMascot) window.MiawMascot.say('large', "Awas ya manggil-manggil lagi tapi nggak ada tujuannya! 😾", null, 'warning');
+            return;
+        }
+
+        const modal = document.getElementById('modalAngryCat');
+        const vid = document.getElementById('videoAngryCat');
+        const descText = modal.querySelector('p.text-red-800');
+        
+        if (descText) descText.innerText = "Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼";
+        if (modal) modal.classList.replace('hidden', 'flex');
+        
+        if (vid) {
+            vid.currentTime = 0;
+            vid.muted = true;
+            vid.play().then(() => { vid.muted = false; vid.volume = 0.6; }).catch(() => { vid.muted = true; vid.play(); });
+        }
+
+        timeLeft = Math.max(0, timeLeft - 60); updateTimerUI();
+        const tc = document.getElementById('timerRing');
+        if (tc) tc.classList.add('animate-pulse');
+
+        hasTriggeredAngryCat = true; 
+    };
+
+    window.closeAngryCat = () => {
+        document.getElementById('modalAngryCat')?.classList.replace('flex', 'hidden');
+        document.getElementById('videoAngryCat')?.pause();
+    };
+
+    // Zoom Overlay
+    let currentZoom = 1;
+    window.openImageOverlay = () => {
+        const src = document.getElementById('guideImage').src;
+        document.getElementById('overlayImg').src = src;
+        currentZoom = 1;
+        updateZoomUI();
+        document.getElementById('modalImageOverlay').classList.replace('hidden', 'flex');
+    };
+    window.closeImageOverlay = () => document.getElementById('modalImageOverlay').classList.replace('flex', 'hidden');
+    window.handleZoom = (e) => { e.preventDefault(); currentZoom += e.deltaY > 0 ? -0.2 : 0.2; updateZoomUI(); };
+    window.changeZoom = (val) => { currentZoom += val; updateZoomUI(); };
+    const updateZoomUI = () => {
+        currentZoom = Math.max(1, Math.min(currentZoom, 4));
+        document.getElementById('overlayImg').style.transform = `scale(${currentZoom})`;
+    };
+
+    // Panduan Izin
+    let currentGuideStep = 1;
+    let currentGuideType = 'kamera'; 
+
+    window.showPermissionGuide = (type) => {
+        currentGuideType = type.toLowerCase();
+        currentGuideStep = 1; 
+        document.getElementById('guideType').innerText = type;
+        window.updateGuideUI(); 
+        document.getElementById('modalPermissionGuide').classList.replace('hidden', 'flex');
+    };
+
+    window.nextGuideStep = () => { if (currentGuideStep < 3) { currentGuideStep++; window.updateGuideUI(); } };
+    window.prevGuideStep = () => { if (currentGuideStep > 1) { currentGuideStep--; window.updateGuideUI(); } };
+
+    window.updateGuideUI = () => {
+        const img = document.getElementById('guideImage');
+        const text = document.getElementById('guideText');
+        const btnNext = document.getElementById('btnNextGuide');
+        const btnNextText = document.getElementById('btnNextGuideText');
+        const btnReload = document.getElementById('btnReloadGuide');
+        const btnPrev = document.getElementById('btnPrevGuide');
+        
+        const d1 = document.getElementById('dot1');
+        const d2 = document.getElementById('dot2');
+        const d3 = document.getElementById('dot3');
+        if (d1) d1.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 1 ? 'bg-white' : 'bg-white/40'}`;
+        if (d2) d2.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 2 ? 'bg-white' : 'bg-white/40'}`;
+        if (d3) d3.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 3 ? 'bg-white' : 'bg-white/40'}`;
+        
+        img.src = `/images/panduan-izin-${currentGuideStep}.jpeg`; 
+        img.onerror = () => { img.src = `https://placehold.co/400x300/e2e8f0/475569?text=Gambar+Langkah+${currentGuideStep}`; };
+        
+        if (btnPrev) {
+            if (currentGuideStep > 1) btnPrev.classList.replace('hidden', 'flex');
+            else btnPrev.classList.replace('flex', 'hidden');
+        }
+
+        if (currentGuideStep === 1) {
+            if (text) text.innerHTML = `Langkah 1:<br>Klik ikon 🔒 <strong>Gembok</strong> atau <strong>(Aa)</strong> di sebelah kiri alamat web bagian atas.`;
+            btnNext.classList.replace('hidden', 'flex');
+            btnNextText.innerText = `Lanjut Langkah 2`;
+            btnReload.classList.replace('flex', 'hidden'); 
+        } else if (currentGuideStep === 2) {
+            const menuName = currentGuideType === 'kamera' ? 'Kamera (Camera)' : 'Mikrofon (Microphone)';
+            if (text) text.innerHTML = `Langkah 2:<br>Cari pengaturan <strong>${menuName}</strong>, lalu ubah izinnya menjadi <strong>Izinkan (Allow)</strong>.`;
+            btnNext.classList.replace('hidden', 'flex');
+            btnNextText.innerText = `Lanjut Langkah Terakhir`;
+            btnReload.classList.replace('flex', 'hidden'); 
+        } else if (currentGuideStep === 3) {
+            if (text) text.innerHTML = `Langkah 3:<br>Hebat! Jika sudah diizinkan, silakan tekan tombol <strong>Muat Ulang</strong> di bawah ini.`;
+            btnNext.classList.replace('flex', 'hidden');   
+            btnReload.classList.replace('hidden', 'flex'); 
+        }
+    };
+
+    // ==========================================================
+    // 9. EASTER EGG & AUDIO RECORDING
     // ==========================================================
     const easterEggSurahs = [
         { name: "Surat Al-Kafirun", ayahs: "6 Ayat" },
@@ -536,22 +1372,8 @@ import Mascot from '../../components/Mascot.astro';
         { name: "Surat Al-Humazah", ayahs: "9 Ayat" }
     ];
 
-    let mediaRecorder;
-    let audioChunks = [];
-    let recordTimer;
-    let recordSeconds = 0;
-    
-    let easterEggAudioBlob = null;
-    let retakesLeft = 1;
-    let audioCtx;
-    let analyser;
-    let visAnimationId;
-    let streamRef; 
-    
-    let currentRecordPhase = 'start'; // Fase: 'start' -> 'recording' -> 'review'
-
     window.showEasterEggTrigger = () => {
-        window.isEasterEggActive = true; 
+        window.isEasterEggActive = true;
         const randomSurah = easterEggSurahs[Math.floor(Math.random() * easterEggSurahs.length)];
         
         document.getElementById('easterEggSurah').innerText = randomSurah.name;
@@ -559,15 +1381,10 @@ import Mascot from '../../components/Mascot.astro';
         document.getElementById('modalEasterEgg').classList.replace('hidden', 'flex');
     };
 
-    // FUNGSI SAKTI 1 TOMBOL
     window.handleMainAction = () => {
-        if (currentRecordPhase === 'start') {
-            requestMicAndStart();
-        } else if (currentRecordPhase === 'recording') {
-            stopRecording();
-        } else if (currentRecordPhase === 'review') {
-            submitRecording();
-        }
+        if (currentRecordPhase === 'start') requestMicAndStart();
+        else if (currentRecordPhase === 'recording') window.stopRecording();
+        else if (currentRecordPhase === 'review') window.submitRecording();
     };
 
     const requestMicAndStart = async () => {
@@ -576,7 +1393,6 @@ import Mascot from '../../components/Mascot.astro';
         
         try {
             streamRef = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') await audioCtx.resume();
             
@@ -608,8 +1424,7 @@ import Mascot from '../../components/Mascot.astro';
             };
             canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
             drawWave();
-
-            // Ubah tombol jadi "Bersiap"
+            
             btnMain.disabled = true;
             btnMain.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Bersiap... 3</span>`;
             
@@ -626,86 +1441,14 @@ import Mascot from '../../components/Mascot.astro';
                     startRealRecording(streamRef);
                 }
             }, 1000);
-            
         } catch (err) {
-            // JIKA DITOLAK: Panggil Modal Gambar Panduan
             window.showPermissionGuide('Mikrofon');
-            
-            const status = document.getElementById('recordStatus');
             status.innerText = "Akses mikrofon ditolak! Lihat panduan.";
             status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-red-500 bg-red-50 border-red-100 animate-pulse';
             
-            const btnMain = document.getElementById('btnMainAction');
             btnMain.disabled = false;
             btnMain.classList.replace('btn-indigo', 'btn-red');
             btnMain.innerHTML = `<i class="fa-solid fa-microphone"></i> <span>Izinkan Mikrofon</span>`;
-        }
-    };
-
-// ==========================================
-    // LOGIKA SLIDER PANDUAN IZIN
-    // ==========================================
-    let currentGuideStep = 1;
-    let currentGuideType = 'kamera'; // Default 'kamera' atau 'mikrofon'
-
-    // Fungsi dipanggil saat izin ditolak (dari catch blok)
-    window.showPermissionGuide = (type) => {
-        currentGuideType = type.toLowerCase();
-        currentGuideStep = 1; // Selalu mulai dari slide 1
-        
-        document.getElementById('guideType').innerText = type;
-        updateGuideUI(); // Render tampilan
-        
-        document.getElementById('modalPermissionGuide').classList.replace('hidden', 'flex');
-    };
-
-    // Fungsi pindah slide saat klik Next
-    window.nextGuideStep = () => {
-        if (currentGuideStep < 3) {
-            currentGuideStep++;
-            updateGuideUI();
-        }
-    };
-
-// Fungsi Update Tampilan Slide
-window.updateGuideUI = () => {
-        const img = document.getElementById('guideImage');
-        const text = document.getElementById('guideText');
-        const btnNext = document.getElementById('btnNextGuide');
-        const btnNextText = document.getElementById('btnNextGuideText');
-        const btnReload = document.getElementById('btnReloadGuide');
-        
-        // Atur warna dots indikator
-        document.getElementById('dot1').className = `w-2 h-2 rounded-full ${currentGuideStep >= 1 ? 'bg-white' : 'bg-white/40'}`;
-        document.getElementById('dot2').className = `w-2 h-2 rounded-full ${currentGuideStep >= 2 ? 'bg-white' : 'bg-white/40'}`;
-        document.getElementById('dot3').className = `w-2 h-2 rounded-full ${currentGuideStep >= 3 ? 'bg-white' : 'bg-white/40'}`;
-
-        // [UBAH DI SINI] Fotonya digabung! Cukup ambil 3 foto universal aja
-        const imgPath = `/images/panduan-izin-${currentGuideStep}.jpeg`;
-        const placeholderImg = `https://placehold.co/400x300/e2e8f0/475569?text=Gambar+Langkah+${currentGuideStep}`;
-        
-        img.src = imgPath; 
-        // Fallback jika gambar belum kamu masukkan ke folder public
-        img.onerror = () => { img.src = placeholderImg; }; 
-
-        if (currentGuideStep === 1) {
-            text.innerHTML = `Langkah 1:<br>Klik ikon 🔒 <strong>Gembok</strong> atau <strong>(Aa)</strong> di sebelah kiri alamat web bagian atas.`;
-            btnNext.classList.replace('hidden', 'flex');
-            btnNextText.innerText = `Lanjut Langkah 2`;
-            btnReload.classList.replace('flex', 'hidden'); // Sembunyikan tombol reload
-            
-        } else if (currentGuideStep === 2) {
-            // Teksnya tetap dinamis biar anak nggak bingung
-            const menuName = currentGuideType === 'kamera' ? 'Kamera (Camera)' : 'Mikrofon (Microphone)';
-            text.innerHTML = `Langkah 2:<br>Cari pengaturan <strong>${menuName}</strong>, lalu ubah izinnya menjadi <strong>Izinkan (Allow)</strong>.`;
-            btnNext.classList.replace('hidden', 'flex');
-            btnNextText.innerText = `Lanjut Langkah Terakhir`;
-            btnReload.classList.replace('flex', 'hidden'); // Sembunyikan tombol reload
-            
-        } else if (currentGuideStep === 3) {
-            text.innerHTML = `Langkah 3:<br>Hebat! Jika sudah diizinkan, silakan tekan tombol <strong>Muat Ulang</strong> di bawah ini.`;
-            btnNext.classList.replace('flex', 'hidden');   // Sembunyikan tombol next
-            btnReload.classList.replace('hidden', 'flex'); // MUNCULKAN TOMBOL RELOAD
         }
     };
 
@@ -715,9 +1458,7 @@ window.updateGuideUI = () => {
         const btnMain = document.getElementById('btnMainAction');
         const btnRetake = document.getElementById('btnRetake');
         
-        btnRetake.classList.add('hidden'); // Sembunyikan retake saat merekam
-        
-        // Ubah UI Tombol ke Mode Stop (Merah, Dikunci)
+        btnRetake.classList.add('hidden'); 
         btnMain.classList.replace('btn-indigo', 'btn-red');
         btnMain.disabled = true;
         btnMain.innerHTML = `<i class="fa-solid fa-lock"></i> <span>Tahan Dulu (30s)</span>`;
@@ -730,7 +1471,6 @@ window.updateGuideUI = () => {
         mediaRecorder.start();
         
         recordSeconds = 0;
-        
         recordTimer = setInterval(() => {
             recordSeconds++;
             const sisaMaksimal = 60 - recordSeconds;
@@ -744,17 +1484,14 @@ window.updateGuideUI = () => {
                 status.innerText = `🔴 MEREKAM (${sisaMaksimal}s tersisa)`;
             }
             
-            if (recordSeconds >= 60) stopRecording();
+            if (recordSeconds >= 60) window.stopRecording();
         }, 1000);
-
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
         mediaRecorder.onstop = processRecordingOnStop;
     };
 
     window.stopRecording = () => {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     };
 
     const processRecordingOnStop = () => {
@@ -767,15 +1504,12 @@ window.updateGuideUI = () => {
         const audioPrev = document.getElementById('audioPreview');
         const canvas = document.getElementById('audioVisualizer');
         
-        // Sembunyikan wave, Munculkan Audio Player
         canvas.classList.add('hidden');
         audioPrev.classList.remove('hidden');
         
-        // Ubah UI Tombol ke Mode Submit (Hijau)
         btnMain.classList.replace('btn-red', 'btn-green');
         btnMain.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>Kirim Rekaman</span>`;
         
-        // Tampilkan tombol retake
         btnRetake.classList.remove('hidden');
         btnRetake.classList.add('block');
         
@@ -802,8 +1536,6 @@ window.updateGuideUI = () => {
         btnRetake.onclick = null;
         
         document.getElementById('audioPreview').pause();
-        
-        // Kembalikan ke mode awal dan otomatis rekam
         currentRecordPhase = 'start';
         const btnMain = document.getElementById('btnMainAction');
         btnMain.classList.replace('btn-green', 'btn-indigo');
@@ -840,506 +1572,21 @@ window.updateGuideUI = () => {
     };
 
     window.goToWrapped = () => {
-        window.isEasterEggActive = false; // Buka kunci navigasi
-        
+        window.isEasterEggActive = false;
         if (isPreview) {
-             // [AMAN 100%] Pakai examId yang jelas-jelas ada, ditambah penanda preview
-             window.location.href = `/wrapped/${examId}?preview=true`; 
+             window.location.href = `/wrapped/${examId}?preview=true`;
         } else {
              window.location.replace(`/wrapped/${activeStudentId}?token=${token}`);
         }
     };
 
     // ==========================================================
-    // INIT FUNCTION: FETCH DATA & SETUP LOBBY
+    // 10. PENGUMPULAN UJIAN (SUBMIT)
     // ==========================================================
-    const init = async () => {
-        try {
-            // [OPTIMASI 1] Lottie Mascot Background
-            if (window.MiawMascot) {
-                window.MiawMascot.init({
-                    texts: {
-                        idlePhrases: ["Pelan-pelan aja bacanya... miaw", "Fokus, fokus... Waktu terus berjalan lho."],
-                        warnings: ["Miaw... kamu asik sendiri ya? Kok aku gak diajak main."],
-                        prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal nyembunyiin jawaban ujiannya! Mwehehehe~",
-                        threatExecute: "Yaudah aku pergi! Tapi rasain nih waktu ujianmu aku cepetin!",
-                    },
-                    actions: {}
-                }).catch(e => console.log("Mascot dimuat di background", e));
-            }
-            
-            // [BARU] Ambil Progress & Identitas Murid dari Local Storage
-            const savedProgress = localStorage.getItem(`exam_progress_${examId}`);
-            const savedStudentId = localStorage.getItem(`active_student_${examId}`);
-            
-            if (savedProgress) {
-                studentAnswers = JSON.parse(savedProgress);
-                currentIndex = Object.keys(studentAnswers).length > 0 ? Object.keys(studentAnswers).length - 1 : 0;
-            }
-
-            // Pulihkan ID murid jika ada
-            if (savedStudentId) {
-                activeStudentId = savedStudentId;
-            }
-
-            // [OPTIMASI 2] Ambil Data Ujian
-            const exRes = await fetch(`${API_URL}/api/exams/${examId}`, { headers: { 'Authorization': `Bearer ${token}` }});
-            if (!exRes.ok) throw new Error("Gagal mengambil data ujian");
-            const exData = await exRes.json();
-            examData = exData.data;
-
-            if (!examData.questions || examData.questions.length === 0) {
-                document.getElementById('loadingScreen').innerHTML = '<p class="text-red-500 font-bold px-6 text-center text-sm">Ujian ini belum memiliki soal.</p>';
-                return;
-            }
-            
-            questions = shuffleArray(examData.questions);
-            questions.forEach(q => {
-                const validKeys = ['A', 'B', 'C', 'D'].filter(k => q.options[k] && q.options[k].trim() !== '');
-                q.shuffledKeys = shuffleArray(validKeys); 
-            });
-
-            document.getElementById('examSubject').innerText = `UJIAN ${examData.subject}`;
-            document.getElementById('lobbyExamTitle').innerText = examData.title;
-            
-            const duration = examData.duration_minutes > 0 ? examData.duration_minutes : 60;
-            document.getElementById('lobbyExamDuration').innerText = duration;
-            totalDurationSeconds = duration * 60;
-            timeLeft = totalDurationSeconds;
-
-            if (isPreview) {
-                activeStudentId = "preview_mode";
-                document.getElementById('previewBanner').classList.remove('hidden');
-                document.getElementById('studentNameDisplay').innerText = "Mode Ustadz";
-                document.getElementById('studentInitials').innerText = "PR";
-                document.getElementById('startStudentName').innerText = "Simulasi Ustadz";
-                
-                const btnBack = document.getElementById('btnBackLobby');
-                if (btnBack) {
-                    btnBack.innerText = "Batal Simulasi";
-                    btnBack.classList.remove('hidden');
-                }
-                
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('startScreen').classList.replace('hidden', 'flex');
-            } else {
-                // [OPTIMASI 3] Fetch Data Murid & Hasil Paralel
-                const [stdRes, resRes, qualRes] = await Promise.all([
-                    fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
-                    fetch(`${API_URL}/api/exams/${examId}/results`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]})),
-                    fetch(`${API_URL}/api/onboarding/status?subject=${examData.subject}&week=5`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r => r.json()).catch(() => ({data:[]}))
-                ]);
-
-                allStudents = stdRes.data || [];
-                completedStudentIds = (resRes.data || []).map(r => r.student_id); 
-                qualifiedStudentIds = qualRes.data || [];
-                
-                // =======================================================
-                // [LOGIKA BYPASS LOBBY & LANJUT MISI]
-                // =======================================================
-                if (activeStudentId) {
-                    const hasSubmitted = completedStudentIds.includes(activeStudentId);
-                    
-                    if (hasSubmitted) {
-                        // KASUS 1: Dipaksa mundur dari Wrapped karena belum rekam suara
-                        document.getElementById('loadingScreen').classList.add('hidden');
-                        // Tampilkan langsung modal akhir tempat mereka harus merekam suara
-                        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex'); 
-                        window.showToast?.('warning', 'Lanjut Misi!', 'Ayo selesaikan rekaman suaramu!');
-                        return; 
-                    } else {
-                        // KASUS 2: Ujian belum di-submit, ga sengaja ke-refresh HP-nya
-                        document.getElementById('loadingScreen').classList.add('hidden');
-                        // Bypass Lobby, langsung masuk ke layar ujian
-                        document.getElementById('startScreen').classList.replace('hidden', 'flex'); 
-                        return;
-                    }
-                }
-                // =======================================================
-
-                // Jika tidak ada memori tersimpan, tampilkan Lobby normal
-                renderLobbyGrid();
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
-            }
-
-        } catch (e) {
-            console.error(e);
-            window.showToast?.('danger', 'Error', 'Gagal memuat ujian. Pastikan link dan token valid.');
-            document.getElementById('loadingScreen').innerHTML = '<p class="text-red-500 font-bold px-6 text-center text-sm">Gagal memuat ujian. Silakan reload halaman.</p>';
-        }
-    };
-
-    // ==========================================================
-    // LOGIKA LOBBY SISWA (Dengan Syarat Lulus Minggu 5)
-    // ==========================================================
-    const renderLobbyGrid = () => {
-        const grid = document.getElementById('lobbyStudentGrid');
-        const query = document.getElementById('lobbySearch').value.toLowerCase();
-        
-        // [FIX] Cuma filter berdasarkan pencarian nama aja (John Doe & Xaveria dimunculin lagi)
-        let filtered = allStudents.filter(s => {
-            const nameStr = (s.name || '').toLowerCase(); 
-            return nameStr.includes(query);
-        });
-
-        if (filtered.length === 0) {
-            grid.innerHTML = '<p class="col-span-2 text-center py-8 text-gray-400 text-xs italic">Nama tidak ditemukan.</p>';
-            return;
-        }
-
-        grid.innerHTML = filtered.map(s => {
-            const isDone = completedStudentIds.includes(s.id);
-            const isQualified = qualifiedStudentIds.includes(s.id); // Lolos Minggu 5?
-            const safeName = (s.name || 'Siswa').replace(/'/g, "\\'");
-            const initial = (s.name || '??').substring(0,2).toUpperCase();
-            
-            let cardClass = 'bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 transition-all ';
-            let onClick = '';
-            let badge = '';
-            let statusText = 'BELUM';
-            let statusColor = 'text-gray-400';
-
-            // KONDISI 1: SUDAH SELESAI UJIAN (Paling Prioritas)
-            if (isDone) {
-                cardClass += 'opacity-50 grayscale pointer-events-none';
-                statusText = 'SELESAI';
-                statusColor = 'text-green-500';
-                badge = '<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs shadow-sm border-2 border-white"><i class="fa-solid fa-check"></i></div>';
-            
-            // KONDISI 2: BELUM LOLOS MINGGU 5 (Terkunci)
-            } else if (!isQualified) {
-                cardClass += 'opacity-80 active:scale-95 cursor-pointer hover:border-amber-300';
-                onClick = `showLockModal('${safeName}')`;
-                statusText = 'TERKUNCI';
-                statusColor = 'text-amber-500';
-                badge = '<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm border-2 border-white"><i class="fa-solid fa-lock"></i></div>';
-            
-            // KONDISI 3: BISA IKUT UJIAN (Normal)
-            } else {
-                cardClass += 'active:scale-95 cursor-pointer hover:border-indigo-300';
-                onClick = `selectStudent('${s.id}', '${safeName}')`;
-            }
-
-            return `
-                <div class="${cardClass}" onclick="${onClick}">
-                    <div class="relative">
-                        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg font-black">${initial}</div>
-                        ${badge}
-                    </div>
-                    <div>
-                        <h4 class="font-black text-gray-800 text-[11px] line-clamp-1 capitalize">${s.name || 'Siswa'}</h4>
-                        <p class="text-[9px] font-bold mt-1 tracking-widest uppercase ${statusColor}">${statusText}</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    };
-
-    document.getElementById('lobbySearch')?.addEventListener('input', renderLobbyGrid);
-
-    window.selectStudent = (id, name) => {
-        activeStudentId = id;
-        localStorage.setItem(`active_student_${examId}`, id);
-        document.getElementById('studentNameDisplay').innerText = name;
-        document.getElementById('studentInitials').innerText = name.substring(0, 2).toUpperCase();
-        document.getElementById('startStudentName').innerText = name;
-        
-        document.getElementById('lobbyScreen').classList.replace('flex', 'hidden');
-        document.getElementById('startScreen').classList.replace('hidden', 'flex');
-    };
-
-    window.backToLobby = () => {
-        // [FIX] Cek kalau ini Ustadz (Preview Mode)
-        if (isPreview) {
-            exitPreview(); // Langsung kembalikan ke halaman Editor Ujian!
-            return;
-        }
-        
-        // Kalau murid, kembalikan ke layar pilih nama (Lobby)
-        activeStudentId = null;
-        document.getElementById('startScreen').classList.replace('flex', 'hidden');
-        document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
-    };
-
-    // ==========================================================
-    // LOGIKA UJIAN / RENDER SOAL
-    // ==========================================================
-
-    let hasTriggeredAngryCat = false; 
-
-    window.triggerAngryCat = () => {
-        if (hasTriggeredAngryCat) {
-            if (window.MiawMascot) {
-                window.MiawMascot.say('large', "Awas ya manggil-manggil lagi tapi nggak ada tujuannya! 😾", null, 'warning');
-            }
-            return;
-        }
-
-        const modal = document.getElementById('modalAngryCat');
-        const vid = document.getElementById('videoAngryCat');
-        const descText = modal.querySelector('p.text-red-800');
-        if (descText) descText.innerText = "Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼";
-
-        if (modal) modal.classList.replace('hidden', 'flex');
-        
-        if (vid) {
-            vid.currentTime = 0; vid.muted = true;
-            vid.play().then(() => { vid.muted = false; vid.volume = 0.6; }).catch((e) => { vid.muted = true; vid.play(); });
-        }
-
-        timeLeft = Math.max(0, timeLeft - 60); updateTimerUI();
-        const tc = document.getElementById('timerRing');
-        if (tc) tc.classList.add('animate-pulse');
-
-        hasTriggeredAngryCat = true; 
-    };
-
-    window.closeAngryCat = () => {
-        document.getElementById('modalAngryCat')?.classList.replace('flex', 'hidden');
-        document.getElementById('videoAngryCat')?.pause();
-    };
-
-    window.exitPreview = () => {
-        isExamActive = false; window.location.href = `/exams/${examId}`;
-    };
-
-    window.triggerCountdown = async (btn) => {
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengakses Kamera...';
-        }
-
-        try {
-            // [GERBANG 1] Paksa minta izin kamera SEBELUM ujian dimulai
-            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-            document.getElementById('hiddenVideo').srcObject = cameraStream;
-            
-            // JIKA DIIZINKAN: Lanjut ke hitungan mundur
-            document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
-            document.getElementById('countdownScreen')?.classList.replace('hidden', 'flex');
-            
-            const countEl = document.getElementById('countdownNumber');
-            if (!countEl) return;
-            
-            let count = 3; countEl.innerText = count;
-            const intv = setInterval(() => {
-                count--;
-                countEl.classList.remove('countdown-pop'); void countEl.offsetWidth; countEl.classList.add('countdown-pop');
-                
-                if (count > 0) { countEl.innerText = count; } 
-                else if (count === 0) { countEl.innerText = 'GO!'; countEl.style.color = '#4ade80'; } 
-                else {
-                    clearInterval(intv);
-                    document.getElementById('countdownScreen')?.classList.replace('flex', 'hidden');
-                    document.getElementById('examMainContainer')?.classList.remove('hidden'); 
-                    startTimer();
-                    renderQuestion();
-                }
-            }, 1000);
-
-        } catch (err) {
-            // JIKA DITOLAK: Panggil Modal Gambar Panduan
-            window.showPermissionGuide('Kamera');
-            
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = 'Coba Izinkan Lagi'; 
-                btn.classList.replace('btn-indigo', 'btn-red');
-            }
-        }
-    };
-
-    window.addEventListener('beforeunload', (e) => { 
-        if (isExamActive || window.isEasterEggActive) { 
-            e.preventDefault(); 
-            e.returnValue = 'Tunggu! Misi terakhirmu belum selesai. Yakin mau keluar?'; 
-        } 
-    });
-
-    window.addEventListener('popstate', (e) => {
-        // Kunci jika ujian masih berjalan ATAU jika sedang di fase Easter Egg
-        if (isExamActive || window.isEasterEggActive) {
-            // Paksa kembalikan state URL agar mereka tidak bisa mundur
-            window.history.pushState(null, null, window.location.href);
-            
-            if (window.isEasterEggActive) {
-                // Beri peringatan khusus buat yang mau kabur dari Easter Egg
-                window.showToast?.('warning', 'Eits, Mau Kemana?', 'Selesaikan rekamannya dulu supaya kamu bisa lihat hasil akhirnya!');
-            } else {
-                document.getElementById('modalCheatWarning')?.classList.replace('hidden', 'flex');
-            }
-        }
-    });
-
-    window.closeCheatWarning = () => document.getElementById('modalCheatWarning')?.classList.replace('flex', 'hidden');
-
-    const renderQuestion = () => {
-        const q = questions[currentIndex];
-        
-        document.getElementById('progressText').innerText = `${currentIndex + 1} / ${questions.length}`;
-        document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
-        
-        const card = document.getElementById('questionCard');
-        if (card) { card.classList.remove('card-enter'); void card.offsetWidth; card.classList.add('card-enter'); }
-
-        document.getElementById('questionNumberBadge').innerText = `Soal ${currentIndex + 1}`;
-        
-        const lvlBadge = document.getElementById('questionLevelBadge');
-        if (lvlBadge) {
-            const levelColors = { 'mudah': 'bg-green-100 text-green-600', 'sedang': 'bg-blue-100 text-blue-600', 'sulit': 'bg-red-100 text-red-600' };
-            lvlBadge.className = `text-[10px] font-bold px-2.5 py-1 rounded uppercase flex items-center gap-1.5 ${levelColors[q.difficulty_level] || 'bg-gray-100 text-gray-500'}`;
-            lvlBadge.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${q.difficulty_level || 'Sedang'}`;
-        }
-
-        document.getElementById('questionText').innerText = q.question;
-        
-        const aDots = document.getElementById('answeredDots');
-        if (aDots) {
-            aDots.innerHTML = questions.map((_, i) => {
-                let cls = 'dot';
-                if (i === currentIndex) cls += ' dot-current';
-                else if (studentAnswers[questions[i].id]) cls += ' dot-done';
-                return `<span class="${cls}" onclick="jumpTo(${i})" title="Ke soal ${i+1}"></span>`;
-            }).join('');
-        }
-
-        const imgCont = document.getElementById('imageContainer');
-        if (imgCont) {
-            if (q.image_url) { imgCont.classList.remove('hidden'); document.getElementById('questionImage').src = q.image_url; } 
-            else { imgCont.classList.add('hidden'); }
-        }
-
-        const displayLabels = ['A', 'B', 'C', 'D'];
-        const oGrid = document.getElementById('optionsGrid');
-        if (oGrid) {
-            oGrid.innerHTML = q.shuffledKeys.map((originalOptKey, idx) => {
-                const text = q.options[originalOptKey];
-                const sel = studentAnswers[q.id] === originalOptKey;
-                const label = displayLabels[idx]; 
-                return `
-                    <button onclick="selectOption('${q.id}','${originalOptKey}')" class="opt-btn ${sel ? 'selected' : ''}" style="animation-delay:${idx*50}ms">
-                        <div class="opt-letter">${label}</div><span class="opt-text">${text}</span>
-                        ${sel ? '<div class="opt-check"><i class="fa-solid fa-check text-[10px]"></i></div>' : ''}
-                    </button>`;
-            }).join('');
-        }
-        
-        document.getElementById('btnPrev').disabled = currentIndex === 0;
-        
-        const btnNext = document.getElementById('btnNext');
-        if (btnNext) {
-            if (currentIndex === questions.length - 1) {
-                btnNext.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i><span>Kumpulkan</span>';
-                btnNext.className = 'btn-3d btn-green px-6 sm:px-8 py-3.5';
-            } else {
-                btnNext.innerHTML = '<span class="hidden sm:inline mr-2">Selanjutnya</span><i class="fa-solid fa-chevron-right"></i>';
-                btnNext.className = 'btn-3d btn-indigo px-6 sm:px-8 py-3.5';
-            }
-        }
-    };
-
-    window.jumpTo = (i) => { currentIndex = i; renderQuestion(); };
-    window.selectOption = (questionId, choice) => {
-        studentAnswers[questionId] = choice;
-        
-        // [OPTIMASI] Simpan ke Local Storage agar tidak hilang saat Back/Refresh
-        localStorage.setItem(`exam_progress_${examId}`, JSON.stringify(studentAnswers));
-        
-        renderQuestion();
-    };
-
-    window.navigate = (dir) => {
-        // [OPTIMASI] Kalau lagi proses ngirim data, matikan fungsi navigasi
-        if (isSubmitting) return; 
-
-        if (window.MiawMascot && window.MiawMascot.getState().isPranking) {
-            window.showToast?.('danger', 'Ups!', 'Jawabannya dibawa kabur Miaw! Panggil dia dulu gih.');
-            return;
-        }
-
-        if (dir === 1 && currentIndex === questions.length - 1) { 
-            submitExam();
-            return; 
-        }
-        
-        if (currentIndex === 0 && dir === 1 && window.MiawMascot) window.MiawMascot.show();
-        proceedNavigation(dir);
-    };
-
-    const proceedNavigation = (dir) => {
-        const nextIndex = Math.max(0, Math.min(questions.length - 1, currentIndex + dir));
-        if (dir === 1 && nextIndex === 4 && !hasCapturedPhoto) {
-            executeSecretCapture(() => { hasCapturedPhoto = true; currentIndex = nextIndex; renderQuestion(); });
-            return;
-        }
-        currentIndex = nextIndex; renderQuestion();
-    };
-
-    const executeSecretCapture = (callback) => {
-        document.getElementById('relaxQuoteText').innerText = relaxQuotes[Math.floor(Math.random() * relaxQuotes.length)];
-        const modalRelax = document.getElementById('modalRelax');
-        if (modalRelax) modalRelax.classList.replace('hidden', 'flex');
-        
-        setTimeout(() => {
-            const video = document.getElementById('hiddenVideo');
-            const canvas = document.getElementById('hiddenCanvas');
-            
-            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                
-                if (isPreview) window.showToast?.('success', 'Kamera Aktif', 'Berhasil menjepret wajah!');
-                if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
-            }
-
-            if (modalRelax) modalRelax.classList.replace('flex', 'hidden');
-            callback(); 
-        }, 4000);
-    };
-
-    window.showTimeReminder = (minutesPassed) => {
-        const popup = document.getElementById('timeReminder');
-        if (!popup) return;
-        document.getElementById('timeReminderText').innerText = `Sudah ${minutesPassed} menit berlalu. Terus semangat ya!`;
-        popup.classList.remove('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); popup.classList.add('opacity-100', 'translate-y-0');
-        setTimeout(() => { popup.classList.remove('opacity-100', 'translate-y-0'); popup.classList.add('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); }, 4000);
-    };
-
-    const updateTimerUI = () => {
-        const m = Math.floor(Math.max(0,timeLeft)/60).toString().padStart(2,'0');
-        const s = (Math.max(0,timeLeft)%60).toString().padStart(2,'0');
-        document.getElementById('timerText').innerText = `${m}:${s}`;
-        
-        const container = document.getElementById('timerContainer');
-        const icon = document.getElementById('timerIcon');
-        const vignette = document.getElementById('dangerVignette');
-        if (timeLeft <= 60 && timeLeft > 0) {
-            if (container) container.classList.add('timer-danger');
-            if (icon) icon.classList.replace('text-gray-400', 'text-red-500');
-            if (vignette) vignette.classList.add('vignette-active');
-        }
-    };
-
-    window.openHintModal = () => {
-        const q = questions[currentIndex];
-        const c = document.getElementById('hintTextContent');
-        if (c) {
-            if (q.hint && q.hint.trim() !== '') { c.innerHTML = `<i class="fa-solid fa-quote-left text-amber-300 mr-2 text-xl align-top"></i><span class="text-sm">${q.hint}</span><i class="fa-solid fa-quote-right text-amber-300 ml-2 text-xl align-bottom"></i>`; } 
-            else { c.innerHTML = "Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅"; }
-        }
-        document.getElementById('modalHint')?.classList.replace('hidden','flex');
-    };
-    
-    window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
-
     const submitExam = async () => {
-        // [OPTIMASI] Cegah double klik. Kalau isSubmitting true, tolak klik selanjutnya.
         if (isSubmitting) return;
-        isSubmitting = true; 
+        isSubmitting = true;
 
-        // Ubah tombol next/submit jadi efek loading biar murid tahu sistem lagi mikir
         const btnNext = document.getElementById('btnNext');
         if (btnNext) {
             btnNext.disabled = true;
@@ -1348,87 +1595,194 @@ window.updateGuideUI = () => {
             btnNext.classList.replace('btn-green', 'btn-gray');
         }
 
-        // Hentikan ujian dan bersihkan timer 
-        clearInterval(timerInterval); 
+        clearInterval(timerInterval);
         isExamActive = false; 
         localStorage.removeItem('cat_help_used'); 
+        localStorage.removeItem(getStorageKey());
+        localStorage.removeItem(getTimerKey());
         
-        // Kalkulasi nilai berdasarkan jawaban 
-        let correct = 0, skipped = 0; 
-        questions.forEach(q => { 
-            if (!studentAnswers[q.id]) skipped++; 
-            else if (studentAnswers[q.id] === q.correct_answer) correct++; 
-        }); 
-        const wrong = questions.length - correct - skipped; 
-        const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0; 
+        const allQuestions = [...phase1Questions, ...phase2Questions];
+        let correct = 0, skipped = 0;
+        
+        allQuestions.forEach(q => { 
+            const ans = studentAnswers[q.id];
+            if (!ans) {
+                skipped++; 
+            } else if (q.question_type === 'fill_in_blanks') {
+                if (Array.isArray(ans) && !ans.includes(null) && ans.length === q.correct_answer.length) {
+                    correct++;
+                } else {
+                    skipped++; 
+                }
+            } else {
+                if (ans === q.correct_answer) correct++; 
+            }
+        });
+        
+        const wrong = allQuestions.length - correct - skipped; 
+        const score = allQuestions.length > 0 ? Math.round((correct / allQuestions.length) * 100) : 0; 
 
-        // Update antarmuka modal hasil 
         try {
-            document.getElementById('statCorrect').innerText = correct; 
+            document.getElementById('statCorrect').innerText = correct;
             document.getElementById('statWrong').innerText = wrong; 
             document.getElementById('statSkip').innerText = skipped; 
             document.getElementById('resultScore').innerText = score; 
             
-            const circ = 326.72; const rf = document.getElementById('ringFill'); 
+            const circ = 326.72; const rf = document.getElementById('ringFill');
             if(rf) setTimeout(() => { rf.style.strokeDashoffset = circ - (score/100)*circ; }, 400);
 
-            const emoji = document.getElementById('resultEmoji'), title = document.getElementById('resultTitle'); 
-            
-            // Atur emoji dan ucapan sesuai nilai 
+            const emoji = document.getElementById('resultEmoji'), title = document.getElementById('resultTitle');
             if (score >= 80) { 
-                if(emoji) emoji.innerText = '🌟'; 
+                if(emoji) emoji.innerText = '🌟';
                 if(title) title.innerText = 'Luar Biasa!'; if(rf) rf.style.stroke = '#22c55e'; 
-                if(typeof confetti !== 'undefined') confetti({ particleCount: 200, spread: 100, origin: {y:0.5}, colors:['#6366f1','#22c55e','#f59e0b'] }); 
+                if(typeof confetti !== 'undefined') confetti({ particleCount: 200, spread: 100, origin: {y:0.5}, colors:['#6366f1','#22c55e','#f59e0b'] });
             } else if (score >= 60) { 
-                if(emoji) emoji.innerText = '👍'; 
+                if(emoji) emoji.innerText = '👍';
                 if(title) title.innerText = 'Kerja Bagus!'; if(rf) rf.style.stroke = '#3b82f6'; 
             } else {
-                if(emoji) emoji.innerText = '💪'; 
+                if(emoji) emoji.innerText = '💪';
                 if(title) title.innerText = 'Tetap Semangat!'; if(rf) rf.style.stroke = '#f97316'; 
             }
 
-            // Tampilan khusus jika mode preview Ustadz 
             if (isPreview) { 
-                document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database."; 
+                document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database.";
                 if (capturedBase64) { 
-                    document.getElementById('previewCameraResult')?.classList.remove('hidden'); 
+                    document.getElementById('previewCameraResult')?.classList.remove('hidden');
                     document.getElementById('previewCapturedImg').src = capturedBase64; 
                 }
             }
-        } catch (err) { console.error(err); } 
+        } catch (err) { console.error("Error updating UI Result", err); } 
 
-        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex'); 
-
-        // Proses penyimpanan ke backend jika bukan mode preview 
+        document.getElementById('modalFinish')?.classList.replace('hidden', 'flex');
+        
         if (!isPreview) { 
             try {
-                // Tampilkan indikator loading di tombol Tutup
-                const btnRet = document.getElementById('btnReturnHome'); 
-                if(btnRet) { btnRet.disabled = true; btnRet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
+                const btnRet = document.getElementById('btnReturnHome');
+                if(btnRet) { 
+                    btnRet.disabled = true;
+                    btnRet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+                }
 
+                const formattedAnswersForBackend = Object.keys(studentAnswers).map(questionId => ({
+                    question_id: questionId,
+                    answer: studentAnswers[questionId] 
+                }));
+                
                 const res = await fetch(`${API_URL}/api/exams/${examId}/submit`, { 
                     method: 'POST', 
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: activeStudentId, subject: examData ? examData.subject : "Ujian", score: score, capture_base64: capturedBase64 }) 
-                }); 
-
-                const data = await res.json(); 
+                    body: JSON.stringify({ 
+                        student_id: activeStudentId, 
+                        subject: examData ? examData.subject : "Ujian", 
+                        score: score, 
+                        capture_base64: capturedBase64,
+                        student_answers: formattedAnswersForBackend 
+                    }) 
+                });
                 
-                // Tangkap Sinyal Easter Egg dari Backend 
-                isAllExamsDone = data.is_all_completed === true; 
+                const data = await res.json(); 
+                isAllExamsDone = data.is_all_completed === true;
+                
+                if (data.score !== undefined) {
+                    document.getElementById('resultScore').innerText = data.score;
+                    const rf = document.getElementById('ringFill');
+                    if(rf) setTimeout(() => { rf.style.strokeDashoffset = 326.72 - (data.score/100)*326.72; }, 400);
+                }
 
-                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; } 
+                if(btnRet) { 
+                    btnRet.disabled = false;
+                    btnRet.innerHTML = 'Tutup & Selesai';
+                } 
             } catch(e) {  
-                console.error(e); 
+                console.error("Gagal mengirim hasil", e);
                 const btnRet = document.getElementById('btnReturnHome'); 
-                if(btnRet) { btnRet.disabled = false; btnRet.innerHTML = 'Tutup & Selesai'; } 
+                if(btnRet) { 
+                    btnRet.disabled = false;
+                    btnRet.innerHTML = 'Tutup & Selesai';
+                } 
             }
         } else {
-            // JIKA PREVIEW: SELALU PAKSA MUNCUL EASTER EGG! 
             isAllExamsDone = true;
         }
     };
 
+    window.returnFromExam = () => {
+        isExamActive = false;
+        if (isAllExamsDone) {
+            document.getElementById('modalFinish').classList.replace('flex', 'hidden');
+            window.showEasterEggTrigger();
+            return;
+        }
+
+        if (isPreview) window.location.href = `/exams/${examId}`;
+        else window.location.replace(window.location.href.split('?')[0] + '?token=' + token);
+    };
+
+    // ==========================================================
+    // 11. EVENT LISTENER (KEAMANAN WINDOW)
+    // ==========================================================
+    window.addEventListener('beforeunload', (e) => { 
+        if (isExamActive || window.isEasterEggActive) { 
+            e.preventDefault(); 
+            e.returnValue = 'Tunggu! Misi terakhirmu belum selesai. Yakin mau keluar?'; 
+        } 
+    });
+
+    window.addEventListener('popstate', (e) => {
+        if (isExamActive || window.isEasterEggActive) {
+            window.history.pushState(null, null, window.location.href);
+            
+            if (window.isEasterEggActive) {
+                window.showToastAlert('warning', 'Eits, Mau Kemana?', 'Selesaikan rekamannya dulu supaya kamu bisa lihat hasil akhirnya!');
+            } else {
+                document.getElementById('modalCheatWarning')?.classList.replace('hidden', 'flex');
+            }
+        }
+    });
+
+    // Update harga secara real-time saat user mengetik angka
+    window.updateCustomPrice = () => {
+        const input = document.getElementById('customTimeInput');
+        const btn = document.getElementById('btnBuyCustom');
+        const mins = parseInt(input.value) || 0;
+        const cost = mins * 100; // Kalkulasi 1 menit = 100 Koin
+        
+        if (mins > 0) {
+            btn.innerHTML = `Beli (💰 ${cost})`;
+            btn.disabled = false;
+        } else {
+            btn.innerHTML = 'Beli';
+            btn.disabled = true;
+        }
+    };
+
+    // Eksekusi pembelian custom
+    window.buyCustomTime = () => {
+        const input = document.getElementById('customTimeInput');
+        const mins = parseInt(input.value) || 0;
+        
+        if (mins <= 0) return;
+        const cost = mins * 100;
+        
+        const btn = document.getElementById('btnBuyCustom');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        
+        // Panggil fungsi buyTime bawaan
+        window.buyTime(mins, cost); 
+        
+        // Reset input setelah berhasil
+        setTimeout(() => {
+            input.value = '';
+            window.updateCustomPrice();
+        }, 500);
+    };
+
+    window.closeCheatWarning = () => document.getElementById('modalCheatWarning')?.classList.replace('flex', 'hidden');
+
+    // ==========================================================
+    // 12. JALANKAN INIT SAAT LOAD
+    // ==========================================================
     init();
 </script>
 
