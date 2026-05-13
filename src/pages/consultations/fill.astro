@@ -1111,6 +1111,28 @@ import Mascot from '../../components/Mascot.astro';
                     hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
                 }
 
+                if (!isPreview && completedWeeksForSubject.includes(parsedWeek)) {
+                    document.getElementById('startTitleText').innerText = "Sudah Selesai!";
+                    document.getElementById('startDescText').innerText = "Kamu sudah pernah menyelesaikan ujian ini. Mengalihkan ke halaman hasil...";
+                    
+                    const btnStartLobby = document.getElementById('btnStart');
+                    if (btnStartLobby) {
+                        btnStartLobby.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengalihkan...';
+                        btnStartLobby.disabled = true;
+                    }
+                    
+                    window.showToast?.('info', 'Ujian Selesai', 'Kamu sudah pernah mengerjakan ujian ini.');
+                    
+                    setTimeout(() => {
+                        if (isPRMode) {
+                            window.location.replace(`/leaderboard-pr?subject=${subject}&week=${week}&student_id=${studentId}`);
+                        } else {
+                            window.location.replace('/consultations');
+                        }
+                    }, 2000);
+                    return; // HENTIKAN EKSEKUSI init() agar ujian tidak terbuka!
+                }
+
                 document.getElementById('headerName').innerText = student.data.name;
                 document.getElementById('headerInitials').innerText = student.data.name?.substring(0,2).toUpperCase() || 'S';
                 allQuestions = qData.data || [];
@@ -1900,7 +1922,6 @@ import Mascot from '../../components/Mascot.astro';
         } else {
             previewItem(itemKey);
         }
-    };
     };
 
     window.confirmCallFriend = () => {

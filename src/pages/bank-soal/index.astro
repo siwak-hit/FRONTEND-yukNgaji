@@ -1634,14 +1634,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
             const studentResult = await resStudents.json();
             const allStudents = studentResult.data || [];
 
-            // 3. Filter murid yang hanya ada di list 'sudah ngerjain'
-            const targetStudents = allStudents.filter(s => completedIds.includes(s.id));
+            // [PERBAIKAN] 3. Filter murid yang BELUM selesai ngerjain
+            const targetStudents = allStudents.filter(s => !completedIds.includes(s.id));
 
             if (targetStudents.length === 0) {
                 listContainer.innerHTML = `
                     <div class="text-center py-8">
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">Tidak ada data</p>
-                        <p class="text-[9px] text-gray-400">Belum ada murid yang memulai sesi di mapel ini.</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">Semua Selesai</p>
+                        <p class="text-[9px] text-gray-400">Semua murid sudah menyelesaikan sesi di mapel ini.</p>
                     </div>`;
                 return;
             }
