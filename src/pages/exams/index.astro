@@ -18,6 +18,35 @@ import ModalAlert from '../../components/ModalAlert.astro';
             </button>
         </header>
 
+        <section class="mb-6">
+            <a href="/ujian-hafalan"
+                class="block bg-gradient-to-br from-emerald-500 to-green-600 rounded-[2rem] p-5 text-white shadow-xl shadow-green-600/20 active:scale-[0.99] transition-all relative overflow-hidden">
+                <div class="absolute -right-8 -bottom-8 text-8xl opacity-10">
+                    <i class="fa-solid fa-book-quran"></i>
+                </div>
+
+                <div class="relative z-10 flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-2xl border border-white/20">
+                        <i class="fa-solid fa-microphone-lines"></i>
+                    </div>
+
+                    <div class="flex-1">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-green-100">
+                            Mode Baru
+                        </p>
+                        <h2 class="text-lg font-black leading-tight">
+                            Ujian Hafalan / Lisan
+                        </h2>
+                        <p class="text-xs font-bold text-green-100 mt-1">
+                            Penilaian sesi kelompok, hafalan, dan pemahaman.
+                        </p>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-right text-white/80"></i>
+                </div>
+            </a>
+        </section>
+
         <main id="examList" class="space-y-4">
             <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-green-500 text-2xl"></i></div>
         </main>
@@ -157,7 +186,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                             : `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">Draft</span>`
                         }
                         <div class="flex items-center gap-1.5 mt-1">
-                            
+
                             <button onclick="openEditModal('${exam.id}')" class="w-8 h-8 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-gear"></i></button>
                             <button onclick="confirmDelete('${exam.id}', '${exam.title}')" class="w-8 h-8 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-trash"></i></button>
                         </div>

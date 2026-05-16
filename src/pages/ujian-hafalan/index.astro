@@ -1,0 +1,146 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Ujian Hafalan - yukNgaji">
+    <div class="px-6 py-8 min-h-screen bg-gray-50">
+        <header class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-black text-gray-800 tracking-tight">Ujian Hafalan</h1>
+                <p class="text-xs text-gray-500 font-bold">
+                    Evaluasi hafalan dan pemahaman lisan siswa
+                </p>
+            </div>
+
+            <a href="/exams"
+                class="w-10 h-10 bg-white text-gray-500 border border-gray-100 rounded-xl shadow-sm flex items-center justify-center active:scale-95 transition-all">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+        </header>
+
+        <main id="oralExamList" class="space-y-4">
+            <div class="text-center py-10">
+                <i class="fa-solid fa-spinner fa-spin text-green-500 text-2xl"></i>
+            </div>
+        </main>
+    </div>
+
+    <Toast />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+
+    const SUBJECT_STYLE = {
+        tajwid: {
+            icon: 'fa-book-quran',
+            badge: 'TAJWID',
+            bg: 'bg-green-50',
+            text: 'text-green-600',
+            button: 'bg-green-600 shadow-green-600/20',
+        },
+        fiqih: {
+            icon: 'fa-person-praying',
+            badge: 'FIQIH',
+            bg: 'bg-blue-50',
+            text: 'text-blue-600',
+            button: 'bg-blue-600 shadow-blue-600/20',
+        },
+        tauhid: {
+            icon: 'fa-star-and-crescent',
+            badge: 'TAUHID',
+            bg: 'bg-purple-50',
+            text: 'text-purple-600',
+            button: 'bg-purple-600 shadow-purple-600/20',
+        }
+    };
+
+    const fetchOralExams = async () => {
+        const container = document.getElementById('oralExamList');
+
+        try {
+            const res = await fetch(`${API_URL}/api/oral-exams`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status !== 'success') {
+                throw new Error(result.message || 'Gagal memuat ujian hafalan.');
+            }
+
+            const subjectOrder = ['tajwid', 'fiqih', 'tauhid'];
+
+            const data = (result.data || []).sort((a, b) => {
+                return subjectOrder.indexOf(a.subject) - subjectOrder.indexOf(b.subject);
+            });
+
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white border border-gray-100 rounded-3xl p-8 text-center shadow-sm">
+                        <div class="text-5xl mb-3">📖</div>
+                        <p class="text-sm font-bold text-gray-600">Belum ada template ujian hafalan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.map(item => {
+                const style = SUBJECT_STYLE[item.subject] || SUBJECT_STYLE.tajwid;
+
+                return `
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 active:scale-[0.99] transition-all">
+                        <div class="flex items-start gap-4">
+                            <div class="w-14 h-14 rounded-2xl ${style.bg} ${style.text} flex items-center justify-center text-2xl shrink-0">
+                                <i class="fa-solid ${style.icon}"></i>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] font-black ${style.text} uppercase tracking-widest mb-1">
+                                    ${style.badge}
+                                </p>
+
+                                <h2 class="text-lg font-black text-gray-800 leading-tight">
+                                    ${item.title}
+                                </h2>
+
+                                <p class="text-xs font-bold text-gray-400 mt-1 leading-relaxed">
+                                    ${item.description || 'Evaluasi hafalan dan pemahaman siswa.'}
+                                </p>
+
+                                <div class="grid grid-cols-2 gap-2 mt-4">
+                                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase">Per Sesi</p>
+                                        <p class="text-sm font-black text-gray-700">${item.max_students_per_session || 5} Siswa</p>
+                                    </div>
+
+                                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase">Durasi</p>
+                                        <p class="text-sm font-black text-gray-700">${item.target_session_minutes || 10} Menit</p>
+                                    </div>
+                                </div>
+
+                                <a href="/ujian-hafalan/${item.id}"
+                                    class="mt-4 w-full flex items-center justify-center gap-2 py-3 ${style.button} text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-xs">
+                                    Buka Evaluasi <i class="fa-solid fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error(error);
+            container.innerHTML = `
+                <div class="bg-white border border-red-100 rounded-3xl p-8 text-center shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i>
+                    <p class="text-sm font-bold text-red-600">${error.message}</p>
+                </div>
+            `;
+        }
+    };
+
+    fetchOralExams();
+</script>
