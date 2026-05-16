@@ -12,7 +12,7 @@
     <strong>MIAWW!</strong> <br/>
     <span id="mascot-chat-text" class="italic text-xs text-gray-500"></span>
   </div>
-  
+
   <div id="mascot-lottie-hidden" style="position: absolute; opacity: 0; pointer-events: none; width: 140px; height: 140px;"></div>
     <div id="mascot-video-container" class="hidden absolute bottom-0 right-0 w-[150px] z-[100] drop-shadow-xl rounded-xl overflow-hidden pointer-events-none transition-all duration-300">
         <video id="mascot-video-player" muted playsinline class="w-full h-auto object-cover rounded-xl"></video>
@@ -24,7 +24,7 @@
   #mascot-container {
     position: fixed;
     bottom: 60px;
-    right: -250px; 
+    right: -250px;
     z-index: 100;
     pointer-events: none;
   }
@@ -72,7 +72,7 @@
 
   /* Bubble Besar saat Close Up */
   .bubble-large {
-    bottom: 100px; 
+    bottom: 100px;
     margin-bottom: 5px;
     left: 50%;
     transform: translateX(-50%) scale(1);
@@ -84,7 +84,7 @@
 
   .mascot-bubble strong { font-size: 10px; display: block; }
   .mascot-bubble span { font-size: 9px; line-height: 1.2; }
-  
+
   .chat-choices { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
   .btn-choice {
     padding: 4px 12px; border-radius: 99px; font-size: 10px; font-weight: 800;
@@ -107,10 +107,10 @@
     let catState = "HIDDEN";
     let catAnim = null;
     let chatTimer = null;
-    
-    let timers = { idle: null, prank: null, comeback: null, warningResume: null }; 
-    let catPatience = 60000; 
-    
+
+    let timers = { idle: null, prank: null, comeback: null, warningResume: null };
+    let catPatience = 60000;
+
     let mState = { isDismissed: false, isReturnedAuto: false, isPranking: false, isThreatening: false };
     const CHROMA_KEY = { r: 202, g: 169, b: 0, tolerance: 40 };
 
@@ -137,7 +137,19 @@
             helpExecute: "Ok, aku tahan waktunya... Cepetan kerjain!", helpReject: "Cih, ditawarin bantuan malah nolak. Bye!",
             helpDone: "Maaf ya, aku hanya bisa membantu itu saja... Lanjutkan!"
         },
-        actions: { onPrank: () => {}, onPrankRevert: () => {}, onThreatExecute: () => {}, onThreatRevert: () => {}, onHelpExecute: (done) => { done(); } }
+        actions: { onPrank: () => {}, onPrankRevert: () => {}, onThreatExecute: () => {}, onThreatRevert: () => {}, onHelpExecute: (done) => { done(); } },
+        position: { visibleRight: '40px', hiddenRight: '-250px', bottom: '68px' }
+    };
+
+    const setMascotVisiblePosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.visibleRight;
+        mc.style.bottom = cfg.position.bottom;
+    };
+
+    const setMascotHiddenPosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.hiddenRight;
     };
 
     const applyCatState = (stateName) => {
@@ -153,12 +165,44 @@
         catAnim.addEventListener('enterFrame', () => {
             const hiddenCanvas = document.querySelector('#mascot-lottie-hidden canvas');
             if (!hiddenCanvas) return;
-            if (visibleCanvas.width !== hiddenCanvas.width) { visibleCanvas.width = hiddenCanvas.width; visibleCanvas.height = hiddenCanvas.height; }
-            vCtx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height); vCtx.drawImage(hiddenCanvas, 0, 0);
-            const imgData = vCtx.getImageData(0, 0, visibleCanvas.width, visibleCanvas.height); const data = imgData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                if (Math.abs(data[i]-CHROMA_KEY.r)<=CHROMA_KEY.tolerance && Math.abs(data[i+1]-CHROMA_KEY.g)<=CHROMA_KEY.tolerance && Math.abs(data[i+2]-CHROMA_KEY.b)<=CHROMA_KEY.tolerance) { data[i+3] = 0; }
+
+            // [FIX] Cegah error drawImage kalau Lottie canvas belum punya ukuran
+            if (hiddenCanvas.width === 0 || hiddenCanvas.height === 0) return;
+
+            // [FIX] Pastikan canvas terlihat juga punya ukuran valid
+            if (
+                visibleCanvas.width !== hiddenCanvas.width ||
+                visibleCanvas.height !== hiddenCanvas.height
+            ) {
+                visibleCanvas.width = hiddenCanvas.width;
+                visibleCanvas.height = hiddenCanvas.height;
             }
+
+            if (visibleCanvas.width === 0 || visibleCanvas.height === 0) return;
+
+            vCtx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+
+            try {
+                vCtx.drawImage(hiddenCanvas, 0, 0);
+            } catch (err) {
+                console.warn('Skip frame Miaw: canvas Lottie belum siap.', err);
+                return;
+            }
+
+            const imgData = vCtx.getImageData(0, 0, visibleCanvas.width, visibleCanvas.height);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const isChroma =
+                    Math.abs(data[i] - CHROMA_KEY.r) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 1] - CHROMA_KEY.g) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 2] - CHROMA_KEY.b) <= CHROMA_KEY.tolerance;
+
+                if (isChroma) {
+                    data[i + 3] = 0;
+                }
+            }
+
             vCtx.putImageData(imgData, 0, 0);
         });
     };
@@ -176,21 +220,21 @@
         const bubble = document.getElementById('mascot-chat');
         let themeClass = theme === 'warning' ? 'bubble-warning' : '';
         bubble.className = `mascot-bubble ${type === 'small' ? 'bubble-small' : 'bubble-large'} ${themeClass}`;
-        
+
         let htmlContent = `<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">${text}</span>`;
         if (actionType) {
             htmlContent += `<div class="chat-choices mt-2"><button class="btn-choice btn-yes" onclick="window.MiawMascot.handleChoice('${actionType}', true)">Ya</button><button class="btn-choice btn-no" onclick="window.MiawMascot.handleChoice('${actionType}', false)">Tidak</button></div>`;
         }
-        bubble.innerHTML = htmlContent; 
-        bubble.style.opacity = "1"; 
+        bubble.innerHTML = htmlContent;
+        bubble.style.opacity = "1";
         bubble.style.transform = type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)";
-        
-        if (!actionType) { 
-            setTimeout(() => { 
-                if(bubble.innerHTML.includes(text)){ 
-                    bubble.style.opacity = "0"; 
+
+        if (!actionType) {
+            setTimeout(() => {
+                if(bubble.innerHTML.includes(text)){
+                    bubble.style.opacity = "0";
                     bubble.style.transform = type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)";
-                } 
+                }
             }, duration);
         }
     };
@@ -198,26 +242,26 @@
     const startRandomChats = () => {
         clearInterval(chatTimer);
         chatTimer = setInterval(() => {
-            if (catState === "IDLE_EDGE" || catState === "PEEK_IDLE") { 
-                setChat('small', cfg.texts.idlePhrases[Math.floor(Math.random() * cfg.texts.idlePhrases.length)], null, 'default', 3500); 
+            if (catState === "IDLE_EDGE" || catState === "PEEK_IDLE") {
+                setChat('small', cfg.texts.idlePhrases[Math.floor(Math.random() * cfg.texts.idlePhrases.length)], null, 'default', 3500);
             }
         }, Math.floor(Math.random() * 5000) + 10000);
     };
 
     const resetIdleTimer = () => {
-        clearTimeout(timers.idle); 
+        clearTimeout(timers.idle);
         clearTimeout(timers.prank);
-        clearTimeout(timers.warningResume); 
-        
+        clearTimeout(timers.warningResume);
+
         if (mState.isDismissed || mState.isPranking || catState === "HIDDEN" || catState === "RETREATING" || catState === "PEEK_OUT" || mState.isThreatening) return;
-        
+
         timers.idle = setTimeout(() => {
             if (catState !== "IDLE_EDGE" && catState !== "PEEK_IDLE") return;
-            
+
             clearInterval(chatTimer);
             const warningTxt = cfg.texts.warnings[Math.floor(Math.random() * cfg.texts.warnings.length)];
             setChat('large', warningTxt, null, 'warning', 6000);
-            
+
             timers.warningResume = setTimeout(() => {
                 if (!mState.isPranking && !mState.isDismissed) { startRandomChats(); }
             }, 6000);
@@ -227,31 +271,31 @@
                     if (mState.isDismissed) return;
                     mState.isDismissed = true;
                     clearInterval(chatTimer); clearTimeout(timers.warningResume);
-                    
+
                     catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
-                    setChat('small', "Huh! Yaudah aku sembunyi aja!", null, 'warning', 3000); 
-                    
+                    setChat('small', "Huh! Yaudah aku sembunyi aja!", null, 'warning', 3000);
+
                     timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
                 }, 15000);
             } else {
                 timers.prank = setTimeout(triggerPrank, 15000);
             }
-            
-        }, catPatience); 
+
+        }, catPatience);
     };
 
     const triggerPrank = () => {
         if (mState.isDismissed) return;
-        mState.isPranking = true; mState.isDismissed = true; 
+        mState.isPranking = true; mState.isDismissed = true;
         clearInterval(chatTimer); clearTimeout(timers.warningResume);
-        
-        setChat('large', cfg.texts.prank, null, 'warning', 4000); 
-        cfg.actions.onPrank(); 
-        
+
+        setChat('large', cfg.texts.prank, null, 'warning', 4000);
+        cfg.actions.onPrank();
+
         catState = "LEAVING"; applyCatState("LEAVING");
         const mc = document.getElementById('mascot-container'); const icon = document.getElementById('toggleCatIcon');
         setTimeout(() => {
-            mc.style.transition = 'right 3s linear, transform 3s linear'; mc.style.right = '-250px';
+            mc.style.transition = 'right 3s linear, transform 3s linear'; setMascotHiddenPosition(mc);
             icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
         }, 3000);
     };
@@ -259,22 +303,22 @@
     const autonomousReturn = () => {
         if (!mState.isDismissed || mState.isPranking || mState.isThreatening) return;
         mState.isDismissed = false; mState.isReturnedAuto = true;
-        
+
         if (cfg.mode === 'peek') {
             catState = "PEEK_IN"; applyCatState("PEEK_IN");
             setChat('small', cfg.texts.callNormalArrive, null, 'default', 4000);
-            
-            setTimeout(() => { 
-                catState = "PEEK_IDLE"; applyCatState("PEEK_IDLE"); 
-                catPatience += 20000; 
-                resetIdleTimer(); startRandomChats(); 
+
+            setTimeout(() => {
+                catState = "PEEK_IDLE"; applyCatState("PEEK_IDLE");
+                catPatience += 20000;
+                resetIdleTimer(); startRandomChats();
             }, CAT_CONFIG.PEEK_IN.lottieDuration);
             return;
         }
 
         catState = "ENTERING"; applyCatState("ENTERING");
         const mc = document.getElementById('mascot-container');
-        mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; mc.style.right = '40px';
+        mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; setMascotVisiblePosition(mc);
         const icon = document.getElementById('toggleCatIcon');
         icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
         setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
@@ -286,20 +330,21 @@
         catState = "RETREATING"; applyCatState("RETREATING");
         const mc = document.getElementById('mascot-container');
         mc.style.transition = 'right 2s ease-in-out, transform 2s ease-in-out';
-        mc.style.right = '40px'; mc.style.transform = 'translateX(0) translateY(0) scale(1)';
+        setMascotVisiblePosition(mc); mc.style.transform = 'translateX(0) translateY(0) scale(1)';
         setTimeout(() => { catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE"); startRandomChats(); }, CAT_CONFIG.RETREATING.lottieDuration);
     };
 
     window.MiawMascot = {
         init: async (customConfig) => {
             // Bersihkan sisa state halaman sebelumnya
-            cfg.mode = 'default'; 
-            
+            cfg.mode = 'default';
+
             if(customConfig.mode) cfg.mode = customConfig.mode;
             if(customConfig.texts) cfg.texts = { ...cfg.texts, ...customConfig.texts };
             if(customConfig.actions) cfg.actions = { ...cfg.actions, ...customConfig.actions };
+            if(customConfig.position) cfg.position = { ...cfg.position, ...customConfig.position };
             if(customConfig.animations) { Object.assign(CAT_CONFIG, customConfig.animations); }
-            
+
             const btnTog = document.getElementById('btnToggleCat');
             const mc = document.getElementById('mascot-container');
 
@@ -308,27 +353,27 @@
                 if(btnTog) btnTog.style.display = 'none';
                 if(mc) {
                     mc.classList.add('mascot-peek'); // <--- Tambah class agar max-width 100px berlaku
-                    mc.style.transition = 'none'; 
-                    mc.style.right = '20px'; 
-                    mc.style.bottom = '-35px'; 
-                    mc.style.transform = 'scale(1)'; 
+                    mc.style.transition = 'none';
+                    mc.style.right = '20px';
+                    mc.style.bottom = '-35px';
+                    mc.style.transform = 'scale(1)';
                 }
             } else {
-                if(btnTog) btnTog.style.display = 'flex'; 
+                if(btnTog) btnTog.style.display = 'flex';
                 if(mc) {
                     mc.classList.remove('mascot-peek'); // <--- Hapus class agar max-width 130px berlaku
-                    mc.style.transition = ''; 
-                    mc.style.right = '-250px'; 
-                    mc.style.bottom = '68px'; 
+                    mc.style.transition = '';
+                    setMascotHiddenPosition(mc);
+                    mc.style.bottom = cfg.position.bottom;
                     mc.style.transform = 'scale(1)';
                 }
             }
 
             const keys = Object.keys(CAT_CONFIG);
             const promises = keys.map(async (key) => {
-                try { 
+                try {
                     if(CAT_CONFIG[key].path) {
-                        const res = await fetch(CAT_CONFIG[key].path); CAT_CONFIG[key].data = await res.json(); 
+                        const res = await fetch(CAT_CONFIG[key].path); CAT_CONFIG[key].data = await res.json();
                     }
                 } catch (err) { console.error(`Gagal muat ${key}`, err); }
             });
@@ -343,7 +388,7 @@
                 if (catState === "HIDDEN") {
                     catState = "PEEK_IN"; applyCatState("PEEK_IN");
                     setChat('small', cfg.texts.entering, null, 'default', 4000);
-                    
+
                     setTimeout(() => {
                         catState = "PEEK_IDLE"; applyCatState("PEEK_IDLE");
                         setChat('small', cfg.texts.idleArrive, null, 'default', 4000);
@@ -358,7 +403,7 @@
                 const mc = document.getElementById('mascot-container');
                 setChat('small', cfg.texts.entering, null, 'default', 4000);
                 mc.style.transition = 'right 2s ease-out, transform 2s ease-out';
-                mc.style.right = '40px'; mc.style.transform = 'translateX(0) scale(1)';
+                setMascotVisiblePosition(mc); mc.style.transform = 'translateX(0) scale(1)';
                 setTimeout(() => {
                     catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE");
                     setChat('small', cfg.texts.idleArrive, null, 'default', 4000);
@@ -369,20 +414,20 @@
         toggle: () => {
             resetIdleTimer();
             const mc = document.getElementById('mascot-container'); const icon = document.getElementById('toggleCatIcon');
-            if (!mState.isDismissed) { 
+            if (!mState.isDismissed) {
                 if (catState === "ENTERING" || catState === "TOWARD" || catState === "LEAVING" || catState === "HIDDEN") return;
                 if (mState.isReturnedAuto) { setChat('large', cfg.texts.threatAsk, 'ASK_THREAT', 'warning'); return; }
                 mState.isDismissed = true; mState.isReturnedAuto = false;
                 clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.prank); clearTimeout(timers.comeback);
                 catState = "LEAVING"; applyCatState("LEAVING");
-                setChat('large', cfg.texts.dismissNormal, null, 'warning', 4000); 
-                icon.className = "fa-solid fa-cat text-gray-300 opacity-50"; 
-                setTimeout(() => { mc.style.transition = 'right 3s linear, transform 3s linear'; mc.style.right = '-250px'; }, 3000); 
-                timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000); 
-            } else { 
+                setChat('large', cfg.texts.dismissNormal, null, 'warning', 4000);
+                icon.className = "fa-solid fa-cat text-gray-300 opacity-50";
+                setTimeout(() => { mc.style.transition = 'right 3s linear, transform 3s linear'; setMascotHiddenPosition(mc); }, 3000);
+                timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
+            } else {
                 clearTimeout(timers.comeback);
                 mState.isDismissed = false; catState = "ENTERING"; applyCatState("ENTERING");
-                mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; mc.style.right = '40px';
+                mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; setMascotVisiblePosition(mc);
                 icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
                 setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
 
@@ -392,14 +437,14 @@
                         catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE");
                         setChat('large', cfg.texts.prankRevert, null, 'default', 4000);
                         setTimeout(() => {
-                            cfg.actions.onPrankRevert(); mState.isPranking = false; 
-                            catPatience += 20000; 
+                            cfg.actions.onPrankRevert(); mState.isPranking = false;
+                            catPatience += 20000;
                             resetIdleTimer(); startRandomChats();
                         }, 3000);
                     }, CAT_CONFIG.ENTERING.lottieDuration);
-                } 
+                }
                 else if (mState.isThreatening) {
-                    mState.isThreatening = false; cfg.actions.onThreatRevert(); 
+                    mState.isThreatening = false; cfg.actions.onThreatRevert();
                     setChat('large', cfg.texts.threatRevert, null, 'default', 4000);
                     setTimeout(() => { catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE"); resetIdleTimer(); startRandomChats(); }, CAT_CONFIG.ENTERING.lottieDuration);
                 } else {
@@ -410,16 +455,16 @@
         },
         handleClick: () => {
             resetIdleTimer();
-            
+
             if (cfg.mode === 'peek') {
                 if (catState !== "PEEK_IDLE") return;
-                
-                mState.isDismissed = true; 
+
+                mState.isDismissed = true;
                 clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.warningResume);
-                
+
                 catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
                 setChat('small', cfg.texts.dismissNormal, null, 'default', 3000);
-                
+
                 timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
                 return;
             }
@@ -433,35 +478,35 @@
         },
         handleChoice: (actionType, isYes) => {
             const bubble = document.getElementById('mascot-chat');
-            
+
             if (actionType === 'ASK_THREAT') {
                 bubble.style.opacity = "0";
                 if (isYes) {
                     mState.isReturnedAuto = false;
                     mState.isDismissed = true; mState.isThreatening = true;
-                    clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.prank); clearTimeout(timers.comeback); 
+                    clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.prank); clearTimeout(timers.comeback);
                     catState = "LEAVING"; applyCatState("LEAVING");
-                    setChat('large', cfg.texts.threatExecute, null, 'warning', 4000); 
+                    setChat('large', cfg.texts.threatExecute, null, 'warning', 4000);
                     cfg.actions.onThreatExecute();
                     const mc = document.getElementById('mascot-container'); const icon = document.getElementById('toggleCatIcon');
                     icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
-                    setTimeout(() => { mc.style.transition = 'right 3s linear, transform 3s linear'; mc.style.right = '-250px'; }, 3000);
-                } else { 
-                    mState.isReturnedAuto = false; 
+                    setTimeout(() => { mc.style.transition = 'right 3s linear, transform 3s linear'; setMascotHiddenPosition(mc); }, 3000);
+                } else {
+                    mState.isReturnedAuto = false;
                     setChat('small', "Nah gitu dong, aku anteng aja kok di sini...", null, 'default', 4000);
                 }
                 return;
             }
-            
+
             if (actionType === 'ASK_DIFFICULTY') {
                 if (isYes) {
                     const isHelpUsed = localStorage.getItem('cat_help_used') === 'true';
-                    if (!isHelpUsed) { setChat('large', cfg.texts.clickYesOffer, 'FREEZE'); } 
-                    else { 
+                    if (!isHelpUsed) { setChat('large', cfg.texts.clickYesOffer, 'FREEZE'); }
+                    else {
                         setChat('large', cfg.texts.clickYesEmpty, null, 'default', 4000);
-                        setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500); 
+                        setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
                     }
-                } else { 
+                } else {
                     // [PERBAIKAN]: Eksekusi Kucing Marah saat menolak bantuan sejak awal!
                     if (typeof window.triggerAngryCat === 'function') {
                         window.triggerAngryCat();
@@ -469,18 +514,18 @@
                         setChat('large', cfg.texts.clickNo, null, 'warning', 4000);
                     }
                     // Waktu mundur diperlama sedikit (2500ms) agar teks peringatan bisa terbaca
-                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500); 
+                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
                 }
                 return;
             }
-            
+
             bubble.style.opacity = "0";
-            
+
             if (actionType === 'FREEZE' && isYes) {
                 localStorage.setItem('cat_help_used', 'true');
                 setChat('large', cfg.texts.helpExecute, null, 'default', 4000);
                 cfg.actions.onHelpExecute(() => { if (catState === "IDLE_EDGE") setChat('small', cfg.texts.helpDone, null, 'default', 4000); });
-            } else if (actionType === 'FREEZE' && !isYes) { 
+            } else if (actionType === 'FREEZE' && !isYes) {
                 // [PERBAIKAN]: Eksekusi juga jika menolak di pertanyaan kedua
                 if (typeof window.triggerAngryCat === 'function') {
                     window.triggerAngryCat();

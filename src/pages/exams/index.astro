@@ -7,7 +7,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
 <Layout title="Bank Ujian - yukNgaji">
     <div class="px-6 py-8 pb-32 min-h-screen bg-gray-50">
-        
+
         <header class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Bank Ujian</h1>
@@ -120,16 +120,16 @@ import ModalAlert from '../../components/ModalAlert.astro';
     if (!token) window.location.replace('/');
 
     let currentEditExamId = null;
-    let currentEditQuestions = []; 
-    
+    let currentEditQuestions = [];
+
     // [OPTIMASI CACHE] Tempat menyimpan detail ujian yang sudah pernah di-klik
-    let cachedExamDetails = {}; 
+    let cachedExamDetails = {};
 
     const fetchExams = async () => {
         try {
             const res = await fetch(`${API_URL}/api/exams`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
-            
+
             const list = document.getElementById('examList');
             if (result.data.length === 0) {
                 list.innerHTML = `<div class="text-center py-12 bg-white rounded-3xl border border-gray-100"><i class="fa-solid fa-folder-open text-4xl text-gray-200 mb-3 block"></i><p class="text-gray-400 text-xs font-bold">Belum ada ujian. Klik tombol + untuk membuat.</p></div>`;
@@ -150,13 +150,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
                             <span><i class="fa-regular fa-calendar mr-1"></i> ${new Date(exam.created_at).toLocaleDateString('id-ID')}</span>
                         </div>
                     </a>
-                    
+
                     <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
-                        ${exam.is_active 
-                            ? `<span class="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100"><i class="fa-solid fa-check"></i> Published</span>` 
+                        ${exam.is_active
+                            ? `<span class="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100"><i class="fa-solid fa-check"></i> Published</span>`
                             : `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">Draft</span>`
                         }
                         <div class="flex items-center gap-1.5 mt-1">
+                            
                             <button onclick="openEditModal('${exam.id}')" class="w-8 h-8 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-gear"></i></button>
                             <button onclick="confirmDelete('${exam.id}', '${exam.title}')" class="w-8 h-8 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-trash"></i></button>
                         </div>
@@ -202,10 +203,10 @@ window.toggleDaringMode = (isChecked) => {
 // [BARU] Fungsi Salin Link dengan 'Pinjaman' Token Guru
 window.copyExamLink = () => {
         const frontendUrl = window.location.origin; // Otomatis baca localhost atau domain lu
-        
+
         // Bikin rute dinamis /play/[id] dan titipkan token guru di parameternya
-        const link = `${frontendUrl}/play/${currentEditExamId}?token=${token}`; 
-        
+        const link = `${frontendUrl}/play/${currentEditExamId}?token=${token}`;
+
         // Eksekusi copy ke clipboard
         navigator.clipboard.writeText(link).then(() => {
             window.showToast?.('success', 'Link Disalin!', `Link Ujian berhasil disalin. Silakan paste di Grup WA.`);
@@ -226,7 +227,7 @@ window.copyExamLink = () => {
             document.getElementById('editTitle').value = data.title;
             document.getElementById('editDuration').value = data.duration_minutes;
             document.getElementById('editStatus').value = data.is_active ? 'true' : 'false';
-            
+
             // [BARU] Setup Mode Daring
             document.getElementById('editIsDaring').checked = data.is_daring;
             if (data.deadline_at) {
@@ -238,7 +239,7 @@ window.copyExamLink = () => {
             toggleDaringMode(data.is_daring);
 
             btn.innerHTML = 'Simpan Pengaturan'; btn.disabled = false;
-            return; 
+            return;
         }
 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...'; btn.disabled = true;
@@ -246,12 +247,12 @@ window.copyExamLink = () => {
             const res = await fetch(`${API_URL}/api/exams/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
             if (res.ok) {
-                cachedExamDetails[id] = result.data; 
+                cachedExamDetails[id] = result.data;
                 currentEditExamId = result.data.id; currentEditQuestions = result.data.questions || [];
                 document.getElementById('editTitle').value = result.data.title;
                 document.getElementById('editDuration').value = result.data.duration_minutes;
                 document.getElementById('editStatus').value = result.data.is_active ? 'true' : 'false';
-                
+
                 // [BARU] Setup Mode Daring
                 document.getElementById('editIsDaring').checked = result.data.is_daring;
                 if (result.data.deadline_at) {
@@ -284,7 +285,7 @@ window.copyExamLink = () => {
             is_active: isPublishing,
             is_daring: isDaring,
             deadline_at: isDaring ? deadlineVal : null,
-            questions: currentEditQuestions 
+            questions: currentEditQuestions
         };
 
         try {
@@ -308,9 +309,9 @@ window.copyExamLink = () => {
                 const res = await fetch(`${API_URL}/api/exams/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
                 if(res.ok) {
                     window.showToast?.('success', 'Terhapus', 'Ujian berhasil dihapus.');
-                    
+
                     // Bersihkan ujian yang dihapus dari Cache
-                    delete cachedExamDetails[id]; 
+                    delete cachedExamDetails[id];
 
                     fetchExams();
                 }

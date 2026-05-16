@@ -20,7 +20,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 <i class="fa-solid fa-clock"></i> <span id="lobbyExamDuration">0</span> Menit
             </p>
         </div>
-        
+
         <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
             <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6">
                 <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Siapa Nama Kamu?</h3>
@@ -45,7 +45,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 <div class="rule-item"><div class="rule-dot"></div><span class="text-red-500">Selama ujian, Anda <strong>DILARANG KELUAR</strong> atau memuat ulang halaman.</span></div>
                 <div class="rule-item"><div class="rule-dot"></div><span>Tarik napas, <strong>relax</strong>, dan jangan panik!</span></div>
             </div>
-            
+
             <div class="flex flex-col gap-3 mt-2">
                 <button onclick="triggerCountdown(this)" class="btn-3d btn-indigo w-full py-4 text-lg font-black tracking-widest">
                     MULAI SEKARANG
@@ -80,7 +80,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             <canvas id="hiddenCanvas" class="hidden"></canvas>
         </div>
     </div>
-  
+
     <Mascot />
 
     <div class="exam-shell hidden" id="examMainContainer">
@@ -118,7 +118,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 </div>
                 <div class="options-grid" id="optionsGrid"></div>
             </div>
-        
+
             <div id="phase2Wrapper" class="w-full hidden">
                 <ArcadeTyping />
             </div>
@@ -173,7 +173,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
         <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
             <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="none" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
-            
+
             <div class="absolute bottom-0 inset-x-0 p-6 pt-16 flex flex-col justify-end bg-gradient-to-t from-white via-white/95 to-transparent text-center">
                 <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3 border border-red-200 shadow-inner relative z-10">
                     <i class="fa-solid fa-fire-flame-curved animate-pulse"></i>
@@ -188,7 +188,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             </div>
         </div>
     </div>
-  
+
     <div id="modalMiawLetter" class="modal-backdrop hidden z-[260]">
         <div class="modal-box animate-slide-up border-2 border-amber-500">
             <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-5 border border-amber-100 shadow-inner">
@@ -209,7 +209,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             <div class="text-5xl mb-3" id="resultEmoji">🌟</div>
             <h2 class="text-2xl font-black text-gray-800 mb-1" id="resultTitle">Selesai!</h2>
             <p id="resultMsg" class="text-xs font-bold text-gray-500 mb-6 px-4">Ujian telah berhasil dikumpulkan.</p>
-            
+
             <div class="flex items-center justify-center gap-5 mb-6 bg-gray-50/50 p-4 rounded-3xl border border-gray-100">
                 <div class="relative w-28 h-28 flex-shrink-0">
                     <svg class="w-full h-full transform -rotate-90 drop-shadow-sm" viewBox="0 0 120 120">
@@ -283,12 +283,12 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner shrink-0">
                     <i class="fa-solid fa-microphone-lines animate-pulse"></i>
                 </div>
-                
+
                 <h3 class="text-2xl font-black text-gray-800 mb-1 shrink-0">Misi Terakhir!</h3>
                 <p class="text-[11px] font-bold text-gray-500 mb-5 leading-relaxed shrink-0">
                     Selamat! Kamu telah menyelesaikan semua ujian. Sebagai syarat kelulusan, bacalah surat ini dengan tartil:
                 </p>
-                
+
                 <div class="bg-indigo-50/70 border-2 border-dashed border-indigo-300 text-indigo-800 p-4 rounded-xl mb-4 shadow-sm shrink-0">
                     <h4 class="text-lg font-black tracking-widest" id="easterEggSurah">Surat Al-Kafirun</h4>
                     <p class="text-[10px] font-bold text-indigo-500 mt-1 uppercase tracking-widest" id="easterEggAyah">6 Ayat</p>
@@ -301,7 +301,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                         <i class="fa-solid fa-headphones mr-1"></i> Area Rekaman
                     </p>
                 </div>
-                
+
                 <p id="recordStatus" class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 bg-amber-50 py-2 px-3 rounded-lg border border-amber-100 shrink-0 transition-colors">
                     Izinkan akses mikrofon untuk memulai
                 </p>
@@ -342,12 +342,12 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 shadow-[inset_0_-4px_6px_rgba(0,0,0,0.2)] relative z-10 shrink-0">
                 <i class="fa-solid fa-gift animate-bounce"></i>
             </div>
-            
+
             <h3 class="text-2xl font-black text-gray-800 mb-1 relative z-10 shrink-0">Perjalananmu Selesai!</h3>
             <p class="text-[11px] font-bold text-gray-500 mb-6 leading-relaxed relative z-10 shrink-0 px-2">
                 Terima kasih atas perjuanganmu! Mari kita lihat rekap hasil ngajimu selama ini. Siap terkejut?
             </p>
-            
+
             <button onclick="goToWrapped()" class="btn-3d btn-indigo w-full py-4 text-sm font-black relative z-10 flex items-center justify-center gap-2 transition-all">
                 Buka Catatan Ngajiku <i class="fa-solid fa-wand-magic-sparkles"></i>
             </button>
@@ -369,7 +369,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     <div id="dot3" class="w-2 h-2 rounded-full bg-white/40"></div>
                 </div>
             </div>
-            
+
             <p id="guideText" class="text-xs font-bold text-gray-700 mb-4 min-h-[40px] text-center block leading-relaxed"></p>
 
             <div class="flex gap-2 w-full">
@@ -380,11 +380,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     <span id="btnNextGuideText">Lanjut</span> <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
-            
+
             <button id="btnReloadGuide" onclick="window.location.reload()" class="hidden btn-3d btn-green w-full mt-2 py-4 text-sm font-black items-center justify-center gap-2">
                 <i class="fa-solid fa-rotate-right"></i> <span>Muat Ulang Sekarang</span>
             </button>
-            
+
             <button onclick="document.getElementById('modalPermissionGuide').classList.replace('flex', 'hidden')" class="mt-4 text-[10px] font-black text-gray-400 hover:text-gray-600 underline shrink-0">
                 Nanti Saja / Tutup
             </button>
@@ -395,10 +395,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         <button onclick="closeImageOverlay(); event.stopPropagation();" class="absolute top-6 right-6 z-50 text-white text-2xl w-12 h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center cursor-pointer transition-colors">
             <i class="fa-solid fa-xmark"></i>
         </button>
-        
+
         <div class="relative w-full h-full flex items-center justify-center overflow-hidden" onclick="event.stopPropagation()">
             <img id="overlayImg" src="" class="max-w-full max-h-full transition-transform duration-300 cursor-grab active:cursor-grabbing" style="transform: scale(1)" onwheel="handleZoom(event)">
-            
+
             <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 bg-white/10 p-2 rounded-2xl backdrop-blur-lg">
                 <button onclick="changeZoom(-0.5)" class="w-12 h-12 bg-white/20 text-white rounded-xl"><i class="fa-solid fa-minus"></i></button>
                 <button onclick="changeZoom(0.5)" class="w-12 h-12 bg-white/20 text-white rounded-xl"><i class="fa-solid fa-plus"></i></button>
@@ -411,17 +411,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             <i class="fa-solid fa-cart-shopping"></i>
         </button>
     </div>
-    
+
     <div id="shopDrawer" class="fixed inset-0 z-[400] hidden items-end justify-center pointer-events-none">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto" onclick="toggleShopDrawer()"></div>
         <div id="drawerContent" class="relative w-full max-w-md bg-white rounded-t-[2.5rem] p-8 transform translate-y-full transition-transform duration-500 pointer-events-auto border-t-4 border-indigo-500">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black text-gray-800 text-xl">Pasar Sihir 🔮</h3>
+                <h3 class="font-black text-gray-800 text-xl">Bantuan Ujian 💰</h3>
                 <div class="bg-amber-100 px-4 py-2 rounded-2xl border-2 border-amber-200 flex items-center gap-2">
                     <span>💰</span> <span id="shopWallet" class="font-black text-amber-600">500</span>
                 </div>
             </div>
-        
+
             <div class="grid grid-cols-2 gap-3 mb-4">
                  <button onclick="window.buyTime(1, 100)" class="p-3 rounded-2xl border-2 border-slate-100 hover:bg-indigo-50 active:scale-95 transition-all text-left">
                     <span class="block font-black text-sm text-gray-800">+1 Menit</span>
@@ -455,6 +455,76 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         </div>
     </div>
 
+    <div id="modalStudentTutorialChoice" class="fixed inset-0 bg-black/60 z-[650] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border border-indigo-100">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+
+            <h3 class="font-black text-gray-800 text-lg mb-2">Lihat Tutorial Lagi?</h3>
+
+            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-6">
+                Kamu sudah pernah melihat tutorial ujian sebelumnya.
+                Untuk mapel ini, kamu boleh melihat tutorial lagi atau langsung masuk ke ujian.
+            </p>
+
+            <div class="flex gap-3">
+                <button onclick="continueStudentWithoutTutorial()"
+                    class="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl active:scale-95 transition-all">
+                    Tidak
+                </button>
+
+                <button onclick="continueStudentWithTutorial()"
+                    class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20 active:scale-95 transition-all">
+                    Ya, Tutorial
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCoinHelpOffer" class="fixed inset-0 z-[480] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slide-up text-center border-2 border-amber-300">
+            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                <i class="fa-solid fa-coins animate-bounce"></i>
+            </div>
+
+            <h3 class="text-xl font-black text-gray-800 mb-2">Koinmu Bisa Membantu!</h3>
+
+            <p id="coinHelpOfferText" class="text-xs font-bold text-gray-500 leading-relaxed mb-5">
+                Kamu punya koin yang bisa dipakai untuk menambah waktu ujian.
+            </p>
+
+            <div class="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 mb-5 text-left">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 bg-white text-indigo-600 rounded-xl flex items-center justify-center text-lg shadow-sm">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div>
+                        <p id="coinHelpOfferTitle" class="text-sm font-black text-gray-800">Tambah Waktu +1 Menit</p>
+                        <p id="coinHelpOfferCost" class="text-[10px] font-bold text-amber-600 mt-0.5">💰 100 Koin</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="dismissCoinHelpOffer()"
+                    class="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl active:scale-95 transition-all">
+                    Nggak
+                </button>
+
+                <button onclick="acceptCoinHelpOffer()"
+                    class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all">
+                    Pakai Koin
+                </button>
+            </div>
+
+            <button onclick="openShopFromCoinOffer()"
+                class="mt-4 text-[10px] font-black text-indigo-500 hover:text-indigo-700 underline">
+                Lihat pilihan bantuan lain
+            </button>
+        </div>
+    </div>
+
     <Toast />
 </Layout>
 
@@ -466,17 +536,28 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const examId = window.location.pathname.split('/').pop();
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     // Auth & Preview State
     const urlToken = urlParams.get('token');
     if (urlToken) sessionStorage.setItem('temp_exam_token', urlToken);
     const token = urlToken || sessionStorage.getItem('temp_exam_token') || localStorage.getItem('token');
-    
+
     if (!token) {
         window.location.replace('/');
         throw new Error("Token tidak valid.");
     }
     const isPreview = urlParams.get('preview') === 'true';
+    const isTeacherPreview = isPreview && urlParams.get('teacher_preview') === 'true';
+    const previewTutorialMode = urlParams.get('preview_tutorial') || 'skip';
+    const isPreviewFinalFlow = isTeacherPreview && urlParams.get('preview_final_flow') === 'true';
+
+    // ===============================
+    // UX KOIN / BANTUAN OTOMATIS
+    // ===============================
+    let hasOpenedShopThisExam = false;
+    let hasBoughtHelpThisExam = false;
+    let hasShownCoinHelpOffer = false;
+    let pendingCoinOffer = null;
 
     // State Murid & Lobby
     let activeStudentId = null;
@@ -484,6 +565,96 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     let completedStudentIds = [];
     let qualifiedStudentIds = [];
     let studentPoin = 0;
+
+    let pendingTutorialStudent = null;
+
+    const normalizeSubjectKey = (subject = '') => {
+        return String(subject)
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^\w-]/g, '');
+    };
+
+    const getCurrentSubjectKey = () => normalizeSubjectKey(examData?.subject || 'unknown_subject');
+
+    const getStudentTutorialSubjectsKey = (studentId) => {
+        return `exam_tutorial_seen_subjects_${studentId}`;
+    };
+
+    const getStudentSeenTutorialSubjects = (studentId) => {
+        try {
+            const raw = localStorage.getItem(getStudentTutorialSubjectsKey(studentId));
+            const parsed = JSON.parse(raw || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    const hasStudentSeenAnyTutorial = (studentData, studentId) => {
+        const localSubjects = getStudentSeenTutorialSubjects(studentId);
+        return studentData?.has_completed_exam_tutorial === true || localSubjects.length > 0;
+    };
+
+    const hasStudentSeenCurrentSubjectTutorial = (studentId) => {
+        const subjectKey = getCurrentSubjectKey();
+        return getStudentSeenTutorialSubjects(studentId).includes(subjectKey);
+    };
+
+    function goToStudentTutorial(studentId, studentName) {
+        const returnParams = new URLSearchParams({
+            tutorial_return_student: studentId,
+            tutorial_return_name: studentName || 'Siswa'
+        });
+
+        const returnUrl = encodeURIComponent(`${window.location.pathname}?${returnParams.toString()}`);
+
+        const tutorialParams = new URLSearchParams({
+            returnUrl,
+            studentId,
+            token: token || '',
+            tutorial_context: 'student',
+            student_tutorial_subject: examData?.subject || '',
+        });
+
+        window.location.href = `/tutorial-exam?${tutorialParams.toString()}`;
+    }
+
+    window.openStudentTutorialChoice = (studentId, studentName) => {
+        pendingTutorialStudent = {
+            id: studentId,
+            name: studentName || 'Siswa'
+        };
+
+        document.getElementById('modalStudentTutorialChoice')?.classList.replace('hidden', 'flex');
+    };
+
+    window.closeStudentTutorialChoice = () => {
+        document.getElementById('modalStudentTutorialChoice')?.classList.replace('flex', 'hidden');
+    };
+
+    window.continueStudentWithTutorial = () => {
+        if (!pendingTutorialStudent) return;
+
+        const { id, name } = pendingTutorialStudent;
+        pendingTutorialStudent = null;
+
+        window.closeStudentTutorialChoice();
+        goToStudentTutorial(id, name);
+    };
+
+    window.continueStudentWithoutTutorial = () => {
+        if (!pendingTutorialStudent) return;
+
+        const { id, name } = pendingTutorialStudent;
+        pendingTutorialStudent = null;
+
+        window.closeStudentTutorialChoice();
+
+        // skipTutorialGate: true supaya tidak kena modal lagi
+        window.selectStudent(id, name, { skipTutorialGate: true });
+    };
 
     // State Ujian
     let examData = null;
@@ -506,7 +677,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     // State Kamera & Keamanan
     let cameraStream = null;
-    let hasCapturedPhoto = false; 
+    let hasCapturedPhoto = false;
     let capturedBase64 = null;
     let hasTriggeredAngryCat = false;
 
@@ -521,7 +692,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     let audioCtx;
     let analyser;
     let visAnimationId;
-    let streamRef; 
+    let streamRef;
     let currentRecordPhase = 'start'; // 'start' -> 'recording' -> 'review'
 
     // Kunci Storage
@@ -568,11 +739,15 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     };
 
     window.toggleShopDrawer = () => {
-        const drawer = document.getElementById('shopDrawer');
-        const content = document.getElementById('drawerContent');
-        if (drawer.classList.contains('hidden')) {
-            drawer.classList.replace('hidden', 'flex');
-            setTimeout(() => content.classList.remove('translate-y-full'), 10);
+    const drawer = document.getElementById('shopDrawer');
+    const content = document.getElementById('drawerContent');
+    if (!drawer || !content) return;
+
+    if (drawer.classList.contains('hidden')) {
+        hasOpenedShopThisExam = true;
+
+        drawer.classList.replace('hidden', 'flex');
+        setTimeout(() => content.classList.remove('translate-y-full'), 10);
         } else {
             content.classList.add('translate-y-full');
             setTimeout(() => drawer.classList.replace('flex', 'hidden'), 500);
@@ -600,17 +775,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     actions: {}
                 }).catch(e => console.log("Mascot dimuat di background", e));
             }
-            
+
             // Cek Progress Storage
             const savedProgress = localStorage.getItem(getStorageKey());
             const savedStudentId = localStorage.getItem(`active_student_${examId}`);
-            
+
             if (savedProgress) {
                 studentAnswers = JSON.parse(savedProgress);
                 currentIndex = Object.keys(studentAnswers).length > 0 ? Object.keys(studentAnswers).length - 1 : 0;
             } else {
                 studentAnswers = {};
-                currentIndex = 0; 
+                currentIndex = 0;
             }
 
             if (savedStudentId) activeStudentId = savedStudentId;
@@ -625,7 +800,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             phase1Questions = [];
             phase2Questions = [];
             let rawQuestions = shuffleArray(examData.questions || []);
-            
+
             rawQuestions.forEach(q => {
                 if (q.question_type === 'fill_in_blanks') {
                     if (typeof q.correct_answer === 'string') {
@@ -634,7 +809,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     phase2Questions.push(q);
                 } else {
                     const validKeys = ['A', 'B', 'C', 'D'].filter(k => q.options && q.options[k] && q.options[k].trim() !== '');
-                    q.shuffledKeys = shuffleArray(validKeys); 
+                    q.shuffledKeys = shuffleArray(validKeys);
                     phase1Questions.push(q);
                 }
             });
@@ -664,19 +839,42 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             const duration = examData.duration_minutes > 0 ? examData.duration_minutes : 60;
             document.getElementById('lobbyExamDuration').innerText = duration;
             totalDurationSeconds = duration * 60;
-            
+
             const savedTime = localStorage.getItem(getTimerKey());
             timeLeft = (savedTime && !isNaN(savedTime)) ? parseInt(savedTime) : totalDurationSeconds;
 
             // Mode Preview vs Mode Murid
             if (isPreview) {
-                // Mode Ustadz: Langsung ke Start Screen
                 activeStudentId = "preview_mode";
                 studentPoin = 500;
+
+                // Ambil parameter dari URL
+                if (isTeacherPreview && previewTutorialMode === 'force') {
+                    const returnUrl = encodeURIComponent(`/exams/${examId}`);
+
+                    window.location.replace(
+                        `/tutorial-exam?returnUrl=${returnUrl}&preview=true&teacher_preview=true&examId=${examId}`
+                    );
+                    return;
+                }
+
+                // Backward compatibility kalau masih ada link lama force_tutorial=true
+                const legacyForceTutorial = urlParams.get('force_tutorial') === 'true';
+
+                if (!isTeacherPreview && legacyForceTutorial) {
+                    const returnUrl = encodeURIComponent(`/exams/${examId}`);
+
+                    window.location.replace(
+                        `/tutorial-exam?returnUrl=${returnUrl}&preview=true&teacher_preview=true&examId=${examId}`
+                    );
+                    return;
+                }
+
+                // Jika tutorial sudah beres atau tidak dipaksa, tampilkan UI Ustadz
                 document.getElementById('studentNameDisplay').innerText = "Mode Ustadz";
                 document.getElementById('loadingScreen').classList.add('hidden');
                 document.getElementById('startScreen').classList.replace('hidden', 'flex');
-                window.showShopButton(); 
+                window.showShopButton();
             } else {
                 // Mode Siswa: Ambil data dan WAJIB tampilkan Lobby Grid
                 const [stdRes, resRes, qualRes] = await Promise.all([
@@ -686,7 +884,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 ]);
 
                 allStudents = stdRes.data || [];
-                completedStudentIds = (resRes.data || []).map(r => r.student_id); 
+                completedStudentIds = (resRes.data || []).map(r => r.student_id);
                 qualifiedStudentIds = qualRes.data || [];
 
                 // Render Lobby dan tampilkan layar Lobby (Bypass dihapus agar user bisa pilih nama)
@@ -694,8 +892,23 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 document.getElementById('loadingScreen').classList.add('hidden');
                 document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
                 window.hideShopButton(); // Pastikan toko tersembunyi di Lobby
+
+                const tutorialReturnStudentId = urlParams.get('tutorial_return_student');
+                const tutorialReturnStudentName = urlParams.get('tutorial_return_name');
+
+                if (tutorialReturnStudentId) {
+                    const returnedStudent = allStudents.find(s => s.id === tutorialReturnStudentId);
+                    const returnedName = returnedStudent?.name || tutorialReturnStudentName || 'Siswa';
+
+                    // Bersihkan URL biar kalau reload tidak auto-select terus
+                    window.history.replaceState({}, '', window.location.pathname);
+
+                    setTimeout(() => {
+                        window.selectStudent(tutorialReturnStudentId, returnedName, { skipTutorialGate: true });
+                    }, 300);
+                }
             }
-            
+
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
 
@@ -712,9 +925,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const renderLobbyGrid = () => {
         const grid = document.getElementById('lobbyStudentGrid');
         const query = document.getElementById('lobbySearch').value.toLowerCase();
-        
+
         let filtered = allStudents.filter(s => {
-            const nameStr = (s.name || '').toLowerCase(); 
+            const nameStr = (s.name || '').toLowerCase();
             return nameStr.includes(query);
         });
 
@@ -725,10 +938,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
         grid.innerHTML = filtered.map(s => {
             const isDone = completedStudentIds.includes(s.id);
-            const isQualified = qualifiedStudentIds.includes(s.id); 
+            const isQualified = qualifiedStudentIds.includes(s.id);
             const safeName = (s.name || 'Siswa').replace(/'/g, "\\'");
             const initial = (s.name || '??').substring(0,2).toUpperCase();
-            
+
             let cardClass = 'bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 transition-all ';
             let onClick = '';
             let badge = '';
@@ -768,16 +981,32 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     document.getElementById('lobbySearch')?.addEventListener('input', renderLobbyGrid);
 
-    window.selectStudent = (id, name) => {
+    window.selectStudent = (id, name, options = {}) => {
+        const studentData = allStudents.find(s => s.id === id);
+
+        if (!options.skipTutorialGate) {
+            const hasSeenAnyTutorial = hasStudentSeenAnyTutorial(studentData, id);
+            const hasSeenThisSubject = hasStudentSeenCurrentSubjectTutorial(id);
+
+            // Mapel pertama / tutorial pertama siswa: WAJIB tutorial
+            if (!hasSeenAnyTutorial) {
+                goToStudentTutorial(id, name);
+                return;
+            }
+
+            // Mapel berbeda setelah pernah tutorial: tampilkan modal pilihan
+            if (!hasSeenThisSubject) {
+                window.openStudentTutorialChoice(id, name);
+                return;
+            }
+        }
+
         activeStudentId = id;
         localStorage.setItem(`active_student_${examId}`, id);
-        
-        // [PERBAIKAN BUG KOIN] Cari data murid di array allStudents dan ambil poinnya
-        const studentData = allStudents.find(s => s.id === id);
+
         if (studentData) {
             studentPoin = studentData.poin || 0;
-            
-            // Langsung update angka di dompet Toko Sihir
+
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
         }
@@ -785,10 +1014,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         document.getElementById('studentNameDisplay').innerText = name;
         document.getElementById('studentInitials').innerText = name.substring(0, 2).toUpperCase();
         document.getElementById('startStudentName').innerText = name;
-        
+
         document.getElementById('lobbyScreen').classList.replace('flex', 'hidden');
         document.getElementById('startScreen').classList.replace('hidden', 'flex');
-        window.showShopButton(); // Munculkan tombol toko hanya di Start Screen
+
+        window.showShopButton();
     };
 
     window.backToLobby = () => {
@@ -822,19 +1052,39 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         timerInterval = setInterval(() => {
             if (window.isTimeStoppedByCat) return;
             timeLeft--;
-            
+
             localStorage.setItem(getTimerKey(), timeLeft);
 
-            if (timeLeft <= 0) { 
-                timeLeft = 0; clearInterval(timerInterval); 
-                window.showToastAlert('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.'); 
-                submitExam(); 
+            if (timeLeft <= 0) {
+                timeLeft = 0; clearInterval(timerInterval);
+                window.showToastAlert('warning','WAKTU HABIS!','Ujian dikumpulkan otomatis.');
+                submitExam();
             } else {
                 updateTimerUI();
+
                 const elapsed = totalDurationSeconds - timeLeft;
+
+                if (
+                    elapsed >= Math.floor(totalDurationSeconds * 0.5) &&
+                    timeLeft > 60 &&
+                    speed === 1000
+                ) {
+                    showCoinHelpOffer('mid_exam');
+                }
+
+                if (
+                    timeLeft <= 180 &&
+                    timeLeft > 60 &&
+                    speed === 1000
+                ) {
+                    showCoinHelpOffer('low_time');
+                }
+
                 if (elapsed > 0 && elapsed % 60 === 0 && timeLeft > 0 && speed === 1000) {
                     window.showTimeReminder(Math.floor(elapsed / 60));
                 }
+
+
             }
         }, speed);
     };
@@ -850,11 +1100,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const m = Math.floor(Math.max(0,timeLeft)/60).toString().padStart(2,'0');
         const s = (Math.max(0,timeLeft)%60).toString().padStart(2,'0');
         document.getElementById('timerText').innerText = `${m}:${s}`;
-        
+
         const container = document.getElementById('timerContainer');
         const icon = document.getElementById('timerIcon');
         const vignette = document.getElementById('dangerVignette');
-        
+
         if (timeLeft <= 60 && timeLeft > 0) {
             if (container) container.classList.add('timer-danger');
             if (icon) icon.classList.replace('text-gray-400', 'text-red-500');
@@ -870,15 +1120,14 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const popup = document.getElementById('timeReminder');
         if (!popup) return;
         document.getElementById('timeReminderText').innerText = `Sudah ${minutesPassed} menit berlalu. Terus semangat ya!`;
-        popup.classList.remove('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); 
+        popup.classList.remove('opacity-0', 'translate-y-[-30px]', 'pointer-events-none');
         popup.classList.add('opacity-100', 'translate-y-0');
-        setTimeout(() => { 
-            popup.classList.remove('opacity-100', 'translate-y-0'); 
-            popup.classList.add('opacity-0', 'translate-y-[-30px]', 'pointer-events-none'); 
+        setTimeout(() => {
+            popup.classList.remove('opacity-100', 'translate-y-0');
+            popup.classList.add('opacity-0', 'translate-y-[-30px]', 'pointer-events-none');
         }, 4000);
     };
 
-    // LOGIKA TOKO DENGAN TOAST SUKSES
     window.buyTime = async (mins, cost) => {
         if (studentPoin < cost) {
             window.showToast?.('danger', 'Koin Kurang', 'Kumpulkan koin lebih banyak!');
@@ -890,28 +1139,143 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 const res = await fetch(`${API_URL}/api/exams/buy-time`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: activeStudentId, cost: cost, minutes: mins }) 
+                    body: JSON.stringify({ student_id: activeStudentId, cost: cost, minutes: mins })
                 });
+
                 const result = await res.json();
                 if (result.status !== 'success') throw new Error(result.message);
+
                 studentPoin = result.data.new_poin;
             } else {
                 studentPoin -= cost;
             }
 
-            // Tambahkan waktu dan tampilkan Toast Sukses
-            timeLeft += (mins * 60);
-            localStorage.setItem(getTimerKey(), timeLeft);
-            
-            document.getElementById('shopWallet').innerText = studentPoin;
+            // [BARU] Tandai bahwa anak sudah memakai bantuan koin
+            hasBoughtHelpThisExam = true;
+            hasShownCoinHelpOffer = true;
+
+            timeLeft += mins * 60;
+            totalDurationSeconds += mins * 60;
+
+            const walletEl = document.getElementById('shopWallet');
+            if (walletEl) walletEl.innerText = studentPoin;
+
             updateTimerUI();
-            window.toggleShopDrawer();
-            
-            // MUNCULKAN TOAST PENANDA
-            window.showToast?.('success', 'Sihir Berhasil!', `Waktu ujianmu bertambah ${mins} menit.`);
-            
-        } catch (error) {
-            window.showToast?.('danger', 'Transaksi Gagal', error.message);
+
+            window.showToast?.(
+                'success',
+                'Waktu Bertambah!',
+                `Waktu ujian ditambah ${mins} menit.`
+            );
+
+            const drawer = document.getElementById('shopDrawer');
+            const content = document.getElementById('drawerContent');
+            if (drawer && content && !drawer.classList.contains('hidden')) {
+                content.classList.add('translate-y-full');
+                setTimeout(() => drawer.classList.replace('flex', 'hidden'), 500);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast?.('danger', 'Gagal', 'Gagal membeli tambahan waktu.');
+        }
+    };
+
+    function getBestCoinHelpOffer() {
+        if (studentPoin >= 500) {
+            return {
+                mins: 5,
+                cost: 500,
+                title: 'Tambah Waktu +5 Menit',
+                text: `Kamu punya ${studentPoin} koin. Mau pakai 500 koin untuk menambah waktu 5 menit?`
+            };
+        }
+
+        if (studentPoin >= 200) {
+            return {
+                mins: 2,
+                cost: 200,
+                title: 'Tambah Waktu +2 Menit',
+                text: `Kamu punya ${studentPoin} koin. Mau pakai 200 koin untuk menambah waktu 2 menit?`
+            };
+        }
+
+        if (studentPoin >= 100) {
+            return {
+                mins: 1,
+                cost: 100,
+                title: 'Tambah Waktu +1 Menit',
+                text: `Kamu punya ${studentPoin} koin. Mau pakai 100 koin untuk menambah waktu 1 menit?`
+            };
+        }
+
+        return null;
+    }
+
+    function shouldShowCoinHelpOffer() {
+        if (isPreview) return false;
+        if (!isExamActive) return false;
+        if (hasShownCoinHelpOffer) return false;
+        if (hasOpenedShopThisExam) return false;
+        if (hasBoughtHelpThisExam) return false;
+        if (studentPoin < 100) return false;
+
+        return true;
+    }
+
+    function showCoinHelpOffer(reason = 'mid_exam') {
+        if (!shouldShowCoinHelpOffer()) return;
+
+        const offer = getBestCoinHelpOffer();
+        if (!offer) return;
+
+        hasShownCoinHelpOffer = true;
+        pendingCoinOffer = offer;
+
+        const modal = document.getElementById('modalCoinHelpOffer');
+        const text = document.getElementById('coinHelpOfferText');
+        const title = document.getElementById('coinHelpOfferTitle');
+        const cost = document.getElementById('coinHelpOfferCost');
+
+        if (text) {
+            text.innerText = reason === 'low_time'
+                ? `Waktu kamu mulai sedikit. ${offer.text}`
+                : offer.text;
+        }
+
+        if (title) title.innerText = offer.title;
+        if (cost) cost.innerText = `💰 ${offer.cost} Koin`;
+
+        modal?.classList.replace('hidden', 'flex');
+    }
+
+    window.dismissCoinHelpOffer = () => {
+        pendingCoinOffer = null;
+        document.getElementById('modalCoinHelpOffer')?.classList.replace('flex', 'hidden');
+    };
+
+    window.acceptCoinHelpOffer = async () => {
+        if (!pendingCoinOffer) return;
+
+        const offer = pendingCoinOffer;
+        pendingCoinOffer = null;
+
+        document.getElementById('modalCoinHelpOffer')?.classList.replace('flex', 'hidden');
+
+        await window.buyTime(offer.mins, offer.cost);
+    };
+
+    window.openShopFromCoinOffer = () => {
+        pendingCoinOffer = null;
+        document.getElementById('modalCoinHelpOffer')?.classList.replace('flex', 'hidden');
+
+        hasOpenedShopThisExam = true;
+
+        const drawer = document.getElementById('shopDrawer');
+        const content = document.getElementById('drawerContent');
+
+        if (drawer && content && drawer.classList.contains('hidden')) {
+            drawer.classList.replace('hidden', 'flex');
+            setTimeout(() => content.classList.remove('translate-y-full'), 10);
         }
     };
 
@@ -927,30 +1291,30 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
             document.getElementById('hiddenVideo').srcObject = cameraStream;
-            
+
             document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
             document.getElementById('countdownScreen')?.classList.replace('hidden', 'flex');
             window.hideShopButton(); // Sembunyikan toko sihir
-            
+
             const countEl = document.getElementById('countdownNumber');
             if (!countEl) return;
-            
+
             let count = 3; countEl.innerText = count;
             const intv = setInterval(() => {
                 count--;
                 countEl.classList.remove('countdown-pop'); void countEl.offsetWidth; countEl.classList.add('countdown-pop');
-                
-                if (count > 0) { 
-                    countEl.innerText = count; 
-                } else if (count === 0) { 
-                    countEl.innerText = 'GO!'; countEl.style.color = '#4ade80'; 
+
+                if (count > 0) {
+                    countEl.innerText = count;
+                } else if (count === 0) {
+                    countEl.innerText = 'GO!'; countEl.style.color = '#4ade80';
                 } else {
                     clearInterval(intv);
                     document.getElementById('countdownScreen')?.classList.replace('flex', 'hidden');
-                    document.getElementById('examMainContainer')?.classList.remove('hidden'); 
-                    
+                    document.getElementById('examMainContainer')?.classList.remove('hidden');
+
                     startTimer();
-                    
+
                     if (currentPhase === 1) {
                         renderQuestion();
                     } else if (currentPhase === 2) {
@@ -972,7 +1336,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             window.showPermissionGuide('Kamera');
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = 'Coba Izinkan Lagi'; 
+                btn.innerHTML = 'Coba Izinkan Lagi';
                 btn.classList.replace('btn-indigo', 'btn-red');
             }
         }
@@ -982,22 +1346,22 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         document.getElementById('relaxQuoteText').innerText = relaxQuotes[Math.floor(Math.random() * relaxQuotes.length)];
         const modalRelax = document.getElementById('modalRelax');
         if (modalRelax) modalRelax.classList.replace('hidden', 'flex');
-        
+
         setTimeout(() => {
             const video = document.getElementById('hiddenVideo');
             const canvas = document.getElementById('hiddenCanvas');
-            
+
             if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
                 capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                
+
                 if (isPreview) window.showToastAlert('success', 'Kamera Aktif', 'Berhasil menjepret wajah!');
                 if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
             }
 
             if (modalRelax) modalRelax.classList.replace('flex', 'hidden');
-            callback(); 
+            callback();
         }, 4000);
     };
 
@@ -1006,14 +1370,14 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     // ==========================================================
     const renderQuestion = () => {
         const q = questions[currentIndex];
-        
+
         if (currentPhase === 1 && currentIndex === 1) {
             if (window.MiawMascot) window.MiawMascot.show();
         }
-        
+
         document.getElementById('progressText').innerText = `${currentIndex + 1} / ${questions.length}`;
         document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
-        
+
         const card = document.getElementById('questionCard');
         if (card) { card.classList.remove('card-enter'); void card.offsetWidth; card.classList.add('card-enter'); }
 
@@ -1028,7 +1392,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         }
 
         document.getElementById('questionText').innerText = q.question;
-        
+
         const aDots = document.getElementById('answeredDots');
         if (aDots) {
             aDots.innerHTML = questions.map((_, i) => {
@@ -1041,10 +1405,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
         const imgCont = document.getElementById('imageContainer');
         if (imgCont) {
-            if (q.image_url) { 
+            if (q.image_url) {
                 imgCont.classList.remove('hidden');
-                document.getElementById('questionImage').src = q.image_url; 
-            } else { 
+                document.getElementById('questionImage').src = q.image_url;
+            } else {
                 imgCont.classList.add('hidden');
             }
         }
@@ -1055,7 +1419,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             oGrid.innerHTML = q.shuffledKeys.map((originalOptKey, idx) => {
                 const text = q.options[originalOptKey];
                 const sel = studentAnswers[q.id] === originalOptKey;
-                const label = displayLabels[idx]; 
+                const label = displayLabels[idx];
                 return `
                     <button onclick="window.selectOption('${q.id}','${originalOptKey}')" class="opt-btn ${sel ? 'selected' : ''}" style="animation-delay:${idx*50}ms">
                         <div class="opt-letter">${label}</div><span class="opt-text">${text}</span>
@@ -1063,7 +1427,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     </button>`;
             }).join('');
         }
-        
+
         document.getElementById('btnPrev').disabled = currentIndex === 0;
         const btnNext = document.getElementById('btnNext');
         if (btnNext) {
@@ -1078,7 +1442,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     };
 
     window.jumpTo = (i) => { currentIndex = i; renderQuestion(); };
-    
+
     window.selectOption = (questionId, choice) => {
         studentAnswers[questionId] = choice;
         localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
@@ -1087,7 +1451,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     window.navigate = (dir) => {
         if (isSubmitting) return;
-        if (dir === 1 && currentIndex === questions.length - 1) { 
+        if (dir === 1 && currentIndex === questions.length - 1) {
             if (currentPhase === 1 && phase2Questions.length > 0) {
                 transitionToPhase2();
                 return;
@@ -1100,17 +1464,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     const proceedNavigation = (dir) => {
         const nextIndex = Math.max(0, Math.min(questions.length - 1, currentIndex + dir));
-        
+
         if (dir === 1 && nextIndex === 4 && !hasCapturedPhoto) {
-            executeSecretCapture(() => { 
-                hasCapturedPhoto = true; 
-                currentIndex = nextIndex; 
-                if (currentPhase === 1) renderQuestion(); 
+            executeSecretCapture(() => {
+                hasCapturedPhoto = true;
+                currentIndex = nextIndex;
+                if (currentPhase === 1) renderQuestion();
                 else renderPhase2Question();
             });
             return;
         }
-        
+
         currentIndex = nextIndex;
         if (currentPhase === 1) renderQuestion();
         else renderPhase2Question();
@@ -1127,16 +1491,16 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             if (modalRelax) modalRelax.classList.replace('flex', 'hidden');
 
             currentPhase = 2;
-            questions = phase2Questions; 
+            questions = phase2Questions;
             currentIndex = 0;
-            
+
             document.getElementById('phase1Wrapper').classList.add('hidden');
             document.getElementById('phase2Wrapper').classList.remove('hidden');
-            
+
             if (window.MiawMascot && typeof window.MiawMascot.hide === 'function') {
                 window.MiawMascot.hide();
             }
-            
+
             const mascotElements = document.querySelectorAll('.mascot-container, [id*="mascot" i], [class*="mascot" i]');
             mascotElements.forEach(el => {
                 el.style.opacity = '0';
@@ -1147,10 +1511,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
             document.querySelector('.hint-fab')?.classList.add('hidden');
             window.showToastAlert('success', 'LEVEL 2: TYPING ARCADE', 'Ketik kata yang tepat dan tekan SPASI!');
-            
+
             setupArcadeKeyboard();
             renderPhase2Question();
-        }, 4000); 
+        }, 4000);
     };
 
     const renderPhase2Question = () => {
@@ -1158,21 +1522,21 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         document.getElementById('progressText').innerText = `Fase 2: ${currentIndex + 1} / ${questions.length}`;
         document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
         document.getElementById('arcadeQuestionText').innerText = q.question;
-        
+
         let savedAnswers = studentAnswers[q.id];
         phase2Answers = Array.isArray(savedAnswers) ? [...savedAnswers] : new Array(q.correct_answer.length).fill(null);
-        
+
         const blocksContainer = document.getElementById('arcadeTargetBlocks');
         blocksContainer.innerHTML = q.correct_answer.map((ans, idx) => {
             const isFilled = phase2Answers[idx] !== null;
-            const text = isFilled ? phase2Answers[idx] : ''; 
+            const text = isFilled ? phase2Answers[idx] : '';
             return `<div class="target-block ${isFilled ? 'filled' : ''}">${text}</div>`;
         }).join('');
 
         const filledCount = phase2Answers.filter(a => a !== null).length;
         const totalBlanks = q.correct_answer.length;
         const waterProgress = totalBlanks > 0 ? (filledCount / totalBlanks) * 100 : 0;
-        
+
         document.getElementById('waterLevel').style.height = `${waterProgress}%`;
 
         const arcInput = document.getElementById('arcadeInput');
@@ -1180,7 +1544,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         arcInput.focus();
 
         const aDots = document.getElementById('answeredDots');
-        if (aDots) aDots.innerHTML = ''; 
+        if (aDots) aDots.innerHTML = '';
 
         document.getElementById('btnPrev').disabled = currentIndex === 0;
         const btnNext = document.getElementById('btnNext');
@@ -1224,9 +1588,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     phase2Answers[matchedIndex] = q.correct_answer[matchedIndex];
                     studentAnswers[q.id] = [...phase2Answers];
                     localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
-                    
-                    renderPhase2Question(); 
-                    
+
+                    renderPhase2Question();
+
                     if (!phase2Answers.includes(null)) {
                         setTimeout(() => window.navigate(1), 800);
                     }
@@ -1245,15 +1609,15 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const q = questions[currentIndex];
         const c = document.getElementById('hintTextContent');
         if (c) {
-            if (q.hint && q.hint.trim() !== '') { 
+            if (q.hint && q.hint.trim() !== '') {
                 c.innerHTML = `<i class="fa-solid fa-quote-left text-amber-300 mr-2 text-xl align-top"></i><span class="text-sm">${q.hint}</span><i class="fa-solid fa-quote-right text-amber-300 ml-2 text-xl align-bottom"></i>`;
-            } else { 
+            } else {
                 c.innerHTML = "Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅";
             }
         }
         document.getElementById('modalHint')?.classList.replace('hidden','flex');
     };
-    
+
     window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
 
     window.triggerAngryCat = () => {
@@ -1265,10 +1629,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const modal = document.getElementById('modalAngryCat');
         const vid = document.getElementById('videoAngryCat');
         const descText = modal.querySelector('p.text-red-800');
-        
+
         if (descText) descText.innerText = "Awas aja manggil-manggil lagi tapi nggak ada tujuannya... Waktu ujian kamu aku potong ya! 😼";
         if (modal) modal.classList.replace('hidden', 'flex');
-        
+
         if (vid) {
             vid.currentTime = 0;
             vid.muted = true;
@@ -1279,7 +1643,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const tc = document.getElementById('timerRing');
         if (tc) tc.classList.add('animate-pulse');
 
-        hasTriggeredAngryCat = true; 
+        hasTriggeredAngryCat = true;
     };
 
     window.closeAngryCat = () => {
@@ -1306,13 +1670,13 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     // Panduan Izin
     let currentGuideStep = 1;
-    let currentGuideType = 'kamera'; 
+    let currentGuideType = 'kamera';
 
     window.showPermissionGuide = (type) => {
         currentGuideType = type.toLowerCase();
-        currentGuideStep = 1; 
+        currentGuideStep = 1;
         document.getElementById('guideType').innerText = type;
-        window.updateGuideUI(); 
+        window.updateGuideUI();
         document.getElementById('modalPermissionGuide').classList.replace('hidden', 'flex');
     };
 
@@ -1326,17 +1690,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const btnNextText = document.getElementById('btnNextGuideText');
         const btnReload = document.getElementById('btnReloadGuide');
         const btnPrev = document.getElementById('btnPrevGuide');
-        
+
         const d1 = document.getElementById('dot1');
         const d2 = document.getElementById('dot2');
         const d3 = document.getElementById('dot3');
         if (d1) d1.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 1 ? 'bg-white' : 'bg-white/40'}`;
         if (d2) d2.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 2 ? 'bg-white' : 'bg-white/40'}`;
         if (d3) d3.className = `w-2 h-2 rounded-full transition-colors ${currentGuideStep >= 3 ? 'bg-white' : 'bg-white/40'}`;
-        
-        img.src = `/images/panduan-izin-${currentGuideStep}.jpeg`; 
+
+        img.src = `/images/panduan-izin-${currentGuideStep}.jpeg`;
         img.onerror = () => { img.src = `https://placehold.co/400x300/e2e8f0/475569?text=Gambar+Langkah+${currentGuideStep}`; };
-        
+
         if (btnPrev) {
             if (currentGuideStep > 1) btnPrev.classList.replace('hidden', 'flex');
             else btnPrev.classList.replace('flex', 'hidden');
@@ -1346,17 +1710,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             if (text) text.innerHTML = `Langkah 1:<br>Klik ikon 🔒 <strong>Gembok</strong> atau <strong>(Aa)</strong> di sebelah kiri alamat web bagian atas.`;
             btnNext.classList.replace('hidden', 'flex');
             btnNextText.innerText = `Lanjut Langkah 2`;
-            btnReload.classList.replace('flex', 'hidden'); 
+            btnReload.classList.replace('flex', 'hidden');
         } else if (currentGuideStep === 2) {
             const menuName = currentGuideType === 'kamera' ? 'Kamera (Camera)' : 'Mikrofon (Microphone)';
             if (text) text.innerHTML = `Langkah 2:<br>Cari pengaturan <strong>${menuName}</strong>, lalu ubah izinnya menjadi <strong>Izinkan (Allow)</strong>.`;
             btnNext.classList.replace('hidden', 'flex');
             btnNextText.innerText = `Lanjut Langkah Terakhir`;
-            btnReload.classList.replace('flex', 'hidden'); 
+            btnReload.classList.replace('flex', 'hidden');
         } else if (currentGuideStep === 3) {
             if (text) text.innerHTML = `Langkah 3:<br>Hebat! Jika sudah diizinkan, silakan tekan tombol <strong>Muat Ulang</strong> di bawah ini.`;
-            btnNext.classList.replace('flex', 'hidden');   
-            btnReload.classList.replace('hidden', 'flex'); 
+            btnNext.classList.replace('flex', 'hidden');
+            btnReload.classList.replace('hidden', 'flex');
         }
     };
 
@@ -1375,7 +1739,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     window.showEasterEggTrigger = () => {
         window.isEasterEggActive = true;
         const randomSurah = easterEggSurahs[Math.floor(Math.random() * easterEggSurahs.length)];
-        
+
         document.getElementById('easterEggSurah').innerText = randomSurah.name;
         document.getElementById('easterEggAyah').innerText = randomSurah.ayahs;
         document.getElementById('modalEasterEgg').classList.replace('hidden', 'flex');
@@ -1390,47 +1754,47 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const requestMicAndStart = async () => {
         const status = document.getElementById('recordStatus');
         const btnMain = document.getElementById('btnMainAction');
-        
+
         try {
             streamRef = await navigator.mediaDevices.getUserMedia({ audio: true });
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') await audioCtx.resume();
-            
+
             analyser = audioCtx.createAnalyser();
             const source = audioCtx.createMediaStreamSource(streamRef);
             source.connect(analyser);
             analyser.fftSize = 256;
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
-            
+
             const canvas = document.getElementById('audioVisualizer');
             const canvasCtx = canvas.getContext('2d');
             canvas.classList.remove('hidden');
             document.getElementById('visualizerPlaceholder').classList.add('hidden');
             document.getElementById('audioPreview').classList.add('hidden');
-            
+
             const drawWave = () => {
                 visAnimationId = requestAnimationFrame(drawWave);
                 analyser.getByteFrequencyData(dataArray);
-                canvasCtx.fillStyle = '#f8fafc'; 
+                canvasCtx.fillStyle = '#f8fafc';
                 canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
                 const barWidth = (canvas.width / bufferLength) * 2.5; let x = 0;
                 for(let i = 0; i < bufferLength; i++) {
                     const barHeight = (dataArray[i] / 255) * canvas.height;
-                    canvasCtx.fillStyle = `rgb(99, 102, 241)`; 
+                    canvasCtx.fillStyle = `rgb(99, 102, 241)`;
                     canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
                     x += barWidth + 1;
                 }
             };
             canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
             drawWave();
-            
+
             btnMain.disabled = true;
             btnMain.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Bersiap... 3</span>`;
-            
+
             status.innerText = "Membuka Mikrofon...";
             status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-indigo-500 bg-indigo-50 border-indigo-100';
-            
+
             let count = 3;
             const intv = setInterval(() => {
                 count--;
@@ -1445,7 +1809,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             window.showPermissionGuide('Mikrofon');
             status.innerText = "Akses mikrofon ditolak! Lihat panduan.";
             status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-red-500 bg-red-50 border-red-100 animate-pulse';
-            
+
             btnMain.disabled = false;
             btnMain.classList.replace('btn-indigo', 'btn-red');
             btnMain.innerHTML = `<i class="fa-solid fa-microphone"></i> <span>Izinkan Mikrofon</span>`;
@@ -1457,25 +1821,25 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const status = document.getElementById('recordStatus');
         const btnMain = document.getElementById('btnMainAction');
         const btnRetake = document.getElementById('btnRetake');
-        
-        btnRetake.classList.add('hidden'); 
+
+        btnRetake.classList.add('hidden');
         btnMain.classList.replace('btn-indigo', 'btn-red');
         btnMain.disabled = true;
         btnMain.innerHTML = `<i class="fa-solid fa-lock"></i> <span>Tahan Dulu (30s)</span>`;
-        
+
         status.innerText = `🔴 MEREKAM (Wajib Tartil!)`;
         status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 animate-pulse text-red-500 bg-red-50 border-red-100';
-        
+
         audioChunks = [];
         mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.start();
-        
+
         recordSeconds = 0;
         recordTimer = setInterval(() => {
             recordSeconds++;
             const sisaMaksimal = 60 - recordSeconds;
-            const sisaKunci = 30 - recordSeconds; 
-            
+            const sisaKunci = 30 - recordSeconds;
+
             if(sisaKunci > 0) {
                 btnMain.querySelector('span').innerText = `Tahan Dulu (${sisaKunci}s)`;
             } else {
@@ -1483,7 +1847,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 btnMain.innerHTML = `<i class="fa-solid fa-stop"></i> <span>Selesai Merekam</span>`;
                 status.innerText = `🔴 MEREKAM (${sisaMaksimal}s tersisa)`;
             }
-            
+
             if (recordSeconds >= 60) window.stopRecording();
         }, 1000);
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
@@ -1497,25 +1861,25 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const processRecordingOnStop = () => {
         clearInterval(recordTimer);
         currentRecordPhase = 'review';
-        
+
         const status = document.getElementById('recordStatus');
         const btnMain = document.getElementById('btnMainAction');
         const btnRetake = document.getElementById('btnRetake');
         const audioPrev = document.getElementById('audioPreview');
         const canvas = document.getElementById('audioVisualizer');
-        
+
         canvas.classList.add('hidden');
         audioPrev.classList.remove('hidden');
-        
+
         btnMain.classList.replace('btn-red', 'btn-green');
         btnMain.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>Kirim Rekaman</span>`;
-        
+
         btnRetake.classList.remove('hidden');
         btnRetake.classList.add('block');
-        
+
         status.innerText = "Cek rekamanmu sebelum dikirim.";
         status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-green-600 bg-green-50 border-green-100';
-        
+
         easterEggAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         audioPrev.src = URL.createObjectURL(easterEggAudioBlob);
     };
@@ -1528,29 +1892,29 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     window.executeRetake = () => {
         document.getElementById('modalConfirmRetake').classList.replace('flex', 'hidden');
         if (retakesLeft <= 0) return;
-        
+
         retakesLeft--;
         const btnRetake = document.getElementById('btnRetake');
         btnRetake.innerText = 'Kesempatan Habis';
         btnRetake.classList.add('opacity-50', 'cursor-not-allowed', 'line-through');
         btnRetake.onclick = null;
-        
+
         document.getElementById('audioPreview').pause();
         currentRecordPhase = 'start';
         const btnMain = document.getElementById('btnMainAction');
         btnMain.classList.replace('btn-green', 'btn-indigo');
-        startRealRecording(streamRef); 
+        startRealRecording(streamRef);
     };
 
     window.submitRecording = async () => {
         const btnMain = document.getElementById('btnMainAction');
         btnMain.disabled = true;
         btnMain.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Mengirim...</span>';
-        
+
         const status = document.getElementById('recordStatus');
         status.innerText = "Mengamankan suaramu...";
         status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 animate-pulse text-indigo-500 bg-indigo-50 border-indigo-100';
-        
+
         try {
             const reader = new FileReader();
             reader.readAsDataURL(easterEggAudioBlob);
@@ -1573,13 +1937,67 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     window.goToWrapped = () => {
         window.isEasterEggActive = false;
+
         if (isPreview) {
-             window.location.href = `/wrapped/${examId}?preview=true`;
-        } else {
-             window.location.replace(`/wrapped/${activeStudentId}?token=${token}`);
+            const afterPreviewWrapped = getPreviewFinalSelesaiUrl();
+
+            window.location.href =
+                `/wrapped/${examId}?preview=true&teacher_preview=true&after=${encodeURIComponent(afterPreviewWrapped)}`;
+
+            return;
         }
+
+        const fallbackAfterWrapped = appendTokenToUrl(
+            `/selesai?mode=exam&exam_id=${encodeURIComponent(examId)}&subject=${encodeURIComponent(examData?.subject || 'Ujian')}&student_id=${encodeURIComponent(activeStudentId)}&final=true&feedback_required=true`
+        );
+
+        const finalAfterWrapped = afterWrappedRedirect || fallbackAfterWrapped;
+
+        window.location.replace(
+            `/wrapped/${activeStudentId}?token=${encodeURIComponent(token)}&after=${encodeURIComponent(finalAfterWrapped)}`
+        );
     };
 
+    // ==========================================================
+    // GLOBAL STATE & HELPER (Letakkan di luar/di atas fungsi submit)
+    // ==========================================================
+    let nextAfterExamRedirect = null;
+    let afterWrappedRedirect = null;
+
+    function appendTokenToUrl(url) {
+        if (!url) return url;
+
+        try {
+            const targetUrl = new URL(url, window.location.origin);
+
+            // Asumsi variabel 'token' sudah tersedia di scope global
+            if (token && !targetUrl.searchParams.get('token')) {
+                targetUrl.searchParams.set('token', token);
+            }
+
+            return targetUrl.pathname + targetUrl.search;
+        } catch (e) {
+            return url;
+        }
+    }
+
+    function getPreviewFinalSelesaiUrl() {
+        const params = new URLSearchParams({
+            mode: 'exam',
+            preview: 'true',
+            teacher_preview: 'true',
+            preview_final_flow: 'true',
+            exam_id: examId || '',
+            subject: examData?.subject || 'Ujian',
+            student_id: 'preview_mode',
+            final: 'true',
+            feedback_required: 'true'
+        });
+
+        if (token) params.set('token', token);
+
+        return `/selesai?${params.toString()}`;
+    }
     // ==========================================================
     // 10. PENGUMPULAN UJIAN (SUBMIT)
     // ==========================================================
@@ -1596,142 +2014,182 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         }
 
         clearInterval(timerInterval);
-        isExamActive = false; 
-        localStorage.removeItem('cat_help_used'); 
+        isExamActive = false;
+        localStorage.removeItem('cat_help_used');
         localStorage.removeItem(getStorageKey());
         localStorage.removeItem(getTimerKey());
-        
+
         const allQuestions = [...phase1Questions, ...phase2Questions];
         let correct = 0, skipped = 0;
-        
-        allQuestions.forEach(q => { 
+
+        allQuestions.forEach(q => {
             const ans = studentAnswers[q.id];
             if (!ans) {
-                skipped++; 
+                skipped++;
             } else if (q.question_type === 'fill_in_blanks') {
                 if (Array.isArray(ans) && !ans.includes(null) && ans.length === q.correct_answer.length) {
                     correct++;
                 } else {
-                    skipped++; 
+                    skipped++;
                 }
             } else {
-                if (ans === q.correct_answer) correct++; 
+                if (ans === q.correct_answer) correct++;
             }
         });
-        
-        const wrong = allQuestions.length - correct - skipped; 
-        const score = allQuestions.length > 0 ? Math.round((correct / allQuestions.length) * 100) : 0; 
+
+        const wrong = allQuestions.length - correct - skipped;
+        const score = allQuestions.length > 0 ? Math.round((correct / allQuestions.length) * 100) : 0;
 
         try {
             document.getElementById('statCorrect').innerText = correct;
-            document.getElementById('statWrong').innerText = wrong; 
-            document.getElementById('statSkip').innerText = skipped; 
-            document.getElementById('resultScore').innerText = score; 
-            
+            document.getElementById('statWrong').innerText = wrong;
+            document.getElementById('statSkip').innerText = skipped;
+            document.getElementById('resultScore').innerText = score;
+
             const circ = 326.72; const rf = document.getElementById('ringFill');
             if(rf) setTimeout(() => { rf.style.strokeDashoffset = circ - (score/100)*circ; }, 400);
 
             const emoji = document.getElementById('resultEmoji'), title = document.getElementById('resultTitle');
-            if (score >= 80) { 
+            if (score >= 80) {
                 if(emoji) emoji.innerText = '🌟';
-                if(title) title.innerText = 'Luar Biasa!'; if(rf) rf.style.stroke = '#22c55e'; 
+                if(title) title.innerText = 'Luar Biasa!'; if(rf) rf.style.stroke = '#22c55e';
                 if(typeof confetti !== 'undefined') confetti({ particleCount: 200, spread: 100, origin: {y:0.5}, colors:['#6366f1','#22c55e','#f59e0b'] });
-            } else if (score >= 60) { 
+            } else if (score >= 60) {
                 if(emoji) emoji.innerText = '👍';
-                if(title) title.innerText = 'Kerja Bagus!'; if(rf) rf.style.stroke = '#3b82f6'; 
+                if(title) title.innerText = 'Kerja Bagus!'; if(rf) rf.style.stroke = '#3b82f6';
             } else {
                 if(emoji) emoji.innerText = '💪';
-                if(title) title.innerText = 'Tetap Semangat!'; if(rf) rf.style.stroke = '#f97316'; 
+                if(title) title.innerText = 'Tetap Semangat!'; if(rf) rf.style.stroke = '#f97316';
             }
 
-            if (isPreview) { 
+            if (isPreview) {
                 document.getElementById('resultMsg').innerText = "Simulasi Selesai. Nilai ini tidak tersimpan ke database.";
-                if (capturedBase64) { 
+                if (capturedBase64) {
                     document.getElementById('previewCameraResult')?.classList.remove('hidden');
-                    document.getElementById('previewCapturedImg').src = capturedBase64; 
+                    document.getElementById('previewCapturedImg').src = capturedBase64;
                 }
             }
-        } catch (err) { console.error("Error updating UI Result", err); } 
+        } catch (err) { console.error("Error updating UI Result", err); }
 
         document.getElementById('modalFinish')?.classList.replace('hidden', 'flex');
-        
-        if (!isPreview) { 
+
+        if (!isPreview) {
             try {
                 const btnRet = document.getElementById('btnReturnHome');
-                if(btnRet) { 
+                if(btnRet) {
                     btnRet.disabled = true;
                     btnRet.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
                 }
 
                 const formattedAnswersForBackend = Object.keys(studentAnswers).map(questionId => ({
                     question_id: questionId,
-                    answer: studentAnswers[questionId] 
+                    answer: studentAnswers[questionId]
                 }));
-                
-                const res = await fetch(`${API_URL}/api/exams/${examId}/submit`, { 
-                    method: 'POST', 
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        student_id: activeStudentId, 
-                        subject: examData ? examData.subject : "Ujian", 
-                        score: score, 
-                        capture_base64: capturedBase64,
-                        student_answers: formattedAnswersForBackend 
-                    }) 
-                });
-                
-                const data = await res.json(); 
-                isAllExamsDone = data.is_all_completed === true;
-                
-                if (data.score !== undefined) {
-                    document.getElementById('resultScore').innerText = data.score;
-                    const rf = document.getElementById('ringFill');
-                    if(rf) setTimeout(() => { rf.style.strokeDashoffset = 326.72 - (data.score/100)*326.72; }, 400);
-                }
 
-                if(btnRet) { 
+                const res = await fetch(`${API_URL}/api/exams/${examId}/submit`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_id: activeStudentId,
+                        subject: examData ? examData.subject : "Ujian",
+                        score: score, // Nilai fallback dari UI jika API gagal ngitung
+                        capture_base64: capturedBase64,
+                        student_answers: formattedAnswersForBackend
+                    })
+                });
+
+                const data = await res.json();
+
+                // ==============================================================
+                // [UPDATE] LOGIKA HANDLING RESPONSE
+                // ==============================================================
+                const payload = data.data || data;
+
+                isAllExamsDone = payload.is_all_completed === true;
+
+                nextAfterExamRedirect = appendTokenToUrl(
+                    payload.next_redirect ||
+                    `/selesai?mode=exam&exam_id=${encodeURIComponent(examId)}&subject=${encodeURIComponent(examData?.subject || 'Ujian')}&student_id=${encodeURIComponent(activeStudentId)}`
+                );
+
+                afterWrappedRedirect = appendTokenToUrl(
+                    payload.after_wrapped_redirect ||
+                    `${nextAfterExamRedirect}&final=true&feedback_required=true`
+                );
+
+                if (payload.score !== undefined) {
+                    document.getElementById('resultScore').innerText = payload.score;
+
+                    const rf = document.getElementById('ringFill');
+                    if (rf) {
+                        setTimeout(() => {
+                            rf.style.strokeDashoffset = 326.72 - (payload.score / 100) * 326.72;
+                        }, 400);
+                    }
+                }
+                // ==============================================================
+
+                if(btnRet) {
                     btnRet.disabled = false;
                     btnRet.innerHTML = 'Tutup & Selesai';
-                } 
-            } catch(e) {  
+                }
+            } catch(e) {
                 console.error("Gagal mengirim hasil", e);
-                const btnRet = document.getElementById('btnReturnHome'); 
-                if(btnRet) { 
+                const btnRet = document.getElementById('btnReturnHome');
+                if(btnRet) {
                     btnRet.disabled = false;
                     btnRet.innerHTML = 'Tutup & Selesai';
-                } 
+                }
             }
         } else {
             isAllExamsDone = true;
         }
     };
 
+    // ==========================================================
+    // [UPDATE] FUNGSI RETURN REDIRECT
+    // ==========================================================
     window.returnFromExam = () => {
         isExamActive = false;
-        if (isAllExamsDone) {
-            document.getElementById('modalFinish').classList.replace('flex', 'hidden');
+
+        if (isPreview && isPreviewFinalFlow) {
+            document.getElementById('modalFinish')?.classList.replace('flex', 'hidden');
             window.showEasterEggTrigger();
             return;
         }
 
-        if (isPreview) window.location.href = `/exams/${examId}`;
-        else window.location.replace(window.location.href.split('?')[0] + '?token=' + token);
+        if (isAllExamsDone) {
+            document.getElementById('modalFinish')?.classList.replace('flex', 'hidden');
+            window.showEasterEggTrigger();
+            return;
+        }
+
+        if (isPreview) {
+            window.location.href = `/exams/${examId}`;
+            return;
+        }
+
+        const fallbackRedirect = appendTokenToUrl(
+            `/selesai?mode=exam&exam_id=${encodeURIComponent(examId)}&subject=${encodeURIComponent(examData?.subject || 'Ujian')}&student_id=${encodeURIComponent(activeStudentId)}`
+        );
+
+        window.location.replace(nextAfterExamRedirect || fallbackRedirect);
     };
 
     // ==========================================================
     // 11. EVENT LISTENER (KEAMANAN WINDOW)
     // ==========================================================
-    window.addEventListener('beforeunload', (e) => { 
-        if (isExamActive || window.isEasterEggActive) { 
-            e.preventDefault(); 
-            e.returnValue = 'Tunggu! Misi terakhirmu belum selesai. Yakin mau keluar?'; 
-        } 
+    window.addEventListener('beforeunload', (e) => {
+        if (isExamActive || window.isEasterEggActive) {
+            e.preventDefault();
+            e.returnValue = 'Tunggu! Misi terakhirmu belum selesai. Yakin mau keluar?';
+        }
     });
 
     window.addEventListener('popstate', (e) => {
         if (isExamActive || window.isEasterEggActive) {
             window.history.pushState(null, null, window.location.href);
-            
+
             if (window.isEasterEggActive) {
                 window.showToastAlert('warning', 'Eits, Mau Kemana?', 'Selesaikan rekamannya dulu supaya kamu bisa lihat hasil akhirnya!');
             } else {
@@ -1746,7 +2204,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const btn = document.getElementById('btnBuyCustom');
         const mins = parseInt(input.value) || 0;
         const cost = mins * 100; // Kalkulasi 1 menit = 100 Koin
-        
+
         if (mins > 0) {
             btn.innerHTML = `Beli (💰 ${cost})`;
             btn.disabled = false;
@@ -1760,17 +2218,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     window.buyCustomTime = () => {
         const input = document.getElementById('customTimeInput');
         const mins = parseInt(input.value) || 0;
-        
+
         if (mins <= 0) return;
         const cost = mins * 100;
-        
+
         const btn = document.getElementById('btnBuyCustom');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
-        
+
         // Panggil fungsi buyTime bawaan
-        window.buyTime(mins, cost); 
-        
+        window.buyTime(mins, cost);
+
         // Reset input setelah berhasil
         setTimeout(() => {
             input.value = '';
@@ -1789,8 +2247,8 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 <style is:global>
   /* --- (CSS LU TETAP SAMA KAYA SEBELUMNYA) --- */
   :root {
-    --bg: #f8fafc; --surf: #ffffff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; 
-    --accent: #6366f1; --accent-dark: #4f46e5; --accent-light: #e0e7ff; --shadow-3d: #cbd5e1; 
+    --bg: #f8fafc; --surf: #ffffff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b;
+    --accent: #6366f1; --accent-dark: #4f46e5; --accent-light: #e0e7ff; --shadow-3d: #cbd5e1;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
@@ -1814,10 +2272,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
   @keyframes cPop { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
 
   .exam-shell { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; color: var(--text); position: relative; }
-  
+
   .exam-header { background: var(--surf); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30; }
   .avatar { width: 40px; height: 40px; background: var(--accent-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem; color: var(--accent-dark); flex-shrink: 0; }
-  
+
   .timer-pill { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 2px solid var(--border); border-radius: 100px; padding: 8px 20px; font-size: 1.25rem; font-weight: 900; color: var(--text); letter-spacing: 0.05em; transition: all 0.3s; }
   .timer-icon { font-size: 0.9rem; color: var(--muted); }
   .timer-danger { background: #fee2e2!important; border-color: #ef4444!important; color: #ef4444!important; animation: tPulse 1s ease-in-out infinite; }
@@ -1838,7 +2296,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
   @keyframes cSlide { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
   .q-badge { background: var(--bg); color: var(--muted); font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid var(--border); }
-  
+
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.2s; }
   .dot-done { background: var(--accent); }
   .dot-current { background: #22c55e; transform: scale(1.4); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
@@ -1852,10 +2310,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
   .opt-btn { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--surf); border: 2px solid var(--border); border-radius: 1.25rem; color: var(--text); font-size: 1rem; font-weight: 700; text-align: left; cursor: pointer; position: relative; box-shadow: 0 6px 0 var(--shadow-3d); transition: transform 0.1s, box-shadow 0.1s, background 0.2s, border-color 0.2s; outline: none; animation: optIn 0.3s ease both; }
   @keyframes optIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  
+
   .opt-btn:hover:not(.selected) { background: var(--bg); border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 8px 0 var(--shadow-3d); }
   .opt-btn:active { transform: translateY(6px) !important; box-shadow: 0 0 0 transparent !important; }
-  
+
   .opt-btn.selected { background: var(--accent-light) !important; border-color: var(--accent) !important; transform: translateY(6px) !important; box-shadow: 0 0 0 transparent !important; }
 
   .opt-letter { width: 42px; height: 42px; flex-shrink: 0; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; color: var(--muted); transition: all 0.2s; }
@@ -1866,7 +2324,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
   .btn-3d { font-weight: 900; border: none; border-radius: 1rem; cursor: pointer; transition: all 0.15s; outline: none; display: flex; align-items: center; justify-content: center; }
   .btn-3d:disabled { opacity: 0.4; cursor: not-allowed; transform: translateY(0) !important; box-shadow: 0 4px 0 var(--shadow-3d) !important; background: var(--border)!important; color:var(--muted)!important;}
-  
+
   .btn-indigo { background: var(--accent); color: #fff; box-shadow: 0 6px 0 var(--accent-dark); }
   .btn-indigo:hover:not(:disabled) { background: var(--accent-dark); }
   .btn-indigo:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 0 0 transparent; }

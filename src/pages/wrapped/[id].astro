@@ -13,7 +13,7 @@ import Toast from '../../components/Toast.astro';
 
   <!-- Container Utama -->
   <div class="fixed inset-0 bg-slate-50 overflow-hidden flex flex-col select-none pattern-grid text-slate-800" id="wrappedContainer">
-    
+
     <!-- Floating Ornaments -->
     <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div class="absolute top-10 left-10 w-24 h-24 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
@@ -38,7 +38,7 @@ import Toast from '../../components/Toast.astro';
 
     <!-- SLIDES WRAPPER -->
     <div id="slidesWrapper" class="relative w-full h-full z-20">
-        
+
         <!-- SLIDE 0: SPLASH SCREEN -->
         <div class="wrapped-slide absolute inset-0 hidden flex-col items-center justify-center text-center p-6 bg-slate-50 z-30" id="slide-0">
             <div class="text-6xl mb-6 animate-bounce">🎁</div>
@@ -53,7 +53,7 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-1">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-24 pb-32 no-scrollbar" onscroll="handleScroll(this)">
                 <div class="max-w-sm mx-auto flex flex-col items-center min-h-[120%]">
-                    
+
                     <div class="flip-card w-32 h-32 mb-[-3rem] z-10 cursor-pointer group" onclick="this.classList.toggle('flipped')">
                         <div class="flip-card-inner shadow-xl rounded-full">
                             <div class="flip-card-front bg-white rounded-full border-4 border-white overflow-hidden">
@@ -86,12 +86,12 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-2">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 no-scrollbar" onscroll="handleScroll(this)" id="scroller-2">
                 <div class="max-w-sm mx-auto">
-                    
+
                     <!-- Card 1 -->
                     <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20 pt-10">
                         <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-slate-50">⏳</div>
                         <h2 class="text-3xl font-black text-slate-800 mb-6">Waktu Berlalu...</h2>
-                        <p class="type-target text-base font-bold text-slate-600 leading-relaxed bg-white/60 p-6 rounded-3xl border border-slate-200 shadow-sm" 
+                        <p class="type-target text-base font-bold text-slate-600 leading-relaxed bg-white/60 p-6 rounded-3xl border border-slate-200 shadow-sm"
                            data-text="Tidak terasa, kita sudah melewati puluhan hari penuh perjuangan. Mengulang ayat, menahan kantuk di pagi buta, dan melawan rasa malas yang terus menggoda. Tapi lihatlah dirimu sekarang..."></p>
                     </div>
 
@@ -99,7 +99,7 @@ import Toast from '../../components/Toast.astro';
                     <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20">
                         <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-indigo-50">💪</div>
                         <h2 class="text-3xl font-black text-indigo-900 mb-6">Kamu Berhasil!</h2>
-                        <p class="type-target text-base font-bold text-indigo-800 leading-relaxed bg-indigo-50/80 backdrop-blur p-6 rounded-3xl border border-indigo-200 shadow-sm" 
+                        <p class="type-target text-base font-bold text-indigo-800 leading-relaxed bg-indigo-50/80 backdrop-blur p-6 rounded-3xl border border-indigo-200 shadow-sm"
                            data-text="Ujian demi ujian telah diselesaikan dengan sabar. Setiap tetes keringat saat belajar akan menjadi saksi indah di akhirat kelak. Kamu benar-benar luar biasa!"></p>
                     </div>
 
@@ -107,7 +107,7 @@ import Toast from '../../components/Toast.astro';
                     <div class="narrative-card min-h-[90vh] flex flex-col justify-center items-center text-center opacity-0 transform translate-y-20 pb-20">
                         <div class="text-6xl mb-6 shadow-xl rounded-full bg-white w-24 h-24 flex items-center justify-center border-4 border-amber-50">💌</div>
                         <h2 class="text-3xl font-black text-amber-900 mb-6">Pesan dari Ustad</h2>
-                        <p class="type-target text-base font-bold text-amber-800 leading-relaxed bg-amber-50/80 backdrop-blur p-6 rounded-3xl border border-amber-200 shadow-sm" 
+                        <p class="type-target text-base font-bold text-amber-800 leading-relaxed bg-amber-50/80 backdrop-blur p-6 rounded-3xl border border-amber-200 shadow-sm"
                            data-text="Terima kasih telah bertahan dan tidak menyerah. Jadikan Al-Quran sebagai sahabat sejatimu di manapun kamu berada. Kami sangat bangga padamu!"></p>
                     </div>
 
@@ -122,9 +122,9 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-3">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
                 <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
-                    
+
                     <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Rekap Kehadiran</h2>
-                    
+
                     <!-- Utama (Primary) -->
                     <div class="bg-indigo-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-4 transform transition-all animate-pop-in">
                         <p class="text-[10px] font-black uppercase tracking-widest mb-2 text-indigo-200">Total Kehadiran</p>
@@ -158,9 +158,9 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-4">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
                 <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
-                    
+
                     <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Rekap Hafalan</h2>
-                    
+
                     <!-- Utama (Primary) -->
                     <div class="bg-emerald-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-6 relative overflow-hidden animate-pop-in">
                         <div class="absolute -right-4 -bottom-4 text-7xl opacity-10">📖</div>
@@ -174,15 +174,15 @@ import Toast from '../../components/Toast.astro';
                     <!-- UI Posisi (Timeline) -->
                     <div class="bg-emerald-50/80 backdrop-blur border-2 border-dashed border-emerald-200 rounded-[2rem] p-6 mb-6 shadow-sm animate-fade-in-up" style="animation-delay: 0.2s">
                         <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-6 text-center">Posisi Hafalanmu</p>
-                        
+
                         <div class="relative w-full h-3 bg-white rounded-full border border-emerald-100 flex items-center mb-2">
                             <!-- Progress Fill -->
                             <div class="absolute left-0 h-full bg-emerald-500 rounded-full transition-all duration-1000" id="s4_timeline_fill" style="width: 0%"></div>
-                            
+
                             <!-- Start & End Nodes -->
                             <div class="absolute left-0 w-4 h-4 bg-emerald-300 rounded-full -ml-1 border-2 border-white"></div>
                             <div class="absolute right-0 w-4 h-4 bg-slate-200 rounded-full -mr-1 border-2 border-white"></div>
-                            
+
                             <!-- Dummy Friends -->
                             <div class="absolute left-[30%] w-6 h-6 bg-emerald-100 border-2 border-white rounded-full -ml-3 flex items-center justify-center shadow-sm z-0"><i class="fa-solid fa-user text-[8px] text-emerald-400"></i></div>
                             <div class="absolute left-[50%] w-6 h-6 bg-emerald-100 border-2 border-white rounded-full -ml-3 flex items-center justify-center shadow-sm z-0"><i class="fa-solid fa-user text-[8px] text-emerald-400"></i></div>
@@ -218,9 +218,9 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-5">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
                 <div class="max-w-sm mx-auto min-h-[120%] flex flex-col">
-                    
+
                     <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">Gelar Sultanmu</h2>
-                    
+
                     <!-- Utama (Primary) -->
                     <div class="bg-violet-600 text-white p-8 rounded-[2rem] shadow-xl text-center mb-4 animate-pop-in">
                         <i class="fa-solid fa-coins text-4xl mb-3 text-yellow-300 animate-pulse"></i>
@@ -265,10 +265,10 @@ import Toast from '../../components/Toast.astro';
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden" id="slide-6">
             <div class="scroll-area flex-1 overflow-y-auto w-full p-6 pt-20 pb-32 no-scrollbar" onscroll="handleScroll(this)">
                 <div class="max-w-sm mx-auto flex flex-col items-center min-h-[120%]">
-                    
+
                     <h2 class="text-2xl font-black text-slate-800 mb-1">Wajah Bersejarah</h2>
                     <p class="text-xs font-bold text-slate-500 mb-6">Jepretan momen seru kamu! 📸</p>
-                    
+
                     <div id="bentoGallery" class="w-full bg-white p-3 rounded-3xl shadow-lg border border-slate-200">
                         <div class="grid grid-cols-3 auto-rows-[80px] gap-2 w-full" id="bentoGrid">
                         </div>
@@ -283,7 +283,7 @@ import Toast from '../../components/Toast.astro';
 
         <!-- SLIDE 7: FINALE (CREDITS & AUDIO) -->
         <div class="wrapped-slide absolute inset-0 hidden flex-col h-full w-full overflow-hidden bg-slate-950" id="slide-7">
-            
+
             <!-- CREDIT SCENE -->
             <div id="slide-7-credits" class="absolute inset-0 flex items-center justify-center z-20">
                 <div id="creditsRoll" class="text-center space-y-12 text-white font-black tracking-widest uppercase text-sm w-full px-6">
@@ -312,15 +312,15 @@ import Toast from '../../components/Toast.astro';
 
             <!-- AUDIO SECTION (Fades in after credits) -->
             <div id="slide-7-audio" class="relative z-10 flex-col items-center justify-center h-full p-6 hidden opacity-0">
-                
+
                 <div class="w-32 h-32 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-5xl mb-8 shadow-[0_0_60px_rgba(99,102,241,0.5)] border-4 border-slate-800 relative">
                     <i class="fa-solid fa-microphone-lines text-white animate-pulse"></i>
                     <div class="absolute -bottom-2 -right-2 bg-amber-400 w-10 h-10 rounded-full flex items-center justify-center text-slate-900 text-xl border-2 border-slate-900 transform -rotate-12"><i class="fa-solid fa-star"></i></div>
                 </div>
-                
+
                 <h2 class="text-3xl font-black mb-3 drop-shadow-lg text-center text-white">Suara Emasmu</h2>
                 <p class="text-xs font-bold text-slate-400 mb-12 text-center max-w-xs leading-relaxed">Mari kita dengarkan kembali lantunan tartil terbaikmu di ujian tadi sebagai penutup yang indah.</p>
-                
+
                 <button id="btnPlayPause" onclick="toggleAudio()" class="w-20 h-20 bg-white text-indigo-600 rounded-full flex items-center justify-center text-3xl shadow-lg hover:scale-105 active:scale-95 transition-all outline-none">
                     <i class="fa-solid fa-play ml-1" id="playIcon"></i>
                 </button>
@@ -373,6 +373,9 @@ import Toast from '../../components/Toast.astro';
     const studentId = window.location.pathname.split('/').pop();
     const urlParams = new URLSearchParams(window.location.search);
     const isPreview = urlParams.get('preview') === 'true';
+    const afterWrappedUrl = urlParams.get('after')
+    ? decodeURIComponent(urlParams.get('after'))
+    : null;
 
     let currentSlide = 0;
     const totalSlides = 8; // 0 to 7
@@ -391,9 +394,9 @@ import Toast from '../../components/Toast.astro';
             // 2. Munculkan tembok peringatan
             document.getElementById('modalForceRecord').classList.replace('hidden', 'flex');
             // 3. STOP proses! Jangan ambil data apapun dari database.
-            return; 
+            return;
         }
-        
+
         bgMusic = document.getElementById('bgMusic');
         userAudio = document.getElementById('userAudio');
         bgMusic.volume = 0.5;
@@ -403,7 +406,7 @@ import Toast from '../../components/Toast.astro';
             icon.classList.replace('fa-pause', 'fa-play');
             icon.classList.replace('ml-0', 'ml-1');
             document.getElementById('audioStatusText').innerText = "Selesai (Tekan untuk ulang)";
-            
+
             clearTimeout(audioFadeTimeout);
             gsap.to(bgMusic, { volume: 0.5, duration: 2 });
         };
@@ -429,7 +432,7 @@ import Toast from '../../components/Toast.astro';
                 document.getElementById('s4_pct_val').innerText = "75%";
                 document.getElementById('s4_percentile').classList.remove('hidden');
                 document.getElementById('s4_surahList').innerHTML = ["An-Nas", "Al-Falaq", "Al-Ikhlas"].map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
-                
+
                 // Set Animasi Timeline Dummy
                 document.getElementById('s4_timeline_fill').style.width = "40%";
                 document.getElementById('s4_timeline_user').style.left = "40%";
@@ -446,13 +449,13 @@ import Toast from '../../components/Toast.astro';
                     "https://dummyimage.com/400x400/94a3b8/334155&text=Foto+3"
                 ];
                 renderBentoGrid(dummyPhotos);
-                
+
                 if (base64Audio) userAudio.src = base64Audio;
 
             } else {
                 const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const stdData = (await stdRes.json()).data;
-                
+
                 document.getElementById('s1_name').innerText = stdData.name;
                 document.getElementById('creditName').innerText = stdData.name.toUpperCase();
                 document.getElementById('s1_initial').innerText = stdData.name.substring(0,2).toUpperCase();
@@ -472,7 +475,7 @@ import Toast from '../../components/Toast.astro';
                         detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin/sakit. Kami doakan semoga kamu sehat dan semangat terus ngajinya.</p></div></div>`;
                     }
                     if(detHtml === "") detHtml = `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-green-100 text-green-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-star"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kehadiran sempurna! Luar biasa dedikasi dan semangatmu buat ngaji!</p></div></div>`;
-                    
+
                     document.getElementById('s3_details').innerHTML = detHtml;
                 } catch(e) {}
 
@@ -481,7 +484,7 @@ import Toast from '../../components/Toast.astro';
                     const memData = (await memRes.json()).data || [];
                     const uniqueSurahs = [...new Set(memData.map(m => m.surah_name))];
                     document.getElementById('s4_count').innerText = uniqueSurahs.length;
-                    
+
                     // Setup UI Timeline Posisi
                     const totalSurah = 37;
                     const pctUser = Math.min(100, (uniqueSurahs.length / totalSurah) * 100);
@@ -500,7 +503,7 @@ import Toast from '../../components/Toast.astro';
                 try {
                     const logsRes = await fetch(`${API_URL}/api/students/${studentId}/point-history?days=all&limit=200`, { headers: { 'Authorization': `Bearer ${token}` }});
                     const logsData = (await logsRes.json()).data || [];
-                    
+
                     let itemsCount = { 'Perisai 🛡️': 0, 'Pedang Serang ⚔️': 0, 'Double Score ✨': 0, 'Extra Life 💖': 0 };
                     let targetsCount = {};
                     let attackersCount = {};
@@ -538,11 +541,11 @@ import Toast from '../../components/Toast.astro';
                         fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]}))
                     ]);
                     const allPhotos = [...(galReq.data||[]).map(i=>i.image_url), ...(satpamReq.data||[]).map(i=>i.photo_url)];
-                    
+
                     const avatarUrl = `https://ui-avatars.com/api/?name=${stdData.name}&background=e2e8f0&color=64748b`;
-                    
+
                     if(allPhotos.length > 0) {
-                        document.getElementById('s1_photo').src = allPhotos[0]; 
+                        document.getElementById('s1_photo').src = allPhotos[0];
                         document.getElementById('s1_photo_timeline').src = allPhotos[0];
                         renderBentoGrid(allPhotos);
                     } else {
@@ -565,12 +568,12 @@ import Toast from '../../components/Toast.astro';
 
     const renderBentoGrid = (images) => {
         const grid = document.getElementById('bentoGrid');
-        grid.innerHTML = ''; 
-        
+        grid.innerHTML = '';
+
         images.forEach((url, i) => {
             let rowSpan = (i % 3 === 0) ? 'row-span-2' : 'row-span-1';
             let colSpan = (i % 4 === 0) ? 'col-span-2' : 'col-span-1';
-            
+
             grid.innerHTML += `
                 <div class="${colSpan} ${rowSpan} relative bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer group" onclick="openPhotoViewer('${url}')">
                     <img src="${url}" crossorigin="anonymous" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
@@ -592,15 +595,15 @@ import Toast from '../../components/Toast.astro';
 
     window.nextSlide = () => {
         if(currentSlide === totalSlides - 1) return;
-        
+
         const currEl = document.getElementById(`slide-${currentSlide}`);
         if(currEl) currEl.classList.replace('flex', 'hidden');
-        
+
         currentSlide++;
-        
+
         const nextEl = document.getElementById(`slide-${currentSlide}`);
         nextEl.classList.replace('hidden', 'flex');
-        
+
         const bar = document.getElementById('scrollProgress');
         bar.style.width = '0%';
         bar.classList.remove('bg-green-500'); bar.classList.add('bg-indigo-500');
@@ -621,15 +624,15 @@ import Toast from '../../components/Toast.astro';
     const setupSlide = (index) => {
         const btnDownload = document.getElementById('btnDownload');
         const btnCloseHeader = document.getElementById('btnCloseHeader');
-        
+
         // Atur Header Icons
         if (index > 0 && index < 7) btnDownload.classList.replace('hidden', 'flex');
         else btnDownload.classList.replace('flex', 'hidden');
 
         // GSAP SLIDE 2: Efek Ngetik per Card Full Screen
         if (index === 2) {
-            ScrollTrigger.getAll().forEach(t => t.kill()); 
-            
+            ScrollTrigger.getAll().forEach(t => t.kill());
+
             gsap.utils.toArray('#slide-2 .narrative-card').forEach((card) => {
                 const textTarget = card.querySelector('.type-target');
                 const fullText = textTarget.getAttribute('data-text');
@@ -643,11 +646,11 @@ import Toast from '../../components/Toast.astro';
                         // Animasi Muncul Card
                         gsap.to(card, { opacity: 1, y: 0, duration: 0.8, ease: "back.out(1.5)" });
                         // Animasi Ngetik Teks
-                        gsap.to(textTarget, { 
-                            text: fullText, 
-                            duration: 3.5, 
-                            delay: 0.4, 
-                            ease: "none" 
+                        gsap.to(textTarget, {
+                            text: fullText,
+                            duration: 3.5,
+                            delay: 0.4,
+                            ease: "none"
                         });
                     }
                 });
@@ -660,17 +663,17 @@ import Toast from '../../components/Toast.astro';
             document.getElementById('slide-7-credits').classList.replace('hidden', 'flex');
             document.getElementById('slide-7-audio').classList.replace('flex', 'hidden');
             gsap.set("#slide-7-audio", { opacity: 0 });
-            
+
             // GSAP Timeline untuk Credit Scene
             const tl = gsap.timeline({
                 onComplete: () => {
                     // Setelah Credit beres, Munculin Audio Player + Tombol Silang Header
                     document.getElementById('slide-7-credits').classList.replace('flex', 'hidden');
                     document.getElementById('slide-7-audio').classList.replace('hidden', 'flex');
-                    
+
                     gsap.to("#slide-7-audio", { opacity: 1, duration: 1.5 });
                     btnCloseHeader.classList.replace('hidden', 'flex');
-                    
+
                     // Kalau audio aslinya kosong/error, lgsg tunjukin tombol silang di header aja
                     if(!userAudio.src || userAudio.src.endsWith('undefined')) {
                         document.getElementById('audioStatusText').innerText = "Rekaman tidak tersedia.";
@@ -679,23 +682,23 @@ import Toast from '../../components/Toast.astro';
             });
 
             // Animasi Credit dari bawah ke atas layar lalu ilang
-            tl.fromTo("#creditsRoll", 
-                { y: "100vh" }, 
+            tl.fromTo("#creditsRoll",
+                { y: "100vh" },
                 { y: "-150vh", duration: 12, ease: "linear" }
             ).to("#slide-7-credits", { opacity: 0, duration: 1 });
         }
 
         // Pancing fungsi scroll biar tombol Next bisa muncul kalo content layar pendek
         const scroller = document.getElementById(`slide-${index}`).querySelector('.scroll-area');
-        if (scroller) handleScroll(scroller); 
+        if (scroller) handleScroll(scroller);
     };
 
     window.handleScroll = (el) => {
         const { scrollTop, scrollHeight, clientHeight } = el;
         const maxScroll = scrollHeight - clientHeight;
-        
+
         const progress = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 100;
-        
+
         const bar = document.getElementById('scrollProgress');
         bar.style.width = `${progress}%`;
 
@@ -703,7 +706,7 @@ import Toast from '../../components/Toast.astro';
             bar.classList.replace('bg-indigo-500', 'bg-green-500');
             const slideEl = el.closest('.wrapped-slide');
             const nextBtn = slideEl.querySelector('.next-btn-container');
-            
+
             if (nextBtn) {
                 nextBtn.classList.replace('opacity-0', 'opacity-100');
                 nextBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
@@ -728,7 +731,7 @@ import Toast from '../../components/Toast.astro';
             icon.classList.replace('fa-play', 'fa-pause');
             icon.classList.replace('ml-1', 'ml-0');
             statusText.innerText = "Sedang memutar...";
-            
+
             clearTimeout(audioFadeTimeout);
             gsap.to(bgMusic, { volume: 0.1, duration: 1 });
 
@@ -737,7 +740,7 @@ import Toast from '../../components/Toast.astro';
             icon.classList.replace('fa-pause', 'fa-play');
             icon.classList.replace('ml-0', 'ml-1');
             statusText.innerText = "Dijeda (Tekan untuk lanjut)";
-            
+
             clearTimeout(audioFadeTimeout);
             audioFadeTimeout = setTimeout(() => {
                 gsap.to(bgMusic, { volume: 0.5, duration: 1.5 });
@@ -746,12 +749,17 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.closeWrapped = () => {
-        if (isPreview) {
-            window.location.href = `/exams`; 
-        } else {
-            // Lempar ke halaman publik "Selesai"
-            window.location.replace('/selesai'); 
+        if (afterWrappedUrl) {
+            window.location.replace(afterWrappedUrl);
+            return;
         }
+
+        if (isPreview) {
+            window.location.href = `/exams`;
+            return;
+        }
+
+        window.location.replace('/selesai');
     };
 
     // ========================================================
@@ -798,16 +806,16 @@ import Toast from '../../components/Toast.astro';
 
         try {
             let elementToCapture = currentSlide === 6 ? document.getElementById('bentoGallery') : activeSlide.querySelector('.scroll-area > div');
-            
+
             const dataUrl = await htmlToImage.toJpeg(elementToCapture, {
-                quality: 0.9, pixelRatio: 2, skipFonts: true, backgroundColor: '#f8fafc' 
+                quality: 0.9, pixelRatio: 2, skipFonts: true, backgroundColor: '#f8fafc'
             });
 
             const link = document.createElement('a');
             link.download = `Ngaji_Catatan_${currentSlide}_${Date.now()}.jpg`;
             link.href = dataUrl;
             link.click();
-            
+
             window.showToast?.('success', 'Tersimpan!', 'Catatan (JPG) berhasil diunduh.');
         } catch (error) {
             window.showToast?.('danger', 'Ups!', 'Gagal menyimpan gambar.');
@@ -835,16 +843,16 @@ import Toast from '../../components/Toast.astro';
     /* Flip Card CSS */
     .flip-card { perspective: 1000px; }
     .flip-card-inner {
-        position: relative; 
-        width: 100%; 
+        position: relative;
+        width: 100%;
         height: 100%;
         transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         transform-style: preserve-3d;
     }
     .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
     .flip-card-front, .flip-card-back {
-        position: absolute; 
-        width: 100%; 
+        position: absolute;
+        width: 100%;
         height: 100%;
         backface-visibility: hidden;
     }
