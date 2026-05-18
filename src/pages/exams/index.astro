@@ -138,6 +138,58 @@ import ModalAlert from '../../components/ModalAlert.astro';
         </div>
     </div>
 
+    <div id="modalRetakePermission" class="fixed inset-0 bg-black/60 z-[120] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="font-black text-gray-800 text-lg">Buka Bantuan Ujian</h3>
+                    <p id="retakeExamTitle" class="text-xs font-bold text-gray-400 mt-1">Pilih murid yang meminta bantuan</p>
+                </div>
+                <button onclick="closeRetakeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="formRetakePermission" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Siapa muridnya?</label>
+                    <select id="retakeStudentId" required class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Memuat daftar murid...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Jenis Bantuan</label>
+                    <select id="retakeMode" required onchange="toggleRetakeExtraMinutes()" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="extra_time">Tambah waktu</option>
+                        <option value="continue">Izinkan lanjut dari progress terakhir</option>
+                        <option value="reset">Reset dari awal</option>
+                    </select>
+                </div>
+
+                <div id="retakeExtraMinutesWrap">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Tambahan Waktu</label>
+                    <input type="number" id="retakeExtraMinutes" min="1" value="10" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Alasan</label>
+                    <textarea id="retakeReason" rows="3" placeholder="Contoh: HP mati saat ujian / dipinjam orang tua / jaringan bermasalah" class="w-full mt-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                    <p class="text-[10px] font-bold text-amber-700 leading-relaxed">
+                        Izin ini hanya berlaku untuk murid yang dipilih. Setelah dipakai, izin akan ditandai sebagai sudah digunakan.
+                    </p>
+                </div>
+
+                <button type="submit" id="btnSubmitRetake" class="w-full py-4 bg-amber-500 text-white font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                    Buat Izin & Salin Link
+                </button>
+            </form>
+        </div>
+    </div>
+
     <NavbarGuru activeMenu="exams" />
     <Toast />
     <ModalAlert />
@@ -150,6 +202,29 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     let currentEditExamId = null;
     let currentEditQuestions = [];
+
+    let currentRetakeExamId = null;
+    let currentRetakeExamTitle = '';
+    let cachedStudents = [];
+
+    const fetchStudentsForRetake = async () => {
+        if (cachedStudents.length > 0) return cachedStudents;
+
+        const res = await fetch(`${API_URL}/api/students`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || result.status === 'error') {
+            throw new Error(result.message || 'Gagal memuat data murid.');
+        }
+
+        cachedStudents = result.data || [];
+        return cachedStudents;
+    };
 
     // [OPTIMASI CACHE] Tempat menyimpan detail ujian yang sudah pernah di-klik
     let cachedExamDetails = {};
@@ -187,8 +262,17 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         }
                         <div class="flex items-center gap-1.5 mt-1">
 
-                            <button onclick="openEditModal('${exam.id}')" class="w-8 h-8 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-gear"></i></button>
-                            <button onclick="confirmDelete('${exam.id}', '${exam.title}')" class="w-8 h-8 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="openRetakeModal('${exam.id}', '${exam.title.replace(/'/g, "\\'")}')" class="w-8 h-8 bg-gray-50 hover:bg-amber-50 text-gray-400 hover:text-amber-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100" title="Buka ulang / tambah waktu">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+
+                            <button onclick="openEditModal('${exam.id}')" class="w-8 h-8 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100">
+                                <i class="fa-solid fa-gear"></i>
+                            </button>
+
+                            <button onclick="confirmDelete('${exam.id}', '${exam.title.replace(/'/g, "\\'")}')" class="w-8 h-8 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors shadow-sm border border-gray-100">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -330,6 +414,148 @@ window.copyExamLink = () => {
     };
 
     window.closeEditModal = () => document.getElementById('modalEditExam').classList.replace('flex', 'hidden');
+
+    window.toggleRetakeExtraMinutes = () => {
+        const mode = document.getElementById('retakeMode').value;
+        const wrap = document.getElementById('retakeExtraMinutesWrap');
+
+        if (mode === 'extra_time') {
+            wrap.classList.remove('hidden');
+        } else {
+            wrap.classList.add('hidden');
+        }
+    };
+
+    window.openRetakeModal = async (examId, examTitle) => {
+        currentRetakeExamId = examId;
+        currentRetakeExamTitle = examTitle;
+
+        document.getElementById('retakeExamTitle').innerText = examTitle;
+        document.getElementById('modalRetakePermission').classList.replace('hidden', 'flex');
+
+        const select = document.getElementById('retakeStudentId');
+        select.innerHTML = '<option value="">Memuat daftar murid...</option>';
+
+        try {
+            const students = await fetchStudentsForRetake();
+
+            if (students.length === 0) {
+                select.innerHTML = '<option value="">Belum ada murid</option>';
+                return;
+            }
+
+            select.innerHTML = `
+                <option value="">Pilih murid...</option>
+                ${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+            `;
+        } catch (err) {
+            console.error(err);
+            select.innerHTML = '<option value="">Gagal memuat murid</option>';
+            window.showToast?.('danger', 'Gagal', err.message);
+        }
+    };
+
+    window.closeRetakeModal = () => {
+        currentRetakeExamId = null;
+        currentRetakeExamTitle = '';
+
+        document.getElementById('modalRetakePermission').classList.replace('flex', 'hidden');
+        document.getElementById('formRetakePermission').reset();
+        window.toggleRetakeExtraMinutes();
+    };
+
+    document.getElementById('formRetakePermission').onsubmit = async (e) => {
+        e.preventDefault();
+
+        if (!currentRetakeExamId) {
+            window.showToast?.('danger', 'Gagal', 'Ujian belum dipilih.');
+            return;
+        }
+
+        const btn = document.getElementById('btnSubmitRetake');
+        const studentSelect = document.getElementById('retakeStudentId');
+
+        const studentId = studentSelect.value;
+        const studentName = studentSelect.options[studentSelect.selectedIndex]?.text || 'Murid';
+        const mode = document.getElementById('retakeMode').value;
+        const extraMinutes = parseInt(document.getElementById('retakeExtraMinutes').value || '0');
+        const reason = document.getElementById('retakeReason').value;
+
+        if (!studentId) {
+            window.showToast?.('warning', 'Pilih Murid', 'Silakan pilih murid yang meminta bantuan.');
+            return;
+        }
+
+        if (mode === 'extra_time' && extraMinutes <= 0) {
+            window.showToast?.('warning', 'Waktu Tidak Valid', 'Tambahan waktu minimal 1 menit.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Membuat izin...';
+
+        try {
+            const payload = {
+                student_id: studentId,
+                mode,
+                extra_minutes: mode === 'extra_time' ? extraMinutes : 0,
+                reason
+            };
+
+            const res = await fetch(`${API_URL}/api/exams/${currentRetakeExamId}/retake-permissions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status === 'error') {
+                throw new Error(result.message || 'Gagal membuat izin.');
+            }
+
+            const frontendUrl = window.location.origin;
+
+            const link = `${frontendUrl}/play/${currentRetakeExamId}?token=${token}&retake_student_id=${studentId}`;
+
+            const modeText = {
+                reset: 'reset dari awal',
+                continue: 'lanjut dari progress terakhir',
+                extra_time: `tambahan waktu ${extraMinutes} menit`
+            }[mode];
+
+            const waText =
+                `Assalamualaikum ${studentName},
+
+                Ustadz sudah membuka izin ujian untuk kamu.
+
+                Jenis bantuan: ${modeText}
+                Ujian: ${currentRetakeExamTitle}
+
+                Silakan buka link ini:
+                ${link}`;
+
+            await navigator.clipboard.writeText(waText);
+
+            window.showToast?.(
+                'success',
+                'Izin Dibuat',
+                'Pesan dan link sudah disalin. Silakan paste ke WhatsApp.'
+            );
+
+            window.closeRetakeModal();
+
+        } catch (err) {
+            console.error(err);
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Buat Izin & Salin Link';
+        }
+    };
 
     // --- LOGIKA HAPUS UJIAN ---
     window.confirmDelete = (id, title) => {

@@ -170,6 +170,29 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         </div>
     </div>
 
+    <div id="modalExamExpired" class="modal-backdrop hidden z-[9999]">
+        <div class="modal-box animate-slide-up border-2 border-red-500">
+            <div class="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-red-100 shadow-inner">
+                <i class="fa-solid fa-hourglass-end animate-pulse"></i>
+            </div>
+
+            <h3 class="text-2xl font-black text-gray-800 mb-2">Waktu Ujian Habis</h3>
+
+            <p class="text-xs font-bold text-gray-500 mb-6 leading-relaxed">
+                Waktu ujian kamu sudah habis. Jika ini terjadi karena HP mati, jaringan bermasalah,
+                atau kendala lain, silakan hubungi ustadz untuk membuka ulang ujian.
+            </p>
+
+            <button onclick="handleCheckRetakePermission(event)" class="btn-3d btn-gray w-full py-4 text-sm mb-3">
+                Cek Ulang Izin
+            </button>
+
+            <button onclick="returnFromExam()" class="btn-3d btn-indigo w-full py-4 text-sm">
+                Kembali
+            </button>
+        </div>
+    </div>
+
     <div id="modalAngryCat" class="modal-backdrop hidden z-[9999] p-4">
         <div class="w-full max-w-xs aspect-[9/16] rounded-[2rem] shadow-2xl relative overflow-hidden animate-slide-up border-4 border-red-500 bg-black">
             <video id="videoAngryCat" src="/video/cat-angry.mp4" preload="none" playsinline loop muted class="absolute inset-0 w-full h-full object-cover"></video>
@@ -536,6 +559,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const examId = window.location.pathname.split('/').pop();
     const urlParams = new URLSearchParams(window.location.search);
+    const retakeStudentIdFromUrl = urlParams.get('retake_student_id');
 
     // Auth & Preview State
     const urlToken = urlParams.get('token');
@@ -703,6 +727,30 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const getStorageKey = () => isPreview ? `preview_progress_${examId}` : `exam_progress_${examId}`;
     const getTimerKey = () => isPreview ? `preview_timer_${examId}` : `exam_timer_${examId}`;
 
+    const getExamStartedKey = () => isPreview
+        ? `preview_exam_started_${examId}`
+        : `exam_started_${examId}`;
+
+    const getQuestionOrderKey = () => isPreview
+        ? `preview_question_order_${examId}`
+        : `exam_question_order_${examId}`;
+
+    const getCurrentIndexKey = () => isPreview
+        ? `preview_current_index_${examId}`
+        : `exam_current_index_${examId}`;
+
+    const getCurrentPhaseKey = () => isPreview
+        ? `preview_current_phase_${examId}`
+        : `exam_current_phase_${examId}`;
+
+        const getExamDeadlineKey = () => isPreview
+            ? `preview_exam_deadline_${examId}`
+            : `exam_deadline_${examId}`;
+
+        const getExpiredReasonKey = () => isPreview
+            ? `preview_exam_expired_reason_${examId}`
+            : `exam_expired_reason_${examId}`;
+
     if (isPreview) {
         localStorage.removeItem(`preview_progress_${examId}`);
         localStorage.removeItem(`preview_timer_${examId}`);
@@ -784,6 +832,57 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         }
     };
 
+    const freezeTimerByMiaw = (durationMs = 7000, done = () => {}) => {
+        if (!isExamActive || isSubmitting) {
+            done();
+            return;
+        }
+
+        const timerText = document.getElementById('timerText');
+        const timerContainer = document.getElementById('timerContainer');
+        const timerIcon = document.getElementById('timerIcon');
+
+        clearTimeout(catFreezeTimeout);
+
+        window.isTimeStoppedByCat = true;
+
+        if (timerText) timerText.innerText = 'DIBEKUKAN';
+
+        if (timerContainer) {
+            timerContainer.classList.add(
+                'bg-cyan-50',
+                'text-cyan-600',
+                'border-cyan-200',
+                'animate-pulse'
+            );
+        }
+
+        if (timerIcon) {
+            timerIcon.className = 'fa-solid fa-snowflake timer-icon text-cyan-500 animate-spin';
+        }
+
+        catFreezeTimeout = setTimeout(() => {
+            window.isTimeStoppedByCat = false;
+
+            if (timerContainer) {
+                timerContainer.classList.remove(
+                    'bg-cyan-50',
+                    'text-cyan-600',
+                    'border-cyan-200',
+                    'animate-pulse'
+                );
+            }
+
+            if (timerIcon) {
+                timerIcon.className = 'fa-solid fa-stopwatch timer-icon text-gray-400';
+            }
+
+            updateTimerUI();
+            done();
+        }, durationMs);
+    };
+
+
     // ==========================================================
     // 3. INISIALISASI (INIT) & FETCH DATA
     // ==========================================================
@@ -820,10 +919,24 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                         onThreatExecute: () => {
                             if (!isExamActive || isSubmitting) return;
 
-                            // 1 detik asli jadi 0.5 detik per countdown
-                            runExamTimer(500);
+                            const penaltySeconds = 60;
+                            timeLeft = Math.max(0, timeLeft - penaltySeconds);
+                            localStorage.setItem(getTimerKey(), String(timeLeft));
+
+                            const deadlineRaw = localStorage.getItem(getExamDeadlineKey());
+                            if (deadlineRaw) {
+                                const newDeadline = Number(deadlineRaw) - (penaltySeconds * 1000);
+                                localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
+                            }
+
+                            updateTimerUI();
 
                             document.getElementById('modalMiawLetter')?.classList.replace('hidden', 'flex');
+
+                            if (timeLeft <= 0) {
+                                localStorage.setItem(getExpiredReasonKey(), 'time_expired');
+                                lockExamBecauseExpired();
+                            }
                         },
 
                         onThreatRevert: () => {
@@ -865,7 +978,39 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             // Pemisahan Fase Soal
             phase1Questions = [];
             phase2Questions = [];
-            let rawQuestions = shuffleArray(examData.questions || []);
+            let rawQuestions = [];
+            const savedQuestionOrder = localStorage.getItem(getQuestionOrderKey());
+
+            if (savedQuestionOrder) {
+                try {
+                    const orderIds = JSON.parse(savedQuestionOrder);
+
+                    rawQuestions = orderIds
+                        .map(id => (examData.questions || []).find(q => String(q.id) === String(id)))
+                        .filter(Boolean);
+
+                    // Fallback kalau data rusak / soal berubah dari database
+                    if (rawQuestions.length === 0) {
+                        rawQuestions = shuffleArray(examData.questions || []);
+                        localStorage.setItem(
+                            getQuestionOrderKey(),
+                            JSON.stringify(rawQuestions.map(q => q.id))
+                        );
+                    }
+                } catch (e) {
+                    rawQuestions = shuffleArray(examData.questions || []);
+                    localStorage.setItem(
+                        getQuestionOrderKey(),
+                        JSON.stringify(rawQuestions.map(q => q.id))
+                    );
+                }
+            } else {
+                rawQuestions = shuffleArray(examData.questions || []);
+                localStorage.setItem(
+                    getQuestionOrderKey(),
+                    JSON.stringify(rawQuestions.map(q => q.id))
+                );
+            }
 
             rawQuestions.forEach(q => {
                 if (q.question_type === 'fill_in_blanks') {
@@ -909,6 +1054,18 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             const savedTime = localStorage.getItem(getTimerKey());
             timeLeft = (savedTime && !isNaN(savedTime)) ? parseInt(savedTime) : totalDurationSeconds;
 
+            const wasExamStarted = localStorage.getItem(getExamStartedKey()) === 'true';
+
+            if (wasExamStarted) {
+                syncTimeLeftWithDeadline();
+
+                if (timeLeft <= 0) {
+                    localStorage.setItem(getExpiredReasonKey(), 'time_expired');
+                    lockExamBecauseExpired();
+                    return;
+                }
+            }
+
             // Mode Preview vs Mode Murid
             if (isPreview) {
                 activeStudentId = "preview_mode";
@@ -950,6 +1107,16 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 ]);
 
                 allStudents = stdRes.data || [];
+
+                if (retakeStudentIdFromUrl) {
+                    const targetStudent = allStudents.find(s => String(s.id) === String(retakeStudentIdFromUrl));
+
+                    if (targetStudent) {
+                        setTimeout(() => {
+                            window.selectStudent(targetStudent.id, targetStudent.name, { skipTutorialGate: true });
+                        }, 300);
+                    }
+                }
                 completedStudentIds = (resRes.data || []).map(r => r.student_id);
                 qualifiedStudentIds = qualRes.data || [];
 
@@ -977,6 +1144,49 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
+
+            const wasExamStarted = localStorage.getItem(getExamStartedKey()) === 'true';
+
+            if (wasExamStarted && activeStudentId) {
+                const savedPhase = parseInt(localStorage.getItem(getCurrentPhaseKey()) || '1');
+                const savedIndex = parseInt(localStorage.getItem(getCurrentIndexKey()) || '0');
+
+                currentPhase = savedPhase === 2 ? 2 : 1;
+
+                if (currentPhase === 2 && phase2Questions.length > 0) {
+                    questions = phase2Questions;
+                    document.getElementById('phase1Wrapper')?.classList.add('hidden');
+                    document.getElementById('phase2Wrapper')?.classList.remove('hidden');
+                } else {
+                    currentPhase = 1;
+                    questions = phase1Questions;
+                    document.getElementById('phase2Wrapper')?.classList.add('hidden');
+                    document.getElementById('phase1Wrapper')?.classList.remove('hidden');
+                }
+
+                currentIndex = Math.max(0, Math.min(savedIndex, questions.length - 1));
+
+                document.getElementById('loadingScreen')?.classList.add('hidden');
+                document.getElementById('lobbyScreen')?.classList.replace('flex', 'hidden');
+                document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
+                document.getElementById('examMainContainer')?.classList.remove('hidden');
+
+                isExamActive = true;
+                updateTimerUI();
+                runExamTimer(currentTimerSpeed || 1000);
+
+                if (currentPhase === 1) {
+                    renderQuestion();
+                } else if (currentPhase === 2 && window.ArcadeTyping) {
+                    window.ArcadeTyping.init(phase2Questions, phase2Answers, handlePhase2Complete);
+                }
+
+                window.showToastAlert?.(
+                    'info',
+                    'Ujian Dilanjutkan',
+                    'Progress sebelumnya berhasil dipulihkan.'
+                );
+            }
 
         } catch (e) {
             console.error(e);
@@ -1096,8 +1306,16 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     window.exitPreview = () => {
         isExamActive = false;
+        clearInterval(timerInterval);
+
         localStorage.removeItem(`preview_progress_${examId}`);
         localStorage.removeItem(`preview_timer_${examId}`);
+        localStorage.removeItem(`preview_exam_started_${examId}`);
+        localStorage.removeItem(`preview_question_order_${examId}`);
+        localStorage.removeItem(`preview_current_index_${examId}`);
+        localStorage.removeItem(`preview_current_phase_${examId}`);
+        localStorage.removeItem('cat_help_used');
+
         window.location.href = `/exams/${examId}`;
     };
 
@@ -1120,14 +1338,16 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         timerInterval = setInterval(() => {
             if (window.isTimeStoppedByCat) return;
 
-            timeLeft--;
-            localStorage.setItem(getTimerKey(), timeLeft);
+            syncTimeLeftWithDeadline();
 
             if (timeLeft <= 0) {
                 timeLeft = 0;
+                localStorage.setItem(getTimerKey(), '0');
+                localStorage.setItem(getExpiredReasonKey(), 'time_expired');
+
                 clearInterval(timerInterval);
-                window.showToastAlert('warning', 'WAKTU HABIS!', 'Ujian dikumpulkan otomatis.');
-                submitExam();
+                lockExamBecauseExpired();
+                return;
             } else {
                 updateTimerUI();
 
@@ -1158,9 +1378,21 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     const startTimer = () => {
         isExamActive = true;
+
+        localStorage.setItem(getExamStartedKey(), 'true');
+        localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
+        localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+
+        // Deadline hanya dibuat sekali.
+        // Kalau reload/resume, jangan bikin deadline baru.
+        if (!localStorage.getItem(getExamDeadlineKey())) {
+            const deadline = Date.now() + (timeLeft * 1000);
+            localStorage.setItem(getExamDeadlineKey(), String(deadline));
+        }
+
         window.history.pushState(null, null, window.location.href);
         updateTimerUI();
-        runExamTimer(1000);
+        runExamTimer(currentTimerSpeed || 1000);
     };
 
     const updateTimerUI = () => {
@@ -1223,6 +1455,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
             timeLeft += mins * 60;
             totalDurationSeconds += mins * 60;
+
+            const deadlineRaw = localStorage.getItem(getExamDeadlineKey());
+
+            if (deadlineRaw) {
+                const oldDeadline = Number(deadlineRaw);
+                const newDeadline = oldDeadline + (mins * 60 * 1000);
+                localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
+            } else {
+                const newDeadline = Date.now() + (timeLeft * 1000);
+                localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
+            }
 
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
@@ -1510,11 +1753,20 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         setQuestionHiddenByMiaw(isQuestionHiddenByMiaw);
     };
 
-    window.jumpTo = (i) => { currentIndex = i; renderQuestion(); };
+    window.jumpTo = (i) => {
+        currentIndex = i;
+        localStorage.setItem(getCurrentIndexKey(), currentIndex);
+        localStorage.setItem(getCurrentPhaseKey(), currentPhase);
+        renderQuestion();
+    };
 
     window.selectOption = (questionId, choice) => {
         studentAnswers[questionId] = choice;
+
         localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
+        localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
+        localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+
         renderQuestion();
     };
 
@@ -1538,6 +1790,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             executeSecretCapture(() => {
                 hasCapturedPhoto = true;
                 currentIndex = nextIndex;
+
+                localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
+                localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+
                 if (currentPhase === 1) renderQuestion();
                 else renderPhase2Question();
             });
@@ -1545,6 +1801,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         }
 
         currentIndex = nextIndex;
+
+        localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
+        localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+
         if (currentPhase === 1) renderQuestion();
         else renderPhase2Question();
     };
@@ -1564,6 +1824,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             currentPhase = 2;
             questions = phase2Questions;
             currentIndex = 0;
+
+            localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+            localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
 
             document.getElementById('phase1Wrapper').classList.add('hidden');
             document.getElementById('phase2Wrapper').classList.remove('hidden');
@@ -2086,9 +2349,18 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
         clearInterval(timerInterval);
         isExamActive = false;
+        window.isTimeStoppedByCat = false;
+
         localStorage.removeItem('cat_help_used');
         localStorage.removeItem(getStorageKey());
         localStorage.removeItem(getTimerKey());
+        localStorage.removeItem(getExamStartedKey());
+        localStorage.removeItem(getQuestionOrderKey());
+        localStorage.removeItem(getCurrentIndexKey());
+        localStorage.removeItem(getCurrentPhaseKey());
+        localStorage.removeItem(getExamDeadlineKey());
+        localStorage.removeItem(getExpiredReasonKey());
+        localStorage.removeItem(`active_student_${examId}`);
 
         const allQuestions = [...phase1Questions, ...phase2Questions];
         let correct = 0, skipped = 0;
@@ -2309,29 +2581,6 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     window.closeCheatWarning = () => document.getElementById('modalCheatWarning')?.classList.replace('flex', 'hidden');
 
-    let isQuestionHiddenByMiaw = false;
-
-    const setQuestionHiddenByMiaw = (hidden) => {
-        isQuestionHiddenByMiaw = hidden;
-
-        const questionCard = document.getElementById('questionCard');
-        const optionsGrid = document.getElementById('optionsGrid');
-        const hintFab = document.querySelector('.hint-fab');
-
-        [questionCard, optionsGrid].forEach(el => {
-            if (!el) return;
-
-            if (hidden) {
-                el.classList.add('opacity-0', 'pointer-events-none', 'scale-95', 'blur-sm');
-            } else {
-                el.classList.remove('opacity-0', 'pointer-events-none', 'scale-95', 'blur-sm');
-            }
-        });
-
-        if (hintFab) {
-            hintFab.classList.toggle('hidden', hidden);
-        }
-    };
 
     const freezeTimerByMiaw = (durationMs = 7000, done = () => {}) => {
         if (!isExamActive || isSubmitting) {
@@ -2379,6 +2628,220 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             updateTimerUI();
             done();
         }, durationMs);
+    };
+
+    const syncTimeLeftWithDeadline = () => {
+        const deadlineRaw = localStorage.getItem(getExamDeadlineKey());
+        if (!deadlineRaw) return timeLeft;
+
+        const deadline = Number(deadlineRaw);
+        if (!deadline || Number.isNaN(deadline)) return timeLeft;
+
+        const remaining = Math.ceil((deadline - Date.now()) / 1000);
+        timeLeft = Math.max(0, remaining);
+
+        localStorage.setItem(getTimerKey(), String(timeLeft));
+
+        return timeLeft;
+    };
+
+    const lockExamBecauseExpired = () => {
+        isExamActive = false;
+        window.isTimeStoppedByCat = false;
+
+        clearInterval(timerInterval);
+
+        document.getElementById('examMainContainer')?.classList.add('hidden');
+        document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
+        document.getElementById('lobbyScreen')?.classList.replace('flex', 'hidden');
+        document.getElementById('loadingScreen')?.classList.add('hidden');
+
+        document.getElementById('modalExamExpired')?.classList.replace('hidden', 'flex');
+
+        window.showToastAlert?.(
+            'warning',
+            'Waktu Habis',
+            'Minta Kak Aziz membuka ulang jika ada kendala teknis.'
+        );
+    };
+
+    const checkRetakePermission = async () => {
+        if (isPreview || !activeStudentId) return null;
+
+        try {
+            const res = await fetch(
+                `${API_URL}/api/exams/${examId}/retake-permissions/check?student_id=${activeStudentId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            const result = await res.json();
+
+            if (!res.ok || result.status === 'error') return null;
+
+            return result.data || null;
+        } catch (err) {
+            console.error('Gagal cek izin retake:', err);
+            return null;
+        }
+    };
+
+    const markRetakePermissionUsed = async (permissionId) => {
+        if (!permissionId || !activeStudentId) return;
+
+        try {
+            await fetch(`${API_URL}/api/exams/${examId}/retake-permissions/use`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    permission_id: permissionId,
+                    student_id: activeStudentId
+                })
+            });
+        } catch (err) {
+            console.error('Gagal menandai izin retake:', err);
+        }
+    };
+
+    const clearLocalExamSession = () => {
+        localStorage.removeItem('cat_help_used');
+        localStorage.removeItem(getStorageKey());
+        localStorage.removeItem(getTimerKey());
+        localStorage.removeItem(getExamStartedKey());
+        localStorage.removeItem(getQuestionOrderKey());
+        localStorage.removeItem(getCurrentIndexKey());
+        localStorage.removeItem(getCurrentPhaseKey());
+        localStorage.removeItem(getExamDeadlineKey());
+        localStorage.removeItem(getExpiredReasonKey());
+    };
+
+    const applyRetakePermission = async (permission) => {
+        if (!permission) return false;
+
+        await markRetakePermissionUsed(permission.id);
+
+        if (permission.mode === 'reset') {
+            clearLocalExamSession();
+
+            studentAnswers = {};
+            phase2Answers = [];
+            currentIndex = 0;
+            currentPhase = 1;
+            timeLeft = totalDurationSeconds;
+
+            localStorage.setItem(getTimerKey(), String(timeLeft));
+
+            document.getElementById('modalExamExpired')?.classList.replace('flex', 'hidden');
+            document.getElementById('examMainContainer')?.classList.add('hidden');
+            document.getElementById('startScreen')?.classList.replace('hidden', 'flex');
+
+            window.showToastAlert?.(
+                'success',
+                'Ujian Dibuka Ulang',
+                'Silakan mulai ulang ujian dari awal.'
+            );
+
+            return true;
+        }
+
+        if (permission.mode === 'extra_time') {
+            const extraSeconds = (Number(permission.extra_minutes) || 0) * 60;
+
+            timeLeft = Math.max(1, timeLeft) + extraSeconds;
+
+            const newDeadline = Date.now() + (timeLeft * 1000);
+
+            localStorage.setItem(getTimerKey(), String(timeLeft));
+            localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
+            localStorage.removeItem(getExpiredReasonKey());
+
+            document.getElementById('modalExamExpired')?.classList.replace('flex', 'hidden');
+            document.getElementById('examMainContainer')?.classList.remove('hidden');
+
+            isExamActive = true;
+            updateTimerUI();
+            runExamTimer(1000);
+
+            if (currentPhase === 1) renderQuestion();
+            else renderPhase2Question();
+
+            window.showToastAlert?.(
+                'success',
+                'Waktu Ditambahkan',
+                `Ujian dibuka lagi dengan tambahan ${permission.extra_minutes} menit.`
+            );
+
+            return true;
+        }
+
+        if (permission.mode === 'continue') {
+            timeLeft = Math.max(60, timeLeft || 60);
+
+            const newDeadline = Date.now() + (timeLeft * 1000);
+
+            localStorage.setItem(getTimerKey(), String(timeLeft));
+            localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
+            localStorage.removeItem(getExpiredReasonKey());
+
+            document.getElementById('modalExamExpired')?.classList.replace('flex', 'hidden');
+            document.getElementById('examMainContainer')?.classList.remove('hidden');
+
+            isExamActive = true;
+            updateTimerUI();
+            runExamTimer(1000);
+
+            if (currentPhase === 1) renderQuestion();
+            else renderPhase2Question();
+
+            window.showToastAlert?.(
+                'success',
+                'Ujian Dilanjutkan',
+                'Silakan lanjutkan ujian dari progress terakhir.'
+            );
+
+            return true;
+        }
+
+        return false;
+    };
+    
+    window.handleCheckRetakePermission = async (event) => {
+        const btn = event?.currentTarget;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengecek...';
+        }
+
+        const permission = await checkRetakePermission();
+
+        if (!permission) {
+            window.showToastAlert?.(
+                'warning',
+                'Belum Ada Izin',
+                'Hubungi ustadz untuk membuka ulang ujian.'
+            );
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Cek Ulang Izin';
+            }
+
+            return;
+        }
+
+        const applied = await applyRetakePermission(permission);
+
+        if (!applied && btn) {
+            btn.disabled = false;
+            btn.innerText = 'Cek Ulang Izin';
+        }
     };
 
     // ==========================================================
