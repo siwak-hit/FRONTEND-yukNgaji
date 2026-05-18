@@ -144,14 +144,58 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         </footer>
     </div>
 
-    <div id="modalHint" class="modal-backdrop hidden z-[260]">
-        <div class="modal-box animate-slide-up border-2 border-amber-400">
-            <button onclick="closeHintModal()" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
-            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
-                <i class="fa-solid fa-lightbulb animate-pulse"></i>
+    <div id="modalHint" class="modal-backdrop hidden z-[260] backdrop-blur-sm">
+        <div class="modal-box animate-slide-up border-2 border-amber-400 relative overflow-hidden">
+            <button onclick="closeHintModal()" class="modal-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Mode terkunci / belum dibeli -->
+            <div id="hintLockedView" class="hidden text-center">
+                <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                    <i class="fa-solid fa-lock animate-bounce"></i>
+                </div>
+
+                <h3 class="text-2xl font-black text-gray-800 mb-2">Clue Terkunci</h3>
+
+                <p class="text-xs font-bold text-gray-500 mb-5 leading-relaxed">
+                    Kamu bisa membuka petunjuk soal ini dengan menggunakan koin.
+                </p>
+
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Koin Kamu</p>
+                        <p class="text-xl font-black text-amber-500">
+                            💰 <span id="hintUserCoins">0</span>
+                        </p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                        <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Biaya Clue</p>
+                        <p class="text-xl font-black text-amber-600">
+                            💰 <span id="hintCostText">0</span>
+                        </p>
+                    </div>
+                </div>
+
+                <button id="btnUnlockHint" onclick="confirmUnlockHint()" class="btn-3d btn-indigo w-full py-4 text-sm">
+                    Buka Clue
+                </button>
+
+                <p id="hintInsufficientText" class="hidden mt-3 text-[10px] font-black text-red-500 uppercase tracking-widest">
+                    Koin kamu belum cukup untuk membuka clue ini.
+                </p>
             </div>
-            <h3 class="text-xl font-black text-gray-800 mb-4">Clue Ustadz</h3>
-            <div id="hintTextContent" class="hint-content"></div>
+
+            <!-- Mode sudah terbuka -->
+            <div id="hintUnlockedView" class="hidden text-center">
+                <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner">
+                    <i class="fa-solid fa-lightbulb animate-pulse"></i>
+                </div>
+
+                <h3 class="text-xl font-black text-gray-800 mb-4">Clue Ustadz</h3>
+                <div id="hintTextContent" class="hint-content"></div>
+            </div>
         </div>
     </div>
 
@@ -585,6 +629,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     const HINT_COST = 70;
     let usedHintQuestionIds = new Set();
+    let pendingHintQuestion = null;
 
     // State Murid & Lobby
     let activeStudentId = null;
@@ -1969,8 +2014,47 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         });
     };
 
+    const openLockedHintModal = (q) => {
+        pendingHintQuestion = q;
+
+        const lockedView = document.getElementById('hintLockedView');
+        const unlockedView = document.getElementById('hintUnlockedView');
+        const userCoins = document.getElementById('hintUserCoins');
+        const costText = document.getElementById('hintCostText');
+        const btnUnlock = document.getElementById('btnUnlockHint');
+        const insufficientText = document.getElementById('hintInsufficientText');
+
+        if (lockedView) lockedView.classList.remove('hidden');
+        if (unlockedView) unlockedView.classList.add('hidden');
+
+        if (userCoins) userCoins.innerText = studentPoin;
+        if (costText) costText.innerText = HINT_COST;
+
+        const isEnough = Number(studentPoin) >= Number(HINT_COST);
+
+        if (btnUnlock) {
+            btnUnlock.disabled = !isEnough;
+            btnUnlock.classList.toggle('opacity-50', !isEnough);
+            btnUnlock.classList.toggle('cursor-not-allowed', !isEnough);
+            btnUnlock.innerHTML = isEnough
+                ? `<i class="fa-solid fa-unlock mr-2"></i>Buka Clue`
+                : `<i class="fa-solid fa-lock mr-2"></i>Koin Kurang`;
+        }
+
+        if (insufficientText) {
+            insufficientText.classList.toggle('hidden', isEnough);
+        }
+
+        document.getElementById('modalHint')?.classList.replace('hidden', 'flex');
+    };
+
     const showHintContent = (hintText) => {
+        const lockedView = document.getElementById('hintLockedView');
+        const unlockedView = document.getElementById('hintUnlockedView');
         const c = document.getElementById('hintTextContent');
+
+        if (lockedView) lockedView.classList.add('hidden');
+        if (unlockedView) unlockedView.classList.remove('hidden');
 
         if (c) {
             c.innerHTML = `
@@ -2049,21 +2133,33 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const hasHint = q.hint && q.hint.trim() !== '';
 
         if (!hasHint) {
+            pendingHintQuestion = null;
             showHintContent("Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅");
             return;
         }
 
         // Preview guru / mode simulasi tetap gratis
         if (isPreview) {
+            pendingHintQuestion = null;
             showHintContent(q.hint);
             return;
         }
 
         // Kalau clue untuk soal ini sudah pernah dibayar, jangan bayar lagi
         if (usedHintQuestionIds.has(q.id)) {
+            pendingHintQuestion = null;
             showHintContent(q.hint);
             return;
         }
+
+        // Real exam: tampilkan modal unlock, bukan confirm browser
+        openLockedHintModal(q);
+    };
+
+    window.confirmUnlockHint = async () => {
+        if (!pendingHintQuestion) return;
+
+        const btn = document.getElementById('btnUnlockHint');
 
         if (studentPoin < HINT_COST) {
             window.showToastAlert?.(
@@ -2074,13 +2170,24 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             return;
         }
 
-        const ok = confirm(`Buka clue dengan ${HINT_COST} koin?`);
-        if (!ok) return;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Membuka...';
+        }
 
-        await buyHint(q);
+        await buyHint(pendingHintQuestion);
+        pendingHintQuestion = null;
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-unlock mr-2"></i>Buka Clue';
+        }
     };
 
-    window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
+    window.closeHintModal = () => {
+        pendingHintQuestion = null;
+        document.getElementById('modalHint')?.classList.replace('flex', 'hidden');
+    };
 
     window.triggerAngryCat = () => {
         if (hasTriggeredAngryCat) {
