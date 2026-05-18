@@ -583,6 +583,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     let hasShownCoinHelpOffer = false;
     let pendingCoinOffer = null;
 
+    const HINT_COST = 70;
+    let usedHintQuestionIds = new Set();
+
     // State Murid & Lobby
     let activeStudentId = null;
     let allStudents = [];
@@ -743,14 +746,17 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         ? `preview_current_phase_${examId}`
         : `exam_current_phase_${examId}`;
 
-        const getExamDeadlineKey = () => isPreview
-            ? `preview_exam_deadline_${examId}`
-            : `exam_deadline_${examId}`;
+    const getExamDeadlineKey = () => isPreview
+        ? `preview_exam_deadline_${examId}`
+        : `exam_deadline_${examId}`;
 
-        const getExpiredReasonKey = () => isPreview
-            ? `preview_exam_expired_reason_${examId}`
-            : `exam_expired_reason_${examId}`;
+    const getExpiredReasonKey = () => isPreview
+        ? `preview_exam_expired_reason_${examId}`
+        : `exam_expired_reason_${examId}`;
 
+    const getLastSeenKey = () => isPreview
+        ? `preview_exam_last_seen_${examId}`
+        : `exam_last_seen_${examId}`;
     if (isPreview) {
         localStorage.removeItem(`preview_progress_${examId}`);
         localStorage.removeItem(`preview_timer_${examId}`);
@@ -1055,14 +1061,14 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             timeLeft = (savedTime && !isNaN(savedTime)) ? parseInt(savedTime) : totalDurationSeconds;
 
             const wasExamStarted = localStorage.getItem(getExamStartedKey()) === 'true';
+            let shouldLockExamAfterStudentReady = false;
 
             if (wasExamStarted) {
                 syncTimeLeftWithDeadline();
 
                 if (timeLeft <= 0) {
-                    localStorage.setItem(getExpiredReasonKey(), 'time_expired');
-                    lockExamBecauseExpired();
-                    return;
+                    localStorage.setItem(getExpiredReasonKey(), 'time_expired_resume');
+                    shouldLockExamAfterStudentReady = true;
                 }
             }
 
@@ -1119,9 +1125,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                     const targetStudent = allStudents.find(s => String(s.id) === String(retakeStudentIdFromUrl));
 
                     if (targetStudent) {
-                        setTimeout(() => {
-                            window.selectStudent(targetStudent.id, targetStudent.name, { skipTutorialGate: true });
-                        }, 300);
+                        window.selectStudent(targetStudent.id, targetStudent.name, { skipTutorialGate: true });
                     }
                 }
 
@@ -1143,6 +1147,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
+
+            if (shouldLockExamAfterStudentReady && activeStudentId) {
+                lockExamBecauseExpired();
+                return;
+            }
 
 
             if (wasExamStarted && activeStudentId) {
@@ -1293,6 +1302,20 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         document.getElementById('startScreen').classList.replace('hidden', 'flex');
 
         window.showShopButton();
+
+        if (localStorage.getItem(getExamStartedKey()) === 'true') {
+            syncTimeLeftWithDeadline();
+
+            if (timeLeft <= 0) {
+                localStorage.setItem(getExpiredReasonKey(), 'time_expired_resume');
+
+                setTimeout(() => {
+                    lockExamBecauseExpired();
+                }, 50);
+
+                return;
+            }
+        }
     };
 
     window.backToLobby = () => {
@@ -1312,6 +1335,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         localStorage.removeItem(`preview_question_order_${examId}`);
         localStorage.removeItem(`preview_current_index_${examId}`);
         localStorage.removeItem(`preview_current_phase_${examId}`);
+        localStorage.removeItem(`preview_exam_deadline_${examId}`);
+        localStorage.removeItem(`preview_exam_expired_reason_${examId}`);
+        localStorage.removeItem(`preview_exam_last_seen_${examId}`);
         localStorage.removeItem('cat_help_used');
 
         window.location.href = `/exams/${examId}`;
@@ -1336,15 +1362,24 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         timerInterval = setInterval(() => {
             if (window.isTimeStoppedByCat) return;
 
+            localStorage.setItem(getLastSeenKey(), String(Date.now()));
             syncTimeLeftWithDeadline();
 
             if (timeLeft <= 0) {
                 timeLeft = 0;
+
                 localStorage.setItem(getTimerKey(), '0');
-                localStorage.setItem(getExpiredReasonKey(), 'time_expired');
+                localStorage.setItem(getExpiredReasonKey(), 'time_expired_active');
 
                 clearInterval(timerInterval);
-                lockExamBecauseExpired();
+
+                window.showToastAlert?.(
+                    'warning',
+                    'WAKTU HABIS!',
+                    'Ujian dikumpulkan otomatis.'
+                );
+
+                submitExam();
                 return;
             } else {
                 updateTimerUI();
@@ -1934,20 +1969,115 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         });
     };
 
+    const showHintContent = (hintText) => {
+        const c = document.getElementById('hintTextContent');
+
+        if (c) {
+            c.innerHTML = `
+                <i class="fa-solid fa-quote-left text-amber-300 mr-2 text-xl align-top"></i>
+                <span class="text-sm">${hintText}</span>
+                <i class="fa-solid fa-quote-right text-amber-300 ml-2 text-xl align-bottom"></i>
+            `;
+        }
+
+        document.getElementById('modalHint')?.classList.replace('hidden', 'flex');
+    };
+
+    const buyHint = async (q) => {
+        try {
+            if (!activeStudentId) {
+                window.showToastAlert?.('danger', 'Gagal', 'Data siswa belum siap.');
+                return;
+            }
+
+            if (!isPreview) {
+                const res = await fetch(`${API_URL}/api/exams/buy-hint`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: activeStudentId,
+                        cost: HINT_COST,
+                        exam_id: examId,
+                        question_id: q.id
+                    })
+                });
+
+                const result = await res.json();
+
+                if (!res.ok || result.status !== 'success') {
+                    throw new Error(result.message || 'Gagal membeli clue.');
+                }
+
+                studentPoin = result.data.new_poin;
+            } else {
+                studentPoin -= HINT_COST;
+            }
+
+            usedHintQuestionIds.add(q.id);
+
+            const walletEl = document.getElementById('shopWallet');
+            if (walletEl) walletEl.innerText = studentPoin;
+
+            window.showToastAlert?.(
+                'success',
+                'Clue Dibuka',
+                `${HINT_COST} koin digunakan untuk membuka clue.`
+            );
+
+            showHintContent(q.hint);
+
+        } catch (err) {
+            console.error(err);
+            window.showToastAlert?.(
+                'danger',
+                'Gagal',
+                err.message || 'Gagal membuka clue.'
+            );
+        }
+    };
+
     // ==========================================================
     // 8. LOGIKA LAINNYA (HINT, KUCING, PANDUAN GAMBAR)
     // ==========================================================
-    window.openHintModal = () => {
+    window.openHintModal = async () => {
         const q = questions[currentIndex];
-        const c = document.getElementById('hintTextContent');
-        if (c) {
-            if (q.hint && q.hint.trim() !== '') {
-                c.innerHTML = `<i class="fa-solid fa-quote-left text-amber-300 mr-2 text-xl align-top"></i><span class="text-sm">${q.hint}</span><i class="fa-solid fa-quote-right text-amber-300 ml-2 text-xl align-bottom"></i>`;
-            } else {
-                c.innerHTML = "Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅";
-            }
+        if (!q) return;
+
+        const hasHint = q.hint && q.hint.trim() !== '';
+
+        if (!hasHint) {
+            showHintContent("Ups! Sepertinya Kak Aziz tidak memberikan clue untuk soal ini... 😅");
+            return;
         }
-        document.getElementById('modalHint')?.classList.replace('hidden','flex');
+
+        // Preview guru / mode simulasi tetap gratis
+        if (isPreview) {
+            showHintContent(q.hint);
+            return;
+        }
+
+        // Kalau clue untuk soal ini sudah pernah dibayar, jangan bayar lagi
+        if (usedHintQuestionIds.has(q.id)) {
+            showHintContent(q.hint);
+            return;
+        }
+
+        if (studentPoin < HINT_COST) {
+            window.showToastAlert?.(
+                'danger',
+                'Koin Kurang',
+                `Butuh ${HINT_COST} koin untuk membuka clue.`
+            );
+            return;
+        }
+
+        const ok = confirm(`Buka clue dengan ${HINT_COST} koin?`);
+        if (!ok) return;
+
+        await buyHint(q);
     };
 
     window.closeHintModal = () => document.getElementById('modalHint')?.classList.replace('flex','hidden');
@@ -2358,6 +2488,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         localStorage.removeItem(getCurrentPhaseKey());
         localStorage.removeItem(getExamDeadlineKey());
         localStorage.removeItem(getExpiredReasonKey());
+        localStorage.removeItem(getLastSeenKey());
         localStorage.removeItem(`active_student_${examId}`);
 
         const allQuestions = [...phase1Questions, ...phase2Questions];
@@ -2671,6 +2802,28 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         localStorage.removeItem(getExpiredReasonKey());
     };
 
+    const restoreSavedExamPosition = () => {
+        const savedPhase = parseInt(localStorage.getItem(getCurrentPhaseKey()) || '1');
+        const savedIndex = parseInt(localStorage.getItem(getCurrentIndexKey()) || '0');
+
+        currentPhase = savedPhase === 2 ? 2 : 1;
+
+        if (currentPhase === 2 && phase2Questions.length > 0) {
+            questions = phase2Questions;
+            document.getElementById('phase1Wrapper')?.classList.add('hidden');
+            document.getElementById('phase2Wrapper')?.classList.remove('hidden');
+            document.querySelector('.hint-fab')?.classList.add('hidden');
+        } else {
+            currentPhase = 1;
+            questions = phase1Questions;
+            document.getElementById('phase2Wrapper')?.classList.add('hidden');
+            document.getElementById('phase1Wrapper')?.classList.remove('hidden');
+            document.querySelector('.hint-fab')?.classList.remove('hidden');
+        }
+
+        currentIndex = Math.max(0, Math.min(savedIndex, questions.length - 1));
+    };
+
     const applyRetakePermission = async (permission) => {
         if (!permission) return false;
 
@@ -2686,6 +2839,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             timeLeft = totalDurationSeconds;
 
             localStorage.setItem(getTimerKey(), String(timeLeft));
+            localStorage.setItem(getExamDeadlineKey(), String(Date.now() + (timeLeft * 1000)));
+            localStorage.setItem(getExamStartedKey(), 'true');
+            localStorage.setItem(getCurrentPhaseKey(), String(currentPhase));
+            localStorage.setItem(getCurrentIndexKey(), String(currentIndex));
 
             document.getElementById('modalExamExpired')?.classList.replace('flex', 'hidden');
             document.getElementById('examMainContainer')?.classList.add('hidden');
@@ -2711,8 +2868,12 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             localStorage.setItem(getExamDeadlineKey(), String(newDeadline));
             localStorage.removeItem(getExpiredReasonKey());
 
+            restoreSavedExamPosition();
+
             document.getElementById('modalExamExpired')?.classList.replace('flex', 'hidden');
             document.getElementById('examMainContainer')?.classList.remove('hidden');
+            document.getElementById('startScreen')?.classList.replace('flex', 'hidden');
+            document.getElementById('lobbyScreen')?.classList.replace('flex', 'hidden');
 
             isExamActive = true;
             updateTimerUI();
