@@ -13,7 +13,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <h1 class="text-2xl font-bold text-green-600 tracking-tight" id="greetingName">yukNgaji</h1>
                 <p class="text-xs text-gray-500 font-medium" id="welcomeMsg">Assalamu'alaikum, Ustadz!</p>
             </div>
-        
+
             <div class="relative">
                 <button onclick="toggleHeaderMenu()" id="btnHeaderMenu" class="relative text-gray-500 bg-white border border-gray-100 w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform shadow-sm">
                     <i class="fa-solid fa-ellipsis-vertical"></i>
@@ -59,7 +59,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         <section class="mb-16">
             <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Ringkasan Kelas</h2>
             <div class="grid grid-cols-2 gap-3">
-                
+
                 <div class="bg-green-50 p-4 rounded-2xl flex flex-col justify-center text-center border border-green-100 shadow-sm">
                     <div class="w-8 h-8 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
                         <i class="fa-solid fa-users"></i>
@@ -82,13 +82,13 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                             <div class="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-user-clock"></i>
                             </div>
-                            <span class="text-[11px] font-bold text-red-600 uppercase tracking-wider">Belum Mengerjakan Tugas</span>
+                            <span class="text-[11px] font-bold text-red-600 uppercase tracking-wider">Belum Mengerjakan PR / Ujian</span>
                         </div>
                         <i class="fa-solid fa-chevron-right text-xs text-red-300 group-hover:text-red-500 group-hover:translate-x-1 transition-all"></i>
                     </div>
                     <div class="flex items-end justify-between mt-2 pl-1">
                         <h3 class="text-3xl font-black text-red-700 leading-none" id="notDoneCount">0</h3>
-                        <p class="text-[10px] text-red-400 font-bold">Siswa Perlu Diingatkan</p>
+                        <p class="text-[10px] text-red-400 font-bold">Tunggakan Aktif</p>
                     </div>
                 </div>
 
@@ -180,7 +180,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="studentList" class="space-y-3">
                     <div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-green-500 text-3xl"></i><p class="text-xs text-gray-400 mt-3 font-bold">Menghitung data...</p></div>
                 </div>
-                
+
                 <div id="remainingStudentsContainer" class="mt-4 text-center hidden">
                     <span id="remainingStudentsText" class="inline-block bg-gray-100 text-gray-500 text-[10px] font-bold px-4 py-1.5 rounded-full border border-gray-200 shadow-sm">
                         + 5 anak lainnya
@@ -216,7 +216,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <p class="text-center text-[9px] text-gray-400 italic mb-8">* Peringkat dihitung otomatis dari nilai kuesioner dan absensi.</p>
             </div>
         </section>
-        
+
         <section class="mb-6">
             <div class="mt-8 mb-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative z-20">
                 <button onclick="toggleDangerZone()" class="w-full px-5 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors active:scale-95">
@@ -228,9 +228,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     </div>
                     <i id="dangerIcon" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
                 </button>
-                
+
                 <div id="dangerContent" class="hidden px-5 py-4 border-t border-gray-100 bg-white">
-                    
+
                     <!-- [BARU] SAKLAR MAINTENANCE -->
                     <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4 shadow-sm">
                         <div class="flex justify-between items-center mb-1">
@@ -252,8 +252,8 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     </div>
                 </div>
             </div>
-        </section> 
-        
+        </section>
+
         <div id="modalReset" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slide-up relative overflow-hidden">
                 <div class="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100">
@@ -266,7 +266,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div class="bg-gray-50 p-1.5 rounded-xl border border-gray-200 mb-6">
                     <input type="password" id="resetPasswordInput" placeholder="Password Anda..." class="w-full px-3 py-2.5 bg-transparent text-sm font-bold text-gray-800 focus:outline-none text-center tracking-widest">
                 </div>
-                
+
                 <div class="flex gap-2">
                     <button onclick="closeResetModal()" class="flex-1 py-3.5 bg-gray-100 text-gray-500 text-xs font-bold rounded-xl active:scale-95 transition-all">Batal</button>
                     <button id="btnExecuteReset" class="flex-1 py-3.5 bg-red-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Hapus Data</button>
@@ -283,9 +283,21 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <i class="fa-solid fa-user-clock"></i>
                 </div>
                 <h3 class="font-black text-gray-800 text-lg">Daftar Tunggakan</h3>
+                <p class="text-[10px] font-bold text-gray-400 mt-1">Pantau PR dan ujian yang belum dikerjakan.</p>
             </div>
-            
-            <div class="flex gap-2 mb-4">
+
+            <!-- TAB PR / UJIAN -->
+            <div class="flex p-1 bg-gray-100 rounded-2xl mb-4 shadow-inner shrink-0">
+                <button id="tabMissingPR" onclick="switchMissingTab('pr')" class="flex-1 py-2.5 text-[10px] font-bold bg-white text-red-600 rounded-xl shadow-sm transition-all uppercase tracking-widest">
+                    <i class="fa-solid fa-book-open mr-1"></i> Belum PR
+                </button>
+                <button id="tabMissingExam" onclick="switchMissingTab('exam')" class="flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest">
+                    <i class="fa-solid fa-file-pen mr-1"></i> Belum Ujian
+                </button>
+            </div>
+
+            <!-- FILTER PR -->
+            <div id="missingPRFilters" class="flex gap-2 mb-4">
                 <select id="modalFilterSubject" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2 outline-none focus:ring-2 focus:ring-red-500 transition-all font-bold cursor-pointer">
                     <option value="">Semua Pelajaran</option>
                 </select>
@@ -293,11 +305,21 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <option value="">Semua Pertemuan</option>
                 </select>
             </div>
-            
+
+            <!-- FILTER UJIAN -->
+            <div id="missingExamFilters" class="hidden mb-4">
+                <select id="modalFilterExamSubject" onchange="loadMissingExamList()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2 outline-none focus:ring-2 focus:ring-red-500 transition-all font-bold cursor-pointer">
+                    <option value="">Semua Mapel Ujian</option>
+                    <option value="tajwid">Tajwid</option>
+                    <option value="fiqih">Fiqih</option>
+                    <option value="tauhid">Tauhid</option>
+                </select>
+            </div>
+
             <div id="notDoneListContainer" class="flex-1 overflow-y-auto space-y-2 pr-1 mb-4 custom-scrollbar">
                 <div class="text-center py-6"><i class="fa-solid fa-spinner fa-spin text-red-500"></i></div>
             </div>
-    
+
             <button onclick="closeNotDoneModal()" class="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl active:scale-95 transition-all text-sm">
                 Tutup
             </button>
@@ -307,7 +329,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     <!-- PUSAT PR (NOTIFIKASI + LEADERBOARD) -->
     <div id="modalNotif" class="fixed inset-0 bg-black/60 z-[200] hidden items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity opacity-0">
         <div class="bg-white w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col h-[85vh] sm:h-[80vh] transform translate-y-full sm:translate-y-0 transition-transform duration-300" id="notifBox">
-            
+
             <div class="flex justify-between items-center mb-4 shrink-0">
                 <div class="flex items-center gap-2">
                     <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
@@ -355,7 +377,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="lbPRContainer" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1 pb-4">
                 </div>
             </div>
-            
+
         </div>
     </div>
 
@@ -455,9 +477,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    let enrichedStudents = [];    
-    let availableTasks = []; 
+
+    let enrichedStudents = [];
+    let availableTasks = [];
+
+    let missingTab = 'pr';
+    let missingExamCache = {};
 
     if (!token) window.location.replace('/');
 
@@ -472,7 +497,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
     const activeTabClass = "flex-1 py-3 text-[10px] font-bold bg-white text-green-600 rounded-xl shadow-sm transition-all uppercase tracking-widest";
     const inactiveTabClass = "flex-1 py-3 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest";
-    
+
     tabList.onclick = () => {
         tabList.className = activeTabClass; tabLeader.className = inactiveTabClass;
         contentList.classList.replace('hidden', 'block');
@@ -494,7 +519,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         document.getElementById('confirmGlobalMessage').innerHTML = message;
         globalConfirmCallback = onConfirm;
         globalKeepIfCancel = warnIfCancel;
-        
+
         const modalBox = document.getElementById('modalConfirmGlobalBox');
         const iconBox = document.getElementById('confirmGlobalIconBox');
         const icon = document.getElementById('confirmGlobalIcon');
@@ -546,7 +571,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.toggleHeaderMenu = () => {
         const menu = document.getElementById('dropdownHeaderMenu');
         menu.classList.toggle('hidden');
-        
+
         const closeMenu = (e) => {
             const btn = document.getElementById('btnHeaderMenu');
             if (!menu.contains(e.target) && !btn.contains(e.target)) {
@@ -593,10 +618,10 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const getTimeCategory = (dateString) => {
         const notifDate = new Date(dateString);
         const now = new Date();
-        
+
         const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const notifMidnight = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
-        
+
         const diffDays = Math.floor((todayMidnight - notifMidnight) / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) {
@@ -616,7 +641,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const res = await fetch(`${API_URL}/api/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
             notifications = result.data || [];
-            
+
             if (!isFirstLoad) {
                 const oldNotifs = notifications.filter(n => {
                     const diffDays = Math.floor((new Date() - new Date(n.created_at)) / (1000 * 60 * 60 * 24));
@@ -690,7 +715,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
         container.innerHTML = catOrder.map(cat => {
             if (!grouped[cat] || grouped[cat].length === 0) return '';
-            
+
             const listHtml = grouped[cat].map(notif => {
                 const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 return `
@@ -734,11 +759,11 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await res.json();
-            
+
             let data = result.data || [];
-            
+
             data = data.filter(d => d.is_pr === true);
-            data = data.slice(0, 5); 
+            data = data.slice(0, 5);
 
             if (data.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-gray-400 italic py-10 font-medium">Belum ada murid yang menyetorkan PR ini.</p>`;
@@ -775,15 +800,15 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.openNotifModal = () => {
         const modal = document.getElementById('modalNotif');
         const box = document.getElementById('notifBox');
-        
+
         switchNotifTab('list');
 
         modal.classList.replace('hidden', 'flex');
-        setTimeout(() => { 
-            modal.classList.replace('opacity-0', 'opacity-100'); 
-            box.classList.replace('translate-y-full', 'translate-y-0'); 
+        setTimeout(() => {
+            modal.classList.replace('opacity-0', 'opacity-100');
+            box.classList.replace('translate-y-full', 'translate-y-0');
         }, 10);
-        loadNotifications(false); 
+        loadNotifications(false);
     };
 
     window.closeNotifModal = () => {
@@ -823,9 +848,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         content.classList.add('hidden');
         loading.classList.remove('hidden');
         loading.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-xs font-bold text-gray-500">Menarik data dari server...</p>`;
-        
-        setTimeout(() => { 
-            modal.classList.replace('opacity-0', 'opacity-100'); 
+
+        setTimeout(() => {
+            modal.classList.replace('opacity-0', 'opacity-100');
             box.classList.replace('scale-95', 'scale-100');
         }, 10);
 
@@ -838,10 +863,10 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             const progRes = await fetch(`${API_URL}/api/students/${studentId}/progress`, { headers: { 'Authorization': `Bearer ${token}` } });
             const progData = await progRes.json();
-            
+
             const subjProgress = progData.data[subjLower] || [];
             if (subjProgress.length === 0) throw new Error("Belum ada data nilai di database.");
-            
+
             const latestResult = subjProgress.sort((a, b) => parseInt(b.week) - parseInt(a.week))[0];
             const week = latestResult.week;
             const score = latestResult.score;
@@ -850,12 +875,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             try {
                 const satpamRes = await fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const satpamData = await satpamRes.json();
-                
-                const exactLog = (satpamData.data || []).find(l => 
-                    String(l.subject).toLowerCase().trim() === subjLower && 
+
+                const exactLog = (satpamData.data || []).find(l =>
+                    String(l.subject).toLowerCase().trim() === subjLower &&
                     parseInt(l.week) === parseInt(week)
                 );
-                
+
                 if (exactLog) {
                     photoUrl = exactLog.photo_url;
                 } else {
@@ -869,14 +894,14 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             document.getElementById('detailStudentName').innerText = studentName;
             document.getElementById('detailSubjectWeek').innerText = `${subject} • PERTEMUAN ${week}`;
-            
+
             const scoreEl = document.getElementById('detailScore');
             scoreEl.innerText = score;
             scoreEl.className = `text-5xl font-black drop-shadow-sm ${score >= 80 ? 'text-green-600' : (score >= 60 ? 'text-amber-500' : 'text-red-500')}`;
 
             const photoEl = document.getElementById('detailSatpamPhoto');
             const placeholderEl = document.getElementById('detailSatpamPlaceholder');
-            
+
             if (photoUrl) {
                 photoEl.src = photoUrl;
                 photoEl.classList.remove('hidden');
@@ -898,7 +923,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.closeNotifDetail = () => {
         const modal = document.getElementById('modalNotifDetail');
         const box = document.getElementById('notifDetailBox');
-        
+
         modal.classList.replace('opacity-100', 'opacity-0');
         box.classList.replace('scale-100', 'scale-95');
         setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
@@ -919,12 +944,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.promptMaintenanceToggle = (checkbox) => {
         const newState = checkbox.checked;
         checkbox.checked = !newState; // Revert sementara sampai dikonfirmasi
-        
+
         const actionText = newState ? 'Mengaktifkan' : 'Mematikan';
-        const msgText = newState 
-            ? 'Semua akses murid ke halaman PR akan diblokir dan dialihkan ke halaman Maintenance.' 
+        const msgText = newState
+            ? 'Semua akses murid ke halaman PR akan diblokir dan dialihkan ke halaman Maintenance.'
             : 'Murid dapat kembali mengakses halaman PR secara normal.';
-        
+
         showConfirmGlobal(
             `${actionText} Maintenance?`,
             msgText,
@@ -941,10 +966,10 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_maintenance: newState })
             });
-            
+
             const result = await res.json();
             if (!res.ok) throw new Error(result.message || 'Gagal update status');
-            
+
             checkbox.checked = newState;
             window.showToast?.('success', 'Berhasil', `Mode perbaikan berhasil di${newState ? 'aktifkan' : 'matikan'}.`);
         } catch (e) {
@@ -955,19 +980,19 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
     const resetPassInput = document.getElementById('resetPasswordInput');
     const btnExecuteReset = document.getElementById('btnExecuteReset');
-    
+
     window.openResetModal = () => {
         if (resetPassInput) resetPassInput.value = '';
         if (btnExecuteReset) { btnExecuteReset.disabled = true; btnExecuteReset.innerHTML = 'Hapus Data'; }
         document.getElementById('modalReset')?.classList.replace('hidden', 'flex');
         setTimeout(() => { if (resetPassInput) resetPassInput.focus() }, 100);
     };
-    
+
     window.closeResetModal = () => { document.getElementById('modalReset')?.classList.replace('flex', 'hidden'); };
 
     if (resetPassInput && btnExecuteReset) {
         resetPassInput.addEventListener('input', (e) => { btnExecuteReset.disabled = e.target.value.trim().length < 3; });
-        
+
         btnExecuteReset.onclick = async () => {
             const password = resetPassInput.value.trim();
             if (!password) return;
@@ -980,7 +1005,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 const res = await fetch(`${API_URL}/api/admin/factory-reset`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: password }) 
+                    body: JSON.stringify({ password: password })
                 });
                 const result = await res.json();
 
@@ -1009,28 +1034,28 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
             const res = await fetch(`${API_URL}/api/insights/filters`, { headers });
-            
+
             if(res.ok) {
                 const filterData = await res.json();
                 availableTasks = filterData.data.available_tasks || [];
                 const subjectsList = filterData.data.subjects || [];
 
-                const locksPromises = subjectsList.map(s => 
+                const locksPromises = subjectsList.map(s =>
                     fetch(`${API_URL}/api/onboarding/pr-locks/${s.toLowerCase()}`, { headers })
                     .then(r => r.json())
                     .catch(() => ({data: []}))
                 );
                 const locksResults = await Promise.all(locksPromises);
-                
+
                 subjectsList.forEach((s, i) => {
                     window.prLocksCache[s.toLowerCase()] = locksResults[i].data || [];
                 });
-                
+
                 const subjSelect = document.getElementById('modalFilterSubject');
                 const weekSelect = document.getElementById('modalFilterWeek');
 
                 if (subjSelect) {
-                    subjSelect.innerHTML = `<option value="">Semua Pelajaran</option>` + 
+                    subjSelect.innerHTML = `<option value="">Semua Pelajaran</option>` +
                         subjectsList.map(s => `<option value="${s.toLowerCase()}">${s}</option>`).join('');
                 }
 
@@ -1040,7 +1065,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 if (weekSelect) {
                     weekSelect.innerHTML = `<option value="">Semua Pertemuan</option>` + weeksHtml;
                 }
-                
+
                 if (lbWeekSelect) {
                     lbWeekSelect.innerHTML = weeksHtml;
                 }
@@ -1048,7 +1073,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 subjSelect?.addEventListener('change', renderNotDoneModalList);
                 weekSelect?.addEventListener('change', renderNotDoneModalList);
             }
-            
+
             calculateGlobalMissingTasks();
         } catch (e) { console.error("Gagal memuat filter dan task", e); }
     };
@@ -1056,7 +1081,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const calculateGlobalMissingTasks = () => {
         enrichedStudents.forEach(student => {
             const completed = student.completed_tasks || [];
-            student.missing_tasks = availableTasks.filter(available => 
+            student.missing_tasks = availableTasks.filter(available =>
                 !completed.some(done => done.subject === available.subject && done.week === available.week)
             );
         });
@@ -1064,6 +1089,37 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         const laggingStudents = enrichedStudents.filter(s => s.missing_tasks.length > 0);
         const notDoneCountEl = document.getElementById('notDoneCount');
         if (notDoneCountEl) notDoneCountEl.innerText = laggingStudents.length;
+
+        refreshMissingSummaryCount();
+    };
+
+    const refreshMissingSummaryCount = async () => {
+        try {
+            const prLaggingIds = new Set(
+                enrichedStudents
+                    .filter(s => (s.missing_tasks || []).length > 0)
+                    .map(s => String(s.id))
+            );
+
+            const res = await fetch(`${API_URL}/api/insights/exam-missing`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const result = await res.json();
+            const examLaggingIds = new Set(
+                ((result.data?.students) || []).map(s => String(s.id))
+            );
+
+            const merged = new Set([...prLaggingIds, ...examLaggingIds]);
+
+            const notDoneCountEl = document.getElementById('notDoneCount');
+            if (notDoneCountEl) notDoneCountEl.innerText = merged.size;
+
+        } catch (e) {
+            console.error('Gagal menghitung ringkasan tunggakan gabungan:', e);
+        }
     };
 
     const renderNotDoneModalList = () => {
@@ -1100,17 +1156,17 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             if (!subjFilter || !weekFilter) {
                 const badges = relevantMissing.slice(0, 2).map(mt => {
                     const isPR = window.prLocksCache[mt.subject.toLowerCase()]?.includes(mt.week);
-                    const prLabel = isPR 
-                        ? `<span class="bg-indigo-500 text-white px-1 py-0.5 rounded-[4px] ml-1 flex items-center gap-0.5 shadow-sm"><i class="fa-solid fa-house-laptop text-[6px]"></i> PR</span>` 
+                    const prLabel = isPR
+                        ? `<span class="bg-indigo-500 text-white px-1 py-0.5 rounded-[4px] ml-1 flex items-center gap-0.5 shadow-sm"><i class="fa-solid fa-house-laptop text-[6px]"></i> PR</span>`
                         : '';
 
                     return `<span class="flex items-center text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-red-200">
                         ${mt.subject} (Pert ${mt.week})${prLabel}
                     </span>`;
                 }).join('');
-                
+
                 const moreCount = relevantMissing.length > 2 ? `<span class="flex items-center text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200">+${relevantMissing.length - 2}</span>` : '';
-                
+
                 badgesHtml = `<div class="flex flex-wrap gap-1 mt-1.5">${badges}${moreCount}</div>`;
                 wrapperClass = 'items-start pt-0.5';
             }
@@ -1135,12 +1191,141 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.openNotDoneModal = () => {
         const modal = document.getElementById('modalNotDone');
         if (modal) modal.classList.replace('hidden', 'flex');
-        renderNotDoneModalList();
+
+        window.switchMissingTab(missingTab || 'pr');
     };
 
     window.closeNotDoneModal = () => {
         const modal = document.getElementById('modalNotDone');
         if (modal) modal.classList.replace('flex', 'hidden');
+    };
+
+    window.switchMissingTab = (tab) => {
+        missingTab = tab;
+
+        const tabPR = document.getElementById('tabMissingPR');
+        const tabExam = document.getElementById('tabMissingExam');
+        const prFilters = document.getElementById('missingPRFilters');
+        const examFilters = document.getElementById('missingExamFilters');
+
+        const activePRClass = "flex-1 py-2.5 text-[10px] font-bold bg-white text-red-600 rounded-xl shadow-sm transition-all uppercase tracking-widest";
+        const inactiveClass = "flex-1 py-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest";
+
+        if (tab === 'pr') {
+            tabPR.className = activePRClass;
+            tabExam.className = inactiveClass;
+
+            prFilters.classList.remove('hidden');
+            prFilters.classList.add('flex');
+
+            examFilters.classList.add('hidden');
+
+            renderNotDoneModalList();
+            return;
+        }
+
+        tabExam.className = activePRClass;
+        tabPR.className = inactiveClass;
+
+        prFilters.classList.add('hidden');
+        prFilters.classList.remove('flex');
+
+        examFilters.classList.remove('hidden');
+
+        loadMissingExamList();
+    };
+
+    window.loadMissingExamList = async () => {
+        const container = document.getElementById('notDoneListContainer');
+        const subject = document.getElementById('modalFilterExamSubject')?.value || '';
+        const cacheKey = subject || 'all';
+
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fa-solid fa-spinner fa-spin text-red-500 text-xl"></i>
+                <p class="text-[10px] font-bold text-gray-400 mt-2">Memuat tunggakan ujian...</p>
+            </div>
+        `;
+
+        try {
+            if (!missingExamCache[cacheKey]) {
+                const query = subject ? `?subject=${encodeURIComponent(subject)}` : '';
+                const res = await fetch(`${API_URL}/api/insights/exam-missing${query}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await res.json();
+
+                if (!res.ok || result.status === 'error') {
+                    throw new Error(result.message || 'Gagal memuat data ujian.');
+                }
+
+                missingExamCache[cacheKey] = result.data;
+            }
+
+            renderMissingExamList(missingExamCache[cacheKey]);
+
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `
+                <div class="text-center py-8 bg-red-50 border border-red-100 rounded-2xl">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-2xl mb-2"></i>
+                    <p class="text-xs font-bold text-red-500">Gagal memuat data tunggakan ujian.</p>
+                </div>
+            `;
+        }
+    };
+
+    const renderMissingExamList = (data) => {
+        const container = document.getElementById('notDoneListContainer');
+        if (!container) return;
+
+        const students = data?.students || [];
+        const subject = document.getElementById('modalFilterExamSubject')?.value || '';
+
+        if (students.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-10 bg-green-50 rounded-3xl border border-green-100">
+                    <i class="fa-solid fa-circle-check text-green-500 text-3xl mb-3"></i>
+                    <p class="text-xs font-black text-green-600">Semua siswa sudah mengerjakan ujian${subject ? ' mapel ini' : ''}.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = students.map(student => {
+            const initials = (student.name || '??').substring(0, 2).toUpperCase();
+
+            const badgesHtml = (student.missing_exams || []).map(exam => `
+                <span class="inline-block mt-1 mr-1 bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider">
+                    ${exam.subject} • ${exam.title}
+                </span>
+            `).join('');
+
+            return `
+                <div class="bg-white border border-red-100 rounded-2xl p-3 shadow-sm hover:bg-red-50 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center font-black text-xs shrink-0">
+                                ${initials}
+                            </div>
+                            <div class="min-w-0">
+                                <span class="text-xs font-black text-gray-800 block leading-tight capitalize">${student.name}</span>
+                                <p class="text-[9px] font-bold text-red-400 mt-1">${student.missing_count} ujian belum dikerjakan</p>
+                                <div class="mt-1">
+                                    ${badgesHtml}
+                                </div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-file-circle-xmark text-red-300 text-sm mt-1"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
     };
 
     // ==============================================================
@@ -1149,7 +1334,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const fetchDashboardData = async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-            
+
             // [UPDATE] Sekalian fetch status maintenance dari backend saat load dashboard
             try {
                 const sysRes = await fetch(`${API_URL}/api/onboarding/system/status`, { headers });
@@ -1164,7 +1349,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             const [dashRes, enrichedRes] = await Promise.all([
                 fetch(`${API_URL}/api/insights/dashboard`, { headers }),
-                fetch(`${API_URL}/api/students/stats/enriched`, { headers }) 
+                fetch(`${API_URL}/api/students/stats/enriched`, { headers })
             ]);
 
             if (dashRes.status === 401 || enrichedRes.status === 401) throw new Error('Sesi habis');
@@ -1173,17 +1358,18 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const enrichedData = await enrichedRes.json();
 
             enrichedStudents = enrichedData.data || [];
+            missingExamCache = {};
 
             const statStudentsEl = document.getElementById('statStudents');
             if (statStudentsEl) statStudentsEl.innerText = dashData.data.total_students || enrichedStudents.length || 0;
-            
+
             const statExamsEl = document.getElementById('statExams');
             if (statExamsEl) statExamsEl.innerText = dashData.data.total_exams || 0;
 
             renderStudentList();
             renderLeaderboard();
             await initFiltersAndTasks();
-            
+
             loadNotifications(true);
 
         } catch (error) {
@@ -1196,12 +1382,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     const renderStudentList = () => {
         const filterEl = document.getElementById('filterList');
         if (!filterEl) return;
-        
+
         const filter = filterEl.value;
         const container = document.getElementById('studentList');
         const remContainer = document.getElementById('remainingStudentsContainer');
         const remText = document.getElementById('remainingStudentsText');
-        
+
         if (enrichedStudents.length === 0) {
             container.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-gray-100 border-dashed"><i class="fa-solid fa-folder-open text-gray-200 text-5xl mb-3 block"></i><p class="text-gray-400 text-xs font-bold">Belum ada data Anak.</p></div>`;
             if (remContainer) remContainer.classList.add('hidden');
@@ -1217,7 +1403,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         container.innerHTML = top5.map((student, idx) => {
             const initials = student.name.substring(0, 2).toUpperCase();
             const avatarHtml = student.photo_url ? `<img src="${student.photo_url}" class="w-full h-full object-cover" alt="${student.name}" />` : initials;
-            
+
             let detailBadge = '';
             if (filter === 'nilai') detailBadge = `<span class="bg-amber-100 text-amber-600 px-2 py-0.5 rounded text-[9px] font-bold ml-2"><i class="fa-solid fa-star text-[8px]"></i> Rata: ${student.finalScore}</span>`;
             else if (filter === 'rajin') detailBadge = `<span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold ml-2"><i class="fa-solid fa-calendar-check text-[8px]"></i> Hadir: ${student.hadir}x</span>`;
@@ -1275,11 +1461,11 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
         const generateAvatar = (student, colorClass) => {
             if(!student) return `<div class="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 bg-gray-50"></div>`;
-            
-            const avatarHtml = student.photo_url 
+
+            const avatarHtml = student.photo_url
                 ? `<img src="${student.photo_url}" class="w-full h-full object-cover rounded-full" alt="Foto ${student.name}" />`
                 : student.name.substring(0,2).toUpperCase();
-                
+
             return `
                 <div class="relative w-14 h-14 ${colorClass} rounded-full flex items-center justify-center font-black text-lg z-10 shadow-lg border-2 border-white cursor-pointer hover:-translate-y-1 transition-transform overflow-hidden" onclick="window.location.href='/student/${student.id}'">
                     ${avatarHtml}
@@ -1296,7 +1482,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <span class="text-slate-400 font-black text-2xl drop-shadow-sm">2</span>
                 </div>
             </div>
-            
+
             <div class="flex flex-col items-center">
                 <i class="fa-solid fa-crown text-amber-400 text-3xl mb-1 animate-bounce drop-shadow-md"></i>
                 ${generateAvatar(top5[0], 'bg-amber-100 text-amber-600 border-4 border-amber-300 w-16 h-16 text-2xl')}
@@ -1312,9 +1498,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 </div>
             </div>
         `;
-        
+
         tableBody.innerHTML = top5.map((s, i) => {
-            const miniAvatar = s.photo_url 
+            const miniAvatar = s.photo_url
                 ? `<img src="${s.photo_url}" class="w-full h-full object-cover" />`
                 : `<span class="text-[10px]">${s.name.substring(0,2).toUpperCase()}</span>`;
 
@@ -1346,18 +1532,18 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         localStorage.clear();
         window.location.replace('/');
     });
-    
+
     // --- CEK ABSENSI ---
     const checkAbsensiStatus = async () => {
         try {
             const res = await fetch(`${API_URL}/api/attendances/today-status`, { headers: { 'Authorization': `Bearer ${token}` }});
             const result = await res.json();
-            
+
             const statusText = document.getElementById('absensiStatusText');
             const pulseBox = document.getElementById('absensiPulse');
 
             if (!statusText || !pulseBox) return;
-            
+
             if (result.isDone) {
                 statusText.innerText = "Selesai (Sudah Absen)";
                 statusText.classList.replace('text-gray-400', 'text-green-500');
@@ -1379,15 +1565,15 @@ import NavbarGuru from '../components/NavbarGuru.astro';
     window.openTransferDrawer = () => {
         const select = document.getElementById('transferStudentSelect');
         const amountInput = document.getElementById('transferAmountInput');
-        
+
         if (enrichedStudents && enrichedStudents.length > 0) {
-            select.innerHTML = '<option value="" disabled selected>-- Siapa yang berhasil jawab? --</option>' + 
+            select.innerHTML = '<option value="" disabled selected>-- Siapa yang berhasil jawab? --</option>' +
                 enrichedStudents.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         } else {
             select.innerHTML = '<option value="">Gagal memuat siswa.</option>';
         }
 
-        amountInput.value = ''; 
+        amountInput.value = '';
         document.getElementById('drawerTransfer').classList.replace('hidden', 'flex');
     };
 
@@ -1417,9 +1603,9 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             const res = await fetch(`${API_URL}/api/onboarding/transfer-reward`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    student_id: studentId, 
-                    amount: amount 
+                body: JSON.stringify({
+                    student_id: studentId,
+                    amount: amount
                 })
             });
 
@@ -1427,7 +1613,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             window.showToast?.('success', 'Terkirim!', `Berhasil transfer ${amount} koin sebagai reward.`);
             closeTransferDrawer();
-            
+
             fetchDashboardData();
 
         } catch (err) {
@@ -1442,7 +1628,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    
+
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
