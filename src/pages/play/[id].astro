@@ -1107,6 +1107,13 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 ]);
 
                 allStudents = stdRes.data || [];
+                completedStudentIds = (resRes.data || []).map(r => r.student_id);
+                qualifiedStudentIds = qualRes.data || [];
+
+                renderLobbyGrid();
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+                window.hideShopButton();
 
                 if (retakeStudentIdFromUrl) {
                     const targetStudent = allStudents.find(s => String(s.id) === String(retakeStudentIdFromUrl));
@@ -1117,14 +1124,6 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                         }, 300);
                     }
                 }
-                completedStudentIds = (resRes.data || []).map(r => r.student_id);
-                qualifiedStudentIds = qualRes.data || [];
-
-                // Render Lobby dan tampilkan layar Lobby (Bypass dihapus agar user bisa pilih nama)
-                renderLobbyGrid();
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
-                window.hideShopButton(); // Pastikan toko tersembunyi di Lobby
 
                 const tutorialReturnStudentId = urlParams.get('tutorial_return_student');
                 const tutorialReturnStudentName = urlParams.get('tutorial_return_name');
@@ -1145,7 +1144,6 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             const walletEl = document.getElementById('shopWallet');
             if (walletEl) walletEl.innerText = studentPoin;
 
-            const wasExamStarted = localStorage.getItem(getExamStartedKey()) === 'true';
 
             if (wasExamStarted && activeStudentId) {
                 const savedPhase = parseInt(localStorage.getItem(getCurrentPhaseKey()) || '1');
@@ -2582,54 +2580,6 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     window.closeCheatWarning = () => document.getElementById('modalCheatWarning')?.classList.replace('flex', 'hidden');
 
 
-    const freezeTimerByMiaw = (durationMs = 7000, done = () => {}) => {
-        if (!isExamActive || isSubmitting) {
-            done();
-            return;
-        }
-
-        const timerText = document.getElementById('timerText');
-        const timerContainer = document.getElementById('timerContainer');
-        const timerIcon = document.getElementById('timerIcon');
-
-        clearTimeout(catFreezeTimeout);
-
-        window.isTimeStoppedByCat = true;
-
-        if (timerText) timerText.innerText = 'DIBEKUKAN';
-        if (timerContainer) {
-            timerContainer.classList.add(
-                'bg-cyan-50',
-                'text-cyan-600',
-                'border-cyan-200',
-                'animate-pulse'
-            );
-        }
-        if (timerIcon) {
-            timerIcon.className = 'fa-solid fa-snowflake timer-icon text-cyan-500 animate-spin';
-        }
-
-        catFreezeTimeout = setTimeout(() => {
-            window.isTimeStoppedByCat = false;
-
-            if (timerContainer) {
-                timerContainer.classList.remove(
-                    'bg-cyan-50',
-                    'text-cyan-600',
-                    'border-cyan-200',
-                    'animate-pulse'
-                );
-            }
-
-            if (timerIcon) {
-                timerIcon.className = 'fa-solid fa-stopwatch timer-icon text-gray-400';
-            }
-
-            updateTimerUI();
-            done();
-        }, durationMs);
-    };
-
     const syncTimeLeftWithDeadline = () => {
         const deadlineRaw = localStorage.getItem(getExamDeadlineKey());
         if (!deadlineRaw) return timeLeft;
@@ -2810,7 +2760,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
         return false;
     };
-    
+
     window.handleCheckRetakePermission = async (event) => {
         const btn = event?.currentTarget;
 
