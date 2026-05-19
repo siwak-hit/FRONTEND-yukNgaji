@@ -303,10 +303,15 @@ import Toast from '../../../../components/Toast.astro';
 
     const fetchSession = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/oral-exams/${templateId}/sessions/${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
+            // Asumsi endpoint API Anda menyertakan data prompt atau Anda bisa menambah fetch terpisah
+            const res = await fetch(`${API_URL}/api/oral-exams/${templateId}/sessions/${sessionId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             const result = await res.json();
             if (!res.ok || result.status !== 'success') throw new Error(result.message || 'Gagal memuat sesi.');
+
             sessionData = result.data;
+            // Pastikan sessionData sekarang berisi properti 'understanding_prompts' dari database
             renderSession();
         } catch (error) { window.showToast?.('danger', 'Gagal', error.message); }
     };
@@ -651,42 +656,21 @@ import Toast from '../../../../components/Toast.astro';
     // LOGIKA GENERATOR PERTANYAAN (UPDATE 2)
     // ==========================================
     const generateQuestions = () => {
-        const items = [];
-        sessionData.sections.forEach(sec => {
-            (sec.oral_exam_items || []).forEach(item => items.push(item.short_label || item.title));
-        });
+        // Mengambil dari sessionData yang sekarang sudah berisi understanding_prompts
+        const prompts = sessionData.understanding_prompts || [];
 
-        if (items.length === 0) return ["Coba jelaskan kembali intisari dari materi yang baru saja dipelajari."];
-
-        const templates = [
-            "Jelaskan secara singkat pengertian dari {0}.",
-            "Berikan contoh cara membaca / penerapan {0}.",
-            "Apa ciri-ciri atau tanda dari {0}?",
-            "Mengapa kita harus memperhatikan {0} dalam membaca?",
-        ];
-
-        if (items.length > 1) {
-            templates.push("Menurutmu, apa bedanya antara {0} dan {1}?");
-            templates.push("Kapan hukum {0} dipakai dibandingkan {1}?");
+        // Jika data dari DB kosong, baru gunakan fallback
+        if (prompts.length === 0) {
+            return ["Jelaskan kembali intisari dari materi yang baru saja dipelajari."];
         }
 
-        const count = Math.floor(Math.random() * 2) + 2; // Acak 2-3 pertanyaan
-        const questions = [];
+        // Ambil 2-3 soal secara acak dari database
+        const count = Math.floor(Math.random() * 2) + 2;
+        // Mengacak array prompt
+        const shuffled = [...prompts].sort(() => 0.5 - Math.random());
 
-        for(let i=0; i<count; i++) {
-            const tpl = templates[Math.floor(Math.random() * templates.length)];
-            const item1 = items[Math.floor(Math.random() * items.length)];
-            let item2 = items[Math.floor(Math.random() * items.length)];
-
-            while(item1 === item2 && items.length > 1) {
-                item2 = items[Math.floor(Math.random() * items.length)];
-            }
-
-            const q = tpl.replace('{0}', `<strong class="text-purple-600">${item1}</strong>`)
-                         .replace('{1}', `<strong class="text-purple-600">${item2}</strong>`);
-            questions.push(q);
-        }
-        return questions;
+        // Mengembalikan properti 'prompt' dari objek yang diambil
+        return shuffled.slice(0, count).map(p => p.prompt);
     };
 
     window.openUnderstandingStep = () => {
@@ -723,53 +707,67 @@ import Toast from '../../../../components/Toast.astro';
 
             return `
                 <div class="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm">
-                    <div class="flex items-center gap-3 mb-4 pb-4 border-b-2 border-slate-50">
-                        <div class="w-10 h-10 bg-slate-50 border-2 border-slate-100 text-slate-700 rounded-full flex items-center justify-center font-black text-xs shadow-inner">
-                            ${getInitials(student.name)}
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b-2 border-slate-50">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-slate-50 border-2 border-slate-100 text-slate-700 rounded-full flex items-center justify-center font-black text-xs shadow-inner">
+                                ${getInitials(student.name)}
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-slate-800">${student.name}</p>
+                                <p class="text-[10px] font-bold text-slate-400">Tes lisan individu</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-sm font-black text-slate-800">${student.name}</p>
-                            <p class="text-[10px] font-bold text-slate-400">Tes lisan individu</p>
-                        </div>
+                        <button onclick="refreshStudentQuestions('${student.id}')"
+                                class="w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
                     </div>
 
-                    <div class="mb-5 space-y-2.5">
-                        <p class="text-[10px] font-black text-purple-500 uppercase tracking-widest px-1">Pertanyaan Lisan Acak</p>
-                        <div class="grid grid-cols-1 gap-2">
-                            ${current.questions.map((q, i) => `
-                                <div class="flex items-start gap-2.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
-                                    <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm">${i+1}</span>
-                                    <p class="text-xs font-bold text-slate-700 leading-relaxed mt-0.5">${q}</p>
-                                </div>
-                            `).join('')}
-                        </div>
+                    <div id="questions-container-${student.id}" class="mb-5 space-y-2.5">
+                        ${current.questions.map((q, i) => `
+                            <div class="flex items-start gap-2.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
+                                <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm">${i+1}</span>
+                                <p class="text-xs font-bold text-slate-700 leading-relaxed mt-0.5">${q}</p>
+                            </div>
+                        `).join('')}
                     </div>
 
-                    <div class="bg-slate-50/50 p-4 rounded-3xl border-2 border-slate-50">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-3">Beri Nilai Pemahaman</p>
-                        <div class="grid grid-cols-5 gap-2 mb-4">
-                            ${[1, 2, 3, 4, 5].map(value => `
-                                <button onclick="setUnderstandingRating('${student.id}', ${value})"
-                                    class="py-3 rounded-2xl border-2 text-xs font-black active:scale-95 transition-all ${
-                                        Number(current.rating) === value
-                                            ? 'bg-purple-600 text-white border-purple-600 shadow-[0_4px_0_#7e22ce]'
-                                            : 'bg-white text-slate-400 border-slate-100 hover:border-purple-200 hover:text-purple-400'
-                                    }">
-                                    ${value}
-                                </button>
-                            `).join('')}
-                        </div>
-                        <textarea
-                            oninput="setUnderstandingNote('${student.id}', this.value)"
-                            class="w-full bg-white border-2 border-slate-100 rounded-2xl p-3 text-xs font-bold text-slate-600 outline-none focus:border-purple-300 resize-none shadow-sm"
-                            rows="2"
-                            placeholder="Catatan kelemahan/kelebihan...">${current.note || ''}</textarea>
                     </div>
-                </div>
             `;
         }).join('');
     };
 
+    window.refreshStudentQuestions = (studentId) => {
+        // 1. Generate soal baru
+        const newQuestions = generateQuestions();
+        understandingScores[studentId].questions = newQuestions;
+
+        // 2. Ambil container
+        const container = document.getElementById(`questions-container-${studentId}`);
+
+        if (container) {
+            // Berikan sedikit efek transisi pada container
+            container.classList.add('fade-in-content');
+
+            // Update konten
+            container.innerHTML = newQuestions.map((q, i) => `
+                <div class="flex items-start gap-2.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
+                    <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm">${i+1}</span>
+                    <p class="text-xs font-bold text-slate-700 leading-relaxed mt-0.5">${q}</p>
+                </div>
+            `).join('');
+
+            // Hapus class setelah animasi selesai agar bisa dipicu lagi nanti
+            setTimeout(() => {
+                container.classList.remove('fade-in-content');
+            }, 300);
+        }
+
+        // Opsional: Berikan feedback visual pada tombolnya (spin sekali)
+        const btn = event.currentTarget;
+        btn.querySelector('i').classList.add('fa-spin');
+        setTimeout(() => btn.querySelector('i').classList.remove('fa-spin'), 500);
+    };
     window.setUnderstandingRating = (studentId, rating) => {
         understandingScores[studentId].rating = rating;
         renderUnderstandingCards();
@@ -876,4 +874,19 @@ import Toast from '../../../../components/Toast.astro';
     @keyframes slideUp { 0% { transform: translateY(30px) scale(0.95); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
     #sessionStudents::-webkit-scrollbar { display: none; }
     #sessionStudents { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-once {
+        0% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    .animate-pulse-once { animation: pulse-once 0.5s ease; }
+
+    /* Efek transisi halus */
+    .fade-in-content {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
