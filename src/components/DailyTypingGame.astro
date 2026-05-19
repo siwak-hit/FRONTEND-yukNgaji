@@ -1,0 +1,640 @@
+---
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+---
+
+<audio id="bgmAudio" loop src="/audio/bgm.mp3"></audio>
+<audio id="sfxCoin" src="/audio/coin.mp3"></audio>
+<audio id="sfxCombo" src="/audio/combo.mp3"></audio>
+
+<div id="dcLoading" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
+    <div class="loader-ring mb-6"></div>
+    <p class="text-indigo-600 text-xs font-black tracking-widest uppercase animate-pulse">Memuat Petualangan...</p>
+</div>
+
+<div id="dcLobby" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
+    <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0">
+        <h2 class="text-3xl font-black text-white mb-2">Siapa Kamu?</h2>
+        <p class="text-indigo-200 text-sm font-bold">Pilih nama kamu sebelum mulai berburu koin.</p>
+    </div>
+    <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
+        <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6">
+            <input id="dcSearch" type="text" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cari namamu disini...">
+        </div>
+        <div id="dcStudentGrid" class="grid grid-cols-2 gap-3"></div>
+    </div>
+</div>
+
+<div id="dcLanding" class="fixed inset-0 z-[140] hidden flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-indigo-600">
+    <div class="text-center animate-slide-up">
+        <div class="w-24 h-24 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center text-5xl mx-auto mb-6 shadow-xl border border-white/30">
+            <i class="fa-solid fa-gamepad animate-bounce"></i>
+        </div>
+        <h1 id="dcLandingTitle" class="text-4xl font-black text-white mb-2 tracking-tight">Daily Ngetik</h1>
+        <p id="dcLandingSubtitle" class="text-indigo-200 font-bold text-sm mb-8">Ketik materinya, raih combo, kumpulkan koin!</p>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-8 border border-white/20 inline-block min-w-[200px]">
+            <p class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Koinmu</p>
+            <div class="flex items-center justify-center gap-2 text-3xl font-black text-amber-300">
+                <i class="fa-solid fa-coins text-amber-400"></i> <span id="dcLandingWallet">0</span>
+            </div>
+        </div>
+
+        <button onclick="window.goToLevelMap()" class="btn-3d w-full py-4 text-lg bg-amber-400 text-amber-900 border-b-4 border-amber-600 hover:bg-amber-300 rounded-2xl font-black">
+            Mulai Main!
+        </button>
+    </div>
+</div>
+
+<div id="dcLevelSelect" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
+    <header class="bg-white px-6 pt-10 pb-6 rounded-b-[2rem] shadow-sm border-b border-gray-100 sticky top-0 z-20 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-black text-gray-800">Pilih Level</h2>
+            <p class="text-xs font-bold text-gray-400">Selesaikan 10 level hari ini!</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-coins text-amber-500"></i>
+                <span id="dcMapWallet" class="font-black text-amber-600 text-sm">0</span>
+            </div>
+            <button onclick="window.setScreen('dcLanding')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 active:scale-95 transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </header>
+    <div class="p-6">
+        <div id="dcLevelGrid" class="grid grid-cols-2 gap-4 pb-12">
+            </div>
+    </div>
+</div>
+
+<div id="dcLevelLoading" class="fixed inset-0 z-[160] hidden flex-col items-center justify-center bg-indigo-600 px-6 text-center">
+    <div class="text-6xl text-white mb-6 animate-spin-slow">
+        <i class="fa-solid fa-hourglass-half"></i>
+    </div>
+    <h2 id="dcLoadingText" class="text-2xl font-black text-white mb-8 animate-pulse">Tarik nafas dulu...</h2>
+    <div class="w-full max-w-xs bg-white/20 rounded-full h-4 overflow-hidden p-1 border border-white/30">
+        <div id="dcLoadingBar" class="bg-amber-400 h-full rounded-full w-0 transition-all duration-1000 ease-out"></div>
+    </div>
+</div>
+
+<div id="dcTutorialModal" class="fixed inset-0 z-[300] hidden items-center justify-center bg-gray-900/60 p-6 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl animate-slide-up text-center border-4 border-indigo-500 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-24 bg-indigo-50 -z-10 rounded-t-[2rem]"></div>
+        <div class="text-5xl text-indigo-500 mb-4 mt-2">
+            <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-800 mb-3">Cara Mainnya Gampang!</h3>
+        <p class="text-sm font-bold text-gray-500 leading-relaxed mb-6 text-left bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <i class="fa-solid fa-keyboard text-indigo-400 w-5"></i> Ketik huruf sesuai teks di layar.<br><br>
+            <i class="fa-solid fa-bolt text-amber-400 w-5"></i> <strong class="text-gray-700">COMBO:</strong> Selesai kurang dari 10 detik koin dikali 4, kurang dari 20 detik dikali 3!<br><br>
+            <i class="fa-solid fa-coins text-amber-500 w-5"></i> Kumpulkan koin sebanyak-banyaknya!
+        </p>
+        <button onclick="window.closeTutorialAndStart()" class="btn-3d btn-indigo w-full py-4 text-sm font-black">
+            Oke, Aku Paham!
+        </button>
+    </div>
+</div>
+
+<div id="dcPrepModal" class="fixed inset-0 z-[300] hidden items-center justify-center bg-gray-900/60 p-6 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl animate-slide-up text-center border-4 border-amber-400 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-24 bg-amber-50 -z-10 rounded-t-[2rem]"></div>
+        <div class="text-5xl text-amber-400 mb-4 mt-2 animate-bounce">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-800 mb-2">Bersiap!</h3>
+        <p class="text-sm font-bold text-gray-500 leading-relaxed mb-6">
+            Fokuskan matamu. Ketik secepat mungkin untuk raih kombo tertinggi!
+        </p>
+        <button onclick="window.startCountdown()" class="btn-3d w-full py-4 text-sm bg-amber-400 hover:bg-amber-300 text-amber-900 border-b-4 border-amber-600 rounded-2xl font-black">
+            Lanjut Ngetik!
+        </button>
+    </div>
+</div>
+
+<div id="dcCountdownOverlay" class="fixed inset-0 z-[400] hidden items-center justify-center bg-indigo-900/90 backdrop-blur-md">
+    <div id="dcCountdownText" class="text-[12rem] font-black text-amber-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.8)]">3</div>
+</div>
+
+<div id="dcExitModal" class="fixed inset-0 z-[400] hidden items-center justify-center bg-gray-900/60 p-6 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl animate-slide-up text-center border-4 border-rose-500">
+        <div class="text-5xl text-rose-500 mb-4">
+            <i class="fa-solid fa-door-open"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-800 mb-2">Yakin Mau Keluar?</h3>
+        <p class="text-sm font-bold text-gray-500 mb-6">Progres ngetik di level ini bakal hangus lho.</p>
+        <div class="flex gap-3">
+            <button onclick="window.closeExitModal()" class="flex-1 py-4 rounded-xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 active:scale-95 border border-gray-200 transition-all">Batal</button>
+            <button onclick="window.confirmExitGame()" class="flex-1 py-4 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 active:scale-95 shadow-md border-b-4 border-rose-700 transition-all">Keluar</button>
+        </div>
+    </div>
+</div>
+
+<div id="dcAlertModal" class="fixed inset-0 z-[500] hidden items-center justify-center bg-gray-900/60 p-6 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl animate-slide-up text-center">
+        <div id="dcAlertIcon" class="text-5xl mb-4">
+            <i class="fa-solid fa-circle-exclamation text-amber-500"></i>
+        </div>
+        <h3 id="dcAlertTitle" class="text-2xl font-black text-gray-800 mb-2">Perhatian</h3>
+        <p id="dcAlertMessage" class="text-sm font-bold text-gray-500 mb-6">Pesan disini.</p>
+        <button onclick="window.closeCustomAlert()" class="w-full py-4 rounded-xl bg-indigo-50 text-indigo-600 font-black hover:bg-indigo-100 active:scale-95 transition-all">Mengerti</button>
+    </div>
+</div>
+
+<div id="dcGame" class="hidden min-h-screen flex-col bg-slate-50 relative">
+
+    <div id="dcGameGlow" class="absolute inset-0 pointer-events-none transition-all duration-700 z-0 bg-transparent"></div>
+
+    <header class="bg-white/80 backdrop-blur-md px-6 pt-10 pb-4 shadow-sm border-b border-gray-100 flex items-center shrink-0 z-20 relative">
+        <div class="flex-1">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Level <span id="dcGameLevelDisplay">1</span></p>
+            <h1 class="text-xl font-black text-indigo-600 uppercase" id="dcSubjectBadge">Materi</h1>
+        </div>
+        <div class="absolute left-1/2 -translate-x-1/2 top-10 text-center mt-2">
+            <p id="dcTimerText" class="text-2xl font-black text-gray-800">0.0s</p>
+        </div>
+        <div class="flex-1 flex justify-end">
+            <button onclick="window.showExitModal()" class="w-8 h-8 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-full flex items-center justify-center active:scale-95 transition-all border border-rose-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="absolute top-[90px] right-6 z-20">
+        <div id="dcComboBadge" class="bg-blue-100 text-blue-600 border border-blue-200 text-[10px] font-black px-3 py-1 rounded-xl uppercase shadow-sm transition-all duration-300">
+            <i class="fa-solid fa-fire text-blue-500 mr-1"></i> COMBO x4
+        </div>
+    </div>
+
+    <div class="flex-1 relative flex flex-col justify-start pt-14 pb-[50vh] px-6 overflow-y-auto z-10">
+        <div id="dcVisualText" class="text-[28px] md:text-4xl font-black leading-[1.6] pointer-events-none select-none w-full relative transition-all">
+            </div>
+
+        <textarea id="dcTypingInput" disabled
+            class="absolute inset-0 w-full h-full opacity-0 z-20 resize-none outline-none text-transparent bg-transparent cursor-text"
+            autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none"
+            oninput="window.handleDailyTypingInput()"></textarea>
+    </div>
+</div>
+
+<div id="dcModalSuccess" class="fixed inset-0 z-[300] hidden items-center justify-center bg-gray-900/60 p-6 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl animate-slide-up text-center overflow-hidden relative border-4 border-amber-400">
+        <div class="text-6xl text-amber-400 mb-2 mt-2 drop-shadow-md">
+            <i class="fa-solid fa-trophy"></i>
+        </div>
+        <h3 class="text-3xl font-black text-gray-800 mb-8 border border-gray-100 bg-white inline-block px-5 py-2 rounded-2xl shadow-sm">Luar Biasa!</h3>
+
+        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6 text-left">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-gray-500">Waktu:</span>
+                <span id="dcResultTime" class="text-sm font-black text-gray-800">12.4s</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-gray-500">Koin Dasar:</span>
+                <span id="dcResultBase" class="text-sm font-black text-amber-600">+20</span>
+            </div>
+            <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+                <span class="text-xs font-bold text-gray-500">Multiplier:</span>
+                <span id="dcResultMultiplier" class="text-[10px] font-black text-rose-500 px-2 py-1 bg-rose-100 rounded-lg"><i class="fa-solid fa-bolt"></i> x3 COMBO</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-sm font-black text-gray-800">Total Didapat:</span>
+                <span class="text-2xl font-black text-green-500"><span id="dcResultTotal">+60</span> <i class="fa-solid fa-coins text-amber-400 text-lg"></i></span>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="window.goToLevelMap(true)" class="flex-1 py-4 rounded-xl bg-gray-200 text-gray-700 font-black hover:bg-gray-300 active:scale-95 text-sm transition-all shadow-sm">
+                Ke Peta
+            </button>
+            <button onclick="window.startNextLevel()" class="flex-[2] py-4 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 border-b-4 border-indigo-800 active:scale-95 text-sm transition-all shadow-md">
+                Lanjut Level <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="dcGlobalSpinner" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-white/70 backdrop-blur-sm">
+    <div class="flex flex-col items-center">
+        <div class="loader-ring-indigo"></div>
+        <p class="text-indigo-600 font-black text-xs mt-4 animate-pulse uppercase tracking-widest">Memproses...</p>
+    </div>
+</div>
+
+<script define:vars={{ API_URL }}>
+    // --- KONFIGURASI GLOBAL ---
+    const dcParams = new URLSearchParams(window.location.search);
+    const dcUrlToken = dcParams.get('token');
+    if (dcUrlToken) sessionStorage.setItem('daily_challenge_token', dcUrlToken);
+
+    const dcToken = dcUrlToken || sessionStorage.getItem('daily_challenge_token') || localStorage.getItem('token');
+    const dcIsPreview = dcParams.get('preview') === 'true';
+
+    let dcStudents = [];
+    let dcActiveStudentId = null;
+    let dcActiveStudentName = dcIsPreview ? 'Mode Simulasi' : '';
+    let dcWallet = dcIsPreview ? 9999 : 0;
+
+    let dcCompletedLevels = [];
+    let dcCurrentLevelObj = 1;
+    let dcCurrentSentence = null;
+
+    let dcStartedAt = null;
+    let dcTimerInterval = null;
+    const dcTutorialKey = 'daily_challenge_tutorial_v3'; // reset token key lagi
+
+    // --- AUDIO MANAGERS ---
+    const playBGM = () => {
+        const bgm = document.getElementById('bgmAudio');
+        bgm.volume = 0.6;
+        bgm.play().catch(() => console.log('BGM pending interaction'));
+    };
+    const playCoinSFX = () => document.getElementById('sfxCoin').play().catch(()=>{});
+    const playComboSFX = () => document.getElementById('sfxCombo').play().catch(()=>{});
+
+    // --- GLOBAL FUNCTIONS EXPOSED TO WINDOW ---
+    window.setScreen = (screenId) => {
+        ['dcLoading', 'dcLobby', 'dcLanding', 'dcLevelSelect', 'dcLevelLoading', 'dcGame'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (id === screenId) {
+                el.classList.remove('hidden');
+                el.classList.add('flex');
+            } else {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        });
+    };
+
+    window.showCustomAlert = (title, message, type = 'info') => {
+        document.getElementById('dcAlertTitle').innerText = title;
+        document.getElementById('dcAlertMessage').innerText = message;
+        const iconContainer = document.getElementById('dcAlertIcon');
+        if (type === 'warning') iconContainer.innerHTML = '<i class="fa-solid fa-lock text-amber-500"></i>';
+        else if (type === 'error') iconContainer.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>';
+        else iconContainer.innerHTML = '<i class="fa-solid fa-circle-info text-blue-500"></i>';
+
+        document.getElementById('dcAlertModal').classList.replace('hidden', 'flex');
+    };
+    window.closeCustomAlert = () => document.getElementById('dcAlertModal').classList.replace('flex', 'hidden');
+
+    // --- INISIALISASI ---
+    const initDailyChallenge = async () => {
+        try {
+            if (!dcToken) return window.location.replace('/');
+
+            if (dcIsPreview) {
+                dcActiveStudentId = 'preview_mode';
+                await loadDailyState();
+                window.setScreen('dcLanding');
+                return;
+            }
+            await loadStudentsForDailyChallenge();
+            window.setScreen('dcLobby');
+        } catch (err) {
+            document.getElementById('dcLoading').innerHTML = `<p class="text-red-500 font-bold px-6 text-center">${err.message}</p>`;
+        }
+    };
+
+    const loadStudentsForDailyChallenge = async () => {
+        const res = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${dcToken}` } });
+        const result = await res.json();
+        dcStudents = result.data || [];
+        renderDailyStudentGrid();
+    };
+
+    const renderDailyStudentGrid = () => {
+        const grid = document.getElementById('dcStudentGrid');
+        const query = document.getElementById('dcSearch')?.value?.toLowerCase() || '';
+        const filtered = dcStudents.filter(s => String(s.name || '').toLowerCase().includes(query));
+
+        grid.innerHTML = filtered.map(s => {
+            const initial = String(s.name || '??').substring(0, 2).toUpperCase();
+            const safeName = String(s.name || 'Siswa').replace(/'/g, "\\'");
+            return `
+                <div onclick="window.selectDailyStudent('${s.id}', '${safeName}')" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 cursor-pointer hover:border-indigo-300">
+                    <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg font-black">${initial}</div>
+                    <div><h4 class="font-black text-gray-800 text-[11px]">${s.name}</h4></div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    // --- FUNGSI GLOBAL LOADING ---
+    const showSpinner = (show) => {
+        const el = document.getElementById('dcGlobalSpinner');
+        show ? el.classList.replace('hidden', 'flex') : el.classList.replace('flex', 'hidden');
+    };
+
+    // --- UPDATE SELECT STUDENT ---
+    window.selectDailyStudent = async (id, name) => {
+        showSpinner(true); // Tampilkan spinner saat fetch
+        try {
+            dcActiveStudentId = id;
+            dcActiveStudentName = name;
+            if (!dcIsPreview) {
+                const firstName = name.split(' ')[0];
+                document.getElementById('dcLandingTitle').innerText = `Halo ${firstName}!`;
+                document.getElementById('dcLandingSubtitle').innerText = "Selamat datang di Daily Ngetik. Siap berburu koin?";
+            }
+            await loadDailyState();
+            window.setScreen('dcLanding');
+        } catch (err) {
+            window.showCustomAlert('Error', 'Gagal memuat profil siswa.', 'error');
+        } finally {
+            showSpinner(false); // Hilangkan spinner
+        }
+    };
+
+    const loadDailyState = async () => {
+        const query = dcIsPreview ? '?preview=true' : `?student_id=${dcActiveStudentId}`;
+        const res = await fetch(`${API_URL}/api/daily-challenge/state${query}`, { headers: { 'Authorization': `Bearer ${dcToken}` } });
+        const result = await res.json();
+
+        dcCompletedLevels = result.data.completed_levels || [];
+        dcWallet = result.data.student?.poin ?? dcWallet;
+        document.getElementById('dcLandingWallet').innerText = dcWallet;
+        document.getElementById('dcMapWallet').innerText = dcWallet;
+    };
+
+    // --- PETA LEVEL (STRICT LINEAR) ---
+    window.goToLevelMap = (fromModal = false) => {
+        if (fromModal) document.getElementById('dcModalSuccess').classList.replace('flex', 'hidden');
+        playBGM();
+
+        const grid = document.getElementById('dcLevelGrid');
+        let html = '';
+        let maxUnlocked = dcCompletedLevels.length > 0 ? Math.max(...dcCompletedLevels) + 1 : 1;
+
+        for(let i=1; i<=10; i++) {
+            const isDone = dcCompletedLevels.includes(i);
+            const reward = i <= 5 ? 20 : 30;
+
+            if (isDone) {
+                // Selesai (Checkmark, Coret Koin)
+                html += `
+                    <div onclick="window.prepLevel(${i})" class="bg-indigo-50/60 border-2 border-indigo-200 p-5 rounded-[2rem] text-center cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 transition-all">
+                        <div class="w-8 h-8 bg-green-100 text-green-500 rounded-full flex items-center justify-center text-sm mb-1 shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <h3 class="font-black text-lg text-indigo-400">Level ${i}</h3>
+                        <span class="line-through decoration-2 decoration-gray-400 text-gray-400 text-[10px] font-black uppercase tracking-widest">+${reward} KOIN</span>
+                    </div>
+                `;
+            } else if (i === maxUnlocked) {
+                // Terbuka, Belum diselesaikan
+                html += `
+                    <div onclick="window.prepLevel(${i})" class="bg-white border-2 border-indigo-500 shadow-xl shadow-indigo-100/60 p-5 rounded-[2rem] text-center cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 transform transition-transform hover:-translate-y-1">
+                        <h3 class="font-black text-2xl text-indigo-600 mt-2 mb-1">Level ${i}</h3>
+                        <span class="text-amber-500 text-[10px] font-black uppercase tracking-widest"><i class="fa-solid fa-coins mr-1"></i>+${reward} KOIN</span>
+                    </div>
+                `;
+            } else {
+                // Terkunci
+                html += `
+                    <div onclick="window.showCustomAlert('Level Terkunci', 'Selesaikan level sebelumnya dulu ya!', 'warning')" class="bg-gray-50 border-2 border-gray-200 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center gap-1 opacity-60 cursor-not-allowed transition-all">
+                        <div class="text-2xl mb-1 text-gray-400"><i class="fa-solid fa-lock"></i></div>
+                        <h3 class="font-black text-lg text-gray-400">Level ${i}</h3>
+                        <span class="text-gray-400 text-[10px] font-black uppercase tracking-widest">+${reward} KOIN</span>
+                    </div>
+                `;
+            }
+        }
+        grid.innerHTML = html;
+        window.setScreen('dcLevelSelect');
+    };
+
+    // --- LOADING, PREP MODAL & COUNTDOWN ---
+    const quotes = ["Tarik nafas dulu...", "Fokus ya!", "Pelan-pelan asal benar!", "Siap-siap tangannya..."];
+
+    window.prepLevel = (level) => {
+        dcCurrentLevelObj = level;
+        window.setScreen('dcLevelLoading');
+        document.getElementById('dcLoadingText').innerText = quotes[Math.floor(Math.random() * quotes.length)];
+
+        const bar = document.getElementById('dcLoadingBar');
+        bar.style.width = '0%';
+        setTimeout(() => { bar.style.width = '100%'; }, 100);
+        setTimeout(() => { prepareGameUI(level); }, 1200);
+    };
+
+    const prepareGameUI = async (level) => {
+        try {
+            const res = await fetch(`${API_URL}/api/daily-challenge/sentence?level=${level}`, { headers: { 'Authorization': `Bearer ${dcToken}` } });
+            const result = await res.json();
+            if(result.status === 'error') throw new Error(result.message);
+
+            dcCurrentSentence = result.data;
+            document.getElementById('dcGameLevelDisplay').innerText = level;
+            document.getElementById('dcSubjectBadge').innerText = dcCurrentSentence.subject;
+
+            const input = document.getElementById('dcTypingInput');
+            input.value = '';
+            input.disabled = true;
+            renderTypingVisual();
+            window.setScreen('dcGame');
+
+            if (localStorage.getItem(dcTutorialKey) !== 'true') {
+                document.getElementById('dcTutorialModal').classList.replace('hidden', 'flex');
+            } else {
+                document.getElementById('dcPrepModal').classList.replace('hidden', 'flex');
+            }
+        } catch(e) {
+            window.showCustomAlert('Error', e.message, 'error');
+            window.goToLevelMap();
+        }
+    };
+
+    window.closeTutorialAndStart = () => {
+        localStorage.setItem(dcTutorialKey, 'true');
+        document.getElementById('dcTutorialModal').classList.replace('flex', 'hidden');
+        window.startCountdown();
+    };
+
+    window.startCountdown = () => {
+        document.getElementById('dcPrepModal').classList.replace('flex', 'hidden');
+        const overlay = document.getElementById('dcCountdownOverlay');
+        const text = document.getElementById('dcCountdownText');
+        overlay.classList.replace('hidden', 'flex');
+
+        let count = 3;
+        text.innerText = count;
+        text.classList.remove('animate-ping');
+        void text.offsetWidth; // trigger reflow
+        text.classList.add('animate-ping');
+
+        const countInterval = setInterval(() => {
+            count--;
+            text.classList.remove('animate-ping');
+            void text.offsetWidth;
+            text.classList.add('animate-ping');
+
+            if (count > 0) {
+                text.innerText = count;
+            } else if (count === 0) {
+                text.innerText = "GO!";
+            } else {
+                clearInterval(countInterval);
+                overlay.classList.replace('flex', 'hidden');
+                startTimer();
+                const input = document.getElementById('dcTypingInput');
+                input.disabled = false;
+                input.focus();
+            }
+        }, 1000);
+    };
+
+    // --- KELUAR GAME MODAL ---
+    window.showExitModal = () => document.getElementById('dcExitModal').classList.replace('hidden', 'flex');
+    window.closeExitModal = () => {
+        document.getElementById('dcExitModal').classList.replace('flex', 'hidden');
+        document.getElementById('dcTypingInput').focus();
+    };
+    window.confirmExitGame = () => {
+        clearInterval(dcTimerInterval);
+        document.getElementById('dcExitModal').classList.replace('flex', 'hidden');
+        window.goToLevelMap();
+    };
+
+    // --- GAME MECHANIC (TIMER & PULSE COMBO) ---
+    const startTimer = () => {
+        dcStartedAt = Date.now();
+        clearInterval(dcTimerInterval);
+
+        dcTimerInterval = setInterval(() => {
+            const elapsed = ((Date.now() - dcStartedAt) / 1000).toFixed(1);
+            document.getElementById('dcTimerText').innerText = `${elapsed}s`;
+            updateComboUI(elapsed);
+        }, 100);
+    };
+
+    const updateComboUI = (sec) => {
+        const badge = document.getElementById('dcComboBadge');
+        const glow = document.getElementById('dcGameGlow');
+
+        if (sec <= 10) {
+            badge.className = "bg-blue-100 text-blue-600 border border-blue-200 text-[10px] font-black px-3 py-1 rounded-xl uppercase shadow-sm transition-all duration-300";
+            badge.innerHTML = '<i class="fa-solid fa-fire text-blue-500 mr-1"></i> COMBO x4';
+            glow.className = "absolute inset-0 pointer-events-none transition-all duration-700 z-0 bg-blue-500/10 animate-pulse";
+        } else if (sec <= 20) {
+            badge.className = "bg-green-100 text-green-600 border border-green-200 text-[10px] font-black px-3 py-1 rounded-xl uppercase shadow-sm transition-all duration-300";
+            badge.innerHTML = '<i class="fa-solid fa-bolt text-green-500 mr-1"></i> COMBO x3';
+            glow.className = "absolute inset-0 pointer-events-none transition-all duration-700 z-0 bg-green-500/10 animate-pulse";
+        } else if (sec <= 30) {
+            badge.className = "bg-amber-100 text-amber-600 border border-amber-200 text-[10px] font-black px-3 py-1 rounded-xl uppercase shadow-sm transition-all duration-300";
+            badge.innerHTML = '<i class="fa-solid fa-wind text-amber-500 mr-1"></i> COMBO x2';
+            glow.className = "absolute inset-0 pointer-events-none transition-all duration-700 z-0 bg-transparent";
+        } else {
+            badge.className = "bg-gray-100 text-gray-400 border border-gray-200 text-[10px] font-black px-3 py-1 rounded-xl uppercase shadow-sm transition-all duration-300";
+            badge.innerHTML = '<i class="fa-solid fa-turtle text-gray-400 mr-1"></i> SANTUY';
+            glow.className = "absolute inset-0 pointer-events-none transition-all duration-700 z-0 bg-transparent";
+        }
+    };
+
+    // --- RENDER VISUAL NGETIK PER HURUF & AUTO-SUBMIT ---
+    window.handleDailyTypingInput = () => {
+        const input = document.getElementById('dcTypingInput');
+        if (input.value.includes('  ')) input.value = input.value.replace(/\s\s+/g, ' ');
+        renderTypingVisual();
+
+        if (input.value.toLowerCase() === dcCurrentSentence.sentence.toLowerCase()) finishLevel();
+    };
+
+    const renderTypingVisual = () => {
+        const targetText = dcCurrentSentence.sentence;
+        const inputRaw = document.getElementById('dcTypingInput').value;
+        const targetWords = targetText.split(' ');
+
+        let html = '';
+        let globalIndex = 0;
+
+        for (let w = 0; w < targetWords.length; w++) {
+            let word = targetWords[w];
+            html += `<span class="inline-block mr-3 mb-2">`;
+            for (let c = 0; c < word.length; c++) {
+                const targetChar = word[c];
+                const inputChar = inputRaw[globalIndex];
+                if (inputChar === undefined) html += `<span class="text-indigo-600 opacity-40">${targetChar}</span>`;
+                else if (inputChar.toLowerCase() === targetChar.toLowerCase()) html += `<span class="text-indigo-600 opacity-100">${targetChar}</span>`;
+                else html += `<span class="text-indigo-600 opacity-40 bg-rose-200 rounded-sm">${targetChar}</span>`;
+                globalIndex++;
+            }
+            if (w < targetWords.length - 1) {
+                const inputSpace = inputRaw[globalIndex];
+                if (inputSpace !== undefined && inputSpace !== ' ') html += `<span class="bg-rose-200 rounded-sm absolute inline-block w-2 h-4 mt-2"></span>`;
+                globalIndex++;
+            }
+            html += `</span>`;
+        }
+        document.getElementById('dcVisualText').innerHTML = html;
+    };
+
+    // --- SUBMIT & SUCCESS ---
+    const finishLevel = async () => {
+        clearInterval(dcTimerInterval);
+        document.getElementById('dcTypingInput').disabled = true;
+
+        // Tampilkan spinner sesaat setelah selesai ngetik
+        showSpinner(true);
+
+        const timeTaken = Number(((Date.now() - dcStartedAt) / 1000).toFixed(1));
+
+        try {
+            const res = await fetch(`${API_URL}/api/daily-challenge/submit-level`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${dcToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    preview: dcIsPreview,
+                    student_id: dcActiveStudentId,
+                    level: dcCurrentLevelObj,
+                    sentence_id: dcCurrentSentence.id,
+                    typed_text: document.getElementById('dcTypingInput').value,
+                    time_taken_seconds: timeTaken
+                })
+            });
+            const result = await res.json();
+
+            // Hapus spinner sebelum munculkan modal success
+            showSpinner(false);
+
+            if (result.status === 'error') throw new Error(result.message);
+
+            const d = result.data;
+            if (d.new_poin !== null) dcWallet = d.new_poin;
+            document.getElementById('dcLandingWallet').innerText = dcWallet;
+            document.getElementById('dcMapWallet').innerText = dcWallet;
+            if (!dcCompletedLevels.includes(dcCurrentLevelObj)) dcCompletedLevels.push(dcCurrentLevelObj);
+
+            document.getElementById('dcResultTime').innerText = `${timeTaken}s`;
+            document.getElementById('dcResultBase').innerText = `+${d.base_reward}`;
+            document.getElementById('dcResultMultiplier').innerHTML = `<i class="fa-solid fa-bolt"></i> x${d.combo_multiplier || 1} COMBO`;
+            document.getElementById('dcResultTotal').innerText = `+${d.total_reward}`;
+
+            if (d.combo_multiplier > 1 && d.is_rewarded) playComboSFX();
+            else if (d.is_rewarded) playCoinSFX();
+
+            document.getElementById('dcModalSuccess').classList.replace('hidden', 'flex');
+
+            // Perbaikan Z-Index Confetti agar meletus di atas modal success
+            if (window.confetti) window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 1000 });
+
+        } catch(err) {
+            showSpinner(false);
+            window.showCustomAlert('Gagal', err.message, 'error');
+            window.goToLevelMap();
+        }
+    };
+
+    window.startNextLevel = () => {
+        document.getElementById('dcModalSuccess').classList.replace('flex', 'hidden');
+        if(dcCurrentLevelObj >= 10) {
+            window.showCustomAlert('Selesai!', 'Luar Biasa! Kamu sudah menyelesaikan semua 10 level hari ini.', 'success');
+            window.goToLevelMap();
+        } else {
+            window.prepLevel(dcCurrentLevelObj + 1);
+        }
+    };
+
+    document.getElementById('dcSearch')?.addEventListener('input', renderDailyStudentGrid);
+    initDailyChallenge();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline defer></script>

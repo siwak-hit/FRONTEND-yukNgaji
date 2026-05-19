@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Toast from '../components/Toast.astro';
 import ModalAlert from '../components/ModalAlert.astro';
 import NavbarGuru from '../components/NavbarGuru.astro';
+
 ---
 
 <Layout title="Dashboard Guru - yukNgaji">
@@ -114,7 +115,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
             </a>
 
-            <div class="grid grid-cols-4 gap-2 sm:gap-3">
+            <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-3">
                 <a href="/timer" class="relative bg-yellow-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-yellow-100">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-stopwatch text-base sm:text-lg"></i>
@@ -154,6 +155,16 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                         <p class="text-[7px] sm:text-[9px] text-purple-500 font-bold uppercase tracking-wider truncate">Foto Raport</p>
                     </div>
                 </a>
+
+                <button onclick="openDailyChallengeLinkModal()" class="relative bg-indigo-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-indigo-100">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-keyboard text-base sm:text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-indigo-800 text-[10px] sm:text-sm leading-tight">Challenge</h3>
+                        <p class="text-[7px] sm:text-[9px] text-indigo-500 font-bold uppercase tracking-wider truncate">Koin Harian</p>
+                    </div>
+                </button>
             </div>
         </div>
 
@@ -365,14 +376,33 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             <!-- CONTENT: LEADERBOARD PR -->
             <div id="contentNotifLB" class="hidden flex-1 flex flex-col overflow-hidden">
-                <div class="flex gap-2 mb-3 shrink-0">
-                    <select id="lbFilterSubject" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
-                        <option value="tajwid">Tajwid</option>
-                        <option value="fiqih">Fiqih</option>
-                        <option value="tauhid">Tauhid</option>
+                <div class="grid grid-cols-1 gap-2 mb-3 shrink-0">
+                    <select id="lbMode" onchange="handleNotifLeaderboardModeChange()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                        <option value="pr">Leaderboard PR</option>
+                        <option value="exam">Leaderboard Ujian</option>
                     </select>
-                    <select id="lbFilterWeek" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
-                    </select>
+
+                    <div id="lbPRFilters" class="flex gap-2">
+                        <select id="lbFilterSubject" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                            <option value="tajwid">Tajwid</option>
+                            <option value="fiqih">Fiqih</option>
+                            <option value="tauhid">Tauhid</option>
+                        </select>
+                        <select id="lbFilterWeek" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                        </select>
+                    </div>
+
+                    <div id="lbExamFilters" class="hidden flex gap-2">
+                        <select id="lbExamSubject" onchange="loadExamOptionsForLB()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                            <option value="tajwid">Tajwid</option>
+                            <option value="fiqih">Fiqih</option>
+                            <option value="tauhid">Tauhid</option>
+                        </select>
+
+                        <select id="lbExamId" onchange="loadPRLeaderboard()" class="w-full text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-xl px-2 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 font-bold cursor-pointer">
+                            <option value="">Memuat ujian...</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="lbPRContainer" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1 pb-4">
                 </div>
@@ -391,7 +421,7 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <img id="detailSatpamPhoto" src="" class="w-full h-full object-cover" />
                     <div id="detailSatpamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-50 hidden">
                         <i class="fa-solid fa-user-shield text-3xl mb-1"></i>
-                        <span class="text-[8px] font-bold uppercase tracking-widest text-center mt-2 px-2">Tidak Ada<br>Jepretan Satpam</span>
+                        <span class="text-[8px] font-bold uppercase tracking-widest text-center mt-2 px-2">Tidak Ada<br>Foto Bukti</span>
                     </div>
                 </div>
                 <div class="text-center">
@@ -465,6 +495,35 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                     <i class="fa-solid fa-paper-plane"></i> Kirim Reward Sekarang
                 </button>
             </div>
+        </div>
+    </div>
+
+    <div id="modalDailyChallengeLink" class="fixed inset-0 bg-black/60 z-[220] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-slide-up text-center border border-indigo-100">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-keyboard"></i>
+            </div>
+
+            <h3 class="font-black text-gray-800 text-lg mb-2">Daily Challenge</h3>
+            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-6">
+                Pilih mode link. Simulasi untuk ustadz, real untuk murid.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="copyDailyChallengeLink('preview')" class="py-4 bg-amber-50 text-amber-600 border border-amber-100 rounded-2xl font-black text-xs active:scale-95 transition-all">
+                    <i class="fa-solid fa-eye mb-2 block text-xl"></i>
+                    Simulasi
+                </button>
+
+                <button onclick="copyDailyChallengeLink('real')" class="py-4 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-2xl font-black text-xs active:scale-95 transition-all">
+                    <i class="fa-solid fa-user-graduate mb-2 block text-xl"></i>
+                    Real Murid
+                </button>
+            </div>
+
+            <button onclick="closeDailyChallengeLinkModal()" class="mt-5 text-[10px] font-black text-gray-400 hover:text-gray-600 underline">
+                Tutup
+            </button>
         </div>
     </div>
 
@@ -718,15 +777,53 @@ import NavbarGuru from '../components/NavbarGuru.astro';
 
             const listHtml = grouped[cat].map(notif => {
                 const timeStr = new Date(notif.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const isExam = notif.notif_type === 'exam';
+                const theme = isExam
+                    ? {
+                        wrap: 'bg-blue-50/70 border-blue-100 hover:bg-blue-100/60',
+                        iconWrap: 'text-blue-500 border-blue-50',
+                        textMain: 'text-blue-700',
+                        textAccent: 'text-blue-600',
+                        icon: 'fa-file-pen',
+                        label: 'UJIAN'
+                    }
+                    : {
+                        wrap: 'bg-green-50/70 border-green-100 hover:bg-green-100/60',
+                        iconWrap: 'text-green-500 border-green-50',
+                        textMain: 'text-green-700',
+                        textAccent: 'text-green-600',
+                        icon: 'fa-book-open',
+                        label: 'PR'
+                    };
+
+                const titleText = isExam
+                    ? (notif.title || 'Ujian')
+                    : `PR ${notif.subject}${notif.week ? ` Pertemuan ${notif.week}` : ''}`;
+
                 return `
-                <div onclick="openNotifDetail('${notif.student_name}', '${notif.subject}')" class="bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl flex gap-3 relative group cursor-pointer hover:bg-indigo-100/50 transition-colors">
-                    <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-indigo-500 shrink-0 font-black text-xs border border-indigo-50">
-                        <i class="fa-solid fa-check"></i>
+                <div onclick="openNotifDetail('${notif.id}')" class="${theme.wrap} border p-3.5 rounded-2xl flex gap-3 relative group cursor-pointer transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center ${theme.iconWrap} shrink-0 font-black text-xs border">
+                        <i class="fa-solid ${theme.icon}"></i>
                     </div>
+
                     <div class="flex-1 min-w-0 pr-8 pointer-events-none">
-                        <p class="text-xs text-gray-700 leading-relaxed"><b class="text-indigo-700">${notif.student_name}</b> telah mengerjakan PR <b class="text-indigo-600 uppercase">${notif.subject}</b>.</p>
-                        <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="text-[8px] font-black px-2 py-0.5 rounded-full ${isExam ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">
+                                ${theme.label}
+                            </span>
+                            <span class="text-[8px] font-black text-gray-400 uppercase">${notif.subject || '-'}</span>
+                        </div>
+
+                        <p class="text-xs text-gray-700 leading-relaxed">
+                            <b class="${theme.textMain}">${notif.student_name}</b>
+                            telah mengerjakan <b class="${theme.textAccent}">${titleText}</b>.
+                        </p>
+
+                        <p class="text-[9px] font-bold text-gray-400 mt-1.5 uppercase tracking-wider">
+                            <i class="fa-regular fa-clock"></i> ${timeStr}
+                        </p>
                     </div>
+
                     <button onclick="event.stopPropagation(); deleteNotif('${notif.id}')" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-red-200 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 active:scale-95 shadow-sm z-10">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -745,57 +842,185 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         }).join('');
     };
 
-    window.loadPRLeaderboard = async () => {
-        const subj = document.getElementById('lbFilterSubject').value;
-        const week = document.getElementById('lbFilterWeek').value;
-        const container = document.getElementById('lbPRContainer');
+    let cachedExamOptionsForLB = {};
 
-        if (!subj || !week) return;
+    window.handleNotifLeaderboardModeChange = async () => {
+        const mode = document.getElementById('lbMode')?.value || 'pr';
+        const prFilters = document.getElementById('lbPRFilters');
+        const examFilters = document.getElementById('lbExamFilters');
 
-        container.innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i><p class="text-[10px] text-indigo-400 font-bold mt-2">Menghitung Peringkat...</p></div>`;
+        if (mode === 'exam') {
+            prFilters?.classList.add('hidden');
+            examFilters?.classList.remove('hidden');
+            await loadExamOptionsForLB();
+        } else {
+            examFilters?.classList.add('hidden');
+            prFilters?.classList.remove('hidden');
+            loadPRLeaderboard();
+        }
+    };
+
+    window.loadExamOptionsForLB = async () => {
+        const subject = document.getElementById('lbExamSubject')?.value || 'tajwid';
+        const select = document.getElementById('lbExamId');
+
+        if (!select) return;
+
+        select.innerHTML = `<option value="">Memuat ujian...</option>`;
 
         try {
-            const res = await fetch(`${API_URL}/api/onboarding/leaderboard-pr?subject=${subj}&week=${week}`, {
+            if (!cachedExamOptionsForLB[subject]) {
+                const res = await fetch(`${API_URL}/api/exams`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await res.json();
+
+                const exams = (result.data || [])
+                    .filter(e =>
+                        e.is_active === true &&
+                        String(e.subject || '').toLowerCase() === String(subject).toLowerCase()
+                    );
+
+                cachedExamOptionsForLB[subject] = exams;
+            }
+
+            const exams = cachedExamOptionsForLB[subject];
+
+            if (exams.length === 0) {
+                select.innerHTML = `<option value="">Belum ada ujian aktif</option>`;
+                document.getElementById('lbPRContainer').innerHTML = `
+                    <p class="text-center text-xs text-gray-400 italic py-10 font-medium">
+                        Belum ada ujian aktif untuk mapel ini.
+                    </p>
+                `;
+                return;
+            }
+
+            select.innerHTML = exams.map(e => `
+                <option value="${e.id}">${e.title}</option>
+            `).join('');
+
+            loadPRLeaderboard();
+
+        } catch (err) {
+            console.error(err);
+            select.innerHTML = `<option value="">Gagal memuat ujian</option>`;
+        }
+    };
+
+
+    window.loadPRLeaderboard = async () => {
+        const mode = document.getElementById('lbMode')?.value || 'pr';
+        const container = document.getElementById('lbPRContainer');
+
+        container.innerHTML = `
+            <div class="text-center py-10">
+                <i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i>
+                <p class="text-[10px] text-indigo-400 font-bold mt-2">Menghitung Peringkat...</p>
+            </div>
+        `;
+
+        try {
+            let url = '';
+
+            if (mode === 'exam') {
+                const examId = document.getElementById('lbExamId')?.value;
+
+                if (!examId) {
+                    container.innerHTML = `<p class="text-center text-xs text-gray-400 italic py-10 font-medium">Pilih ujian terlebih dahulu.</p>`;
+                    return;
+                }
+
+                url = `${API_URL}/api/onboarding/leaderboard-pr?mode=exam&exam_id=${examId}`;
+            } else {
+                const subj = document.getElementById('lbFilterSubject').value;
+                const week = document.getElementById('lbFilterWeek').value;
+
+                if (!subj || !week) return;
+
+                url = `${API_URL}/api/onboarding/leaderboard-pr?subject=${subj}&week=${week}`;
+            }
+
+            const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
             const result = await res.json();
 
             let data = result.data || [];
 
-            data = data.filter(d => d.is_pr === true);
+            // PR hanya yang is_pr true
+            if (mode === 'pr') {
+                data = data.filter(d => d.is_pr === true);
+            }
+
+            // Exclude akun dummy/testing
+            data = data.filter(d => {
+                const name = String(d.name || '').toLowerCase();
+                return !name.includes('john doe') && !name.includes('xaviera') && !name.includes('xaveria');
+            });
+
             data = data.slice(0, 5);
 
             if (data.length === 0) {
-                container.innerHTML = `<p class="text-center text-xs text-gray-400 italic py-10 font-medium">Belum ada murid yang menyetorkan PR ini.</p>`;
+                container.innerHTML = `
+                    <p class="text-center text-xs text-gray-400 italic py-10 font-medium">
+                        Belum ada data leaderboard ${mode === 'exam' ? 'ujian ini' : 'PR ini'}.
+                    </p>
+                `;
                 return;
             }
 
-            container.innerHTML = data.map((d, index) => {
-                let badgeClass = "bg-gray-100 text-gray-500";
-                if (index === 0) badgeClass = "bg-amber-100 text-amber-600 border border-amber-300";
-                if (index === 1) badgeClass = "bg-slate-200 text-slate-600 border border-slate-300";
-                if (index === 2) badgeClass = "bg-orange-100 text-orange-600 border border-orange-300";
+            container.innerHTML = data.map((d, i) => {
+                const rankColors = [
+                    'bg-amber-100 text-amber-600 border-amber-200',
+                    'bg-slate-100 text-slate-500 border-slate-200',
+                    'bg-orange-100 text-orange-600 border-orange-200',
+                    'bg-indigo-50 text-indigo-500 border-indigo-100',
+                    'bg-indigo-50 text-indigo-500 border-indigo-100'
+                ];
+
+                const modeBadge = mode === 'exam'
+                    ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-black px-2 py-0.5 rounded-lg">UJIAN</span>`
+                    : `<span class="bg-green-50 text-green-600 border border-green-100 text-[8px] font-black px-2 py-0.5 rounded-lg">PR</span>`;
 
                 return `
-                <div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-indigo-200 transition-colors">
-                    <div class="w-8 h-8 rounded-full ${badgeClass} font-black flex items-center justify-center shrink-0 text-sm shadow-inner">
-                        ${index + 1}
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs border ${rankColors[i] || rankColors[4]}">
+                            #${i + 1}
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 mb-1">
+                                ${modeBadge}
+                                <p class="font-black text-xs text-gray-800 truncate">${d.name}</p>
+                            </div>
+                            <p class="text-[9px] font-bold text-gray-400">
+                                Nilai asli: ${d.raw_score ?? d.score ?? 0}
+                                ${d.time_taken && d.time_taken !== '-' ? ` • ${d.time_taken}s` : ''}
+                            </p>
+                        </div>
+
+                        <div class="text-right">
+                            <p class="text-lg font-black text-indigo-600">${d.composite_score}</p>
+                            <p class="text-[8px] font-bold text-gray-400 uppercase">Poin</p>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-gray-800 truncate">${d.name}</p>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Asli: <span class="text-indigo-500">${d.raw_score}</span> | Waktu: <span class="text-indigo-500">${d.time_taken}s</span></p>
-                    </div>
-                    <div class="text-right shrink-0 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                        <p class="text-sm font-black text-indigo-700 leading-none">${d.composite_score}</p>
-                        <p class="text-[7px] font-black text-indigo-400 uppercase mt-0.5">Komposit</p>
-                    </div>
-                </div>
                 `;
             }).join('');
-        } catch (e) {
-            container.innerHTML = `<p class="text-center text-xs text-red-500 font-bold py-10">Gagal memuat leaderboard.</p>`;
+
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `
+                <div class="text-center py-10 bg-red-50 rounded-2xl border border-red-100">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-2xl mb-2"></i>
+                    <p class="text-xs font-bold text-red-500">Gagal memuat leaderboard.</p>
+                </div>
+            `;
         }
     };
+
 
     window.openNotifModal = () => {
         const modal = document.getElementById('modalNotif');
@@ -838,72 +1063,56 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         }, false, 'danger');
     };
 
-    window.openNotifDetail = async (studentName, subject) => {
+    window.openNotifDetail = async (notifId) => {
         const modal = document.getElementById('modalNotifDetail');
         const box = document.getElementById('notifDetailBox');
-        const content = document.getElementById('notifDetailContent');
         const loading = document.getElementById('notifDetailLoading');
+        const content = document.getElementById('notifDetailContent');
 
         modal.classList.replace('hidden', 'flex');
-        content.classList.add('hidden');
-        loading.classList.remove('hidden');
-        loading.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p class="text-xs font-bold text-gray-500">Menarik data dari server...</p>`;
-
         setTimeout(() => {
             modal.classList.replace('opacity-0', 'opacity-100');
             box.classList.replace('scale-95', 'scale-100');
         }, 10);
 
+        loading.classList.remove('hidden');
+        content.classList.add('hidden');
+
         try {
-            const student = enrichedStudents.find(s => s.name === studentName);
-            if (!student) throw new Error("Siswa tidak ditemukan di data kelas.");
-
-            const studentId = student.id;
-            const subjLower = String(subject).toLowerCase().trim();
-
-            const progRes = await fetch(`${API_URL}/api/students/${studentId}/progress`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const progData = await progRes.json();
-
-            const subjProgress = progData.data[subjLower] || [];
-            if (subjProgress.length === 0) throw new Error("Belum ada data nilai di database.");
-
-            const latestResult = subjProgress.sort((a, b) => parseInt(b.week) - parseInt(a.week))[0];
-            const week = latestResult.week;
-            const score = latestResult.score;
-
-            let photoUrl = null;
-            try {
-                const satpamRes = await fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const satpamData = await satpamRes.json();
-
-                const exactLog = (satpamData.data || []).find(l =>
-                    String(l.subject).toLowerCase().trim() === subjLower &&
-                    parseInt(l.week) === parseInt(week)
-                );
-
-                if (exactLog) {
-                    photoUrl = exactLog.photo_url;
-                } else {
-                    const fallbackLogs = (satpamData.data || []).filter(l => String(l.subject).toLowerCase().trim() === subjLower);
-                    if (fallbackLogs.length > 0) {
-                        const latestLog = fallbackLogs.sort((a,b) => parseInt(b.week) - parseInt(a.week))[0];
-                        photoUrl = latestLog.photo_url;
-                    }
+            const res = await fetch(`${API_URL}/api/notifications/${notifId}/detail`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
-            } catch (e) { console.error("Gagal get satpam:", e); }
+            });
 
-            document.getElementById('detailStudentName').innerText = studentName;
-            document.getElementById('detailSubjectWeek').innerText = `${subject} • PERTEMUAN ${week}`;
+            const result = await res.json();
+
+            if (!res.ok || result.status === 'error') {
+                throw new Error(result.message || 'Gagal mengambil detail notifikasi.');
+            }
+
+            const detail = result.data;
+            const isExam = detail.type === 'exam';
+
+            document.getElementById('detailStudentName').innerText = detail.student_name || 'Siswa';
+
+            document.getElementById('detailSubjectWeek').innerText = isExam
+                ? `${detail.subject || 'UJIAN'} • ${detail.title || 'Ujian'}`
+                : `${detail.subject || 'PR'} • PERTEMUAN ${detail.week || '-'}`;
 
             const scoreEl = document.getElementById('detailScore');
+            const score = Number(detail.score || 0);
+
             scoreEl.innerText = score;
-            scoreEl.className = `text-5xl font-black drop-shadow-sm ${score >= 80 ? 'text-green-600' : (score >= 60 ? 'text-amber-500' : 'text-red-500')}`;
+            scoreEl.className = `text-5xl font-black drop-shadow-sm ${
+                score >= 80 ? 'text-green-600' : (score >= 60 ? 'text-amber-500' : 'text-red-500')
+            }`;
 
             const photoEl = document.getElementById('detailSatpamPhoto');
             const placeholderEl = document.getElementById('detailSatpamPlaceholder');
 
-            if (photoUrl) {
-                photoEl.src = photoUrl;
+            if (detail.photo_url) {
+                photoEl.src = detail.photo_url;
                 photoEl.classList.remove('hidden');
                 placeholderEl.classList.add('hidden');
             } else {
@@ -916,7 +1125,12 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             content.classList.remove('hidden');
 
         } catch (err) {
-            loading.innerHTML = `<div class="text-center"><i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i><p class="text-xs font-bold text-gray-500">${err.message}</p></div>`;
+            loading.innerHTML = `
+                <div class="text-center">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i>
+                    <p class="text-xs font-bold text-gray-500">${err.message}</p>
+                </div>
+            `;
         }
     };
 
@@ -1622,6 +1836,38 @@ import NavbarGuru from '../components/NavbarGuru.astro';
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
+    };
+
+    window.openDailyChallengeLinkModal = () => {
+        document.getElementById('modalDailyChallengeLink')?.classList.replace('hidden', 'flex');
+    };
+
+    window.closeDailyChallengeLinkModal = () => {
+        document.getElementById('modalDailyChallengeLink')?.classList.replace('flex', 'hidden');
+    };
+
+    window.copyDailyChallengeLink = async (mode) => {
+        const origin = window.location.origin;
+
+        const link = mode === 'preview'
+            ? `${origin}/daily-challenge?preview=true&token=${token}`
+            : `${origin}/daily-challenge?token=${token}`;
+
+        const text = mode === 'preview'
+            ? `Link simulasi Daily Challenge:\n${link}`
+            : `Assalamualaikum, ini link Daily Challenge hari ini untuk mendapatkan koin:\n${link}`;
+
+        await navigator.clipboard.writeText(text);
+
+        window.showToast?.(
+            'success',
+            'Link Disalin',
+            mode === 'preview'
+                ? 'Link simulasi sudah disalin.'
+                : 'Link real murid sudah disalin.'
+        );
+
+        window.closeDailyChallengeLinkModal();
     };
 </script>
 
