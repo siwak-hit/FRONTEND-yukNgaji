@@ -2462,7 +2462,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
         // PERBAIKAN DI SINI:
         // Ambil format asli dari mediaRecorder, dengan fallback ke audio/mp4 untuk iOS lawas
-        const mimeType = mediaRecorder.mimeType || 'audio/mp4';
+        const mimeType = mediaRecorder.mimeType;
         easterEggAudioBlob = new Blob(audioChunks, { type: mimeType });
 
         audioPrev.src = URL.createObjectURL(easterEggAudioBlob);
