@@ -366,14 +366,14 @@ import Toast from '../../components/Toast.astro';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js" is:inline></script>
 
 <script>
-    gsap.registerPlugin(ScrollTrigger, TextPlugin);
-
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const urlParams = new URLSearchParams(window.location.search);
     const token = localStorage.getItem('token');
     const studentId = window.location.pathname.split('/').pop();
-    const urlParams = new URLSearchParams(window.location.search);
     const isPreview = urlParams.get('preview') === 'true';
     const afterWrappedUrl = urlParams.get('after')
+    gsap.registerPlugin(ScrollTrigger, TextPlugin);
+
     ? decodeURIComponent(urlParams.get('after'))
     : null;
 
