@@ -2442,7 +2442,6 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     const processRecordingOnStop = () => {
         clearInterval(recordTimer);
         currentRecordPhase = 'review';
-
         const status = document.getElementById('recordStatus');
         const btnMain = document.getElementById('btnMainAction');
         const btnRetake = document.getElementById('btnRetake');
@@ -2461,7 +2460,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         status.innerText = "Cek rekamanmu sebelum dikirim.";
         status.className = 'text-[10px] font-black uppercase tracking-widest mb-4 py-2 px-3 rounded-lg border shrink-0 text-green-600 bg-green-50 border-green-100';
 
-        easterEggAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        // PERBAIKAN DI SINI:
+        // Ambil format asli dari mediaRecorder, dengan fallback ke audio/mp4 untuk iOS lawas
+        const mimeType = mediaRecorder.mimeType || 'audio/mp4';
+        easterEggAudioBlob = new Blob(audioChunks, { type: mimeType });
+
         audioPrev.src = URL.createObjectURL(easterEggAudioBlob);
     };
 
