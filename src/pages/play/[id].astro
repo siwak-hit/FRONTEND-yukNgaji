@@ -1945,48 +1945,40 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             return `<div class="target-block ${isFilled ? 'filled' : ''}">${text}</div>`;
         }).join('');
 
-        const filledCount = phase2Answers.filter(a => a !== null).length;
-        const totalBlanks = q.correct_answer.length;
-        const waterProgress = totalBlanks > 0 ? (filledCount / totalBlanks) * 100 : 0;
-
-        document.getElementById('waterLevel').style.height = `${waterProgress}%`;
-
         const arcInput = document.getElementById('arcadeInput');
-        arcInput.value = '';
-        arcInput.focus();
+        if (arcInput) {
+            arcInput.value = '';
+            arcInput.focus();
+        }
 
-        const aDots = document.getElementById('answeredDots');
-        if (aDots) aDots.innerHTML = '';
-
-        document.getElementById('btnPrev').disabled = currentIndex === 0;
-        const btnNext = document.getElementById('btnNext');
-        if (btnNext) {
-            if (currentIndex === questions.length - 1) {
-                btnNext.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i><span>Kumpulkan</span>';
-                btnNext.className = 'btn-3d btn-green px-6 sm:px-8 py-3.5';
-            } else {
-                btnNext.innerHTML = '<span class="hidden sm:inline mr-2">Selanjutnya</span><i class="fa-solid fa-chevron-right"></i>';
-                btnNext.className = 'btn-3d btn-indigo px-6 sm:px-8 py-3.5';
-            }
+        // [UPDATE] Mengembalikan keadaan teks visual ke format placeholder awal semula beserta class bawaannya
+        const visualText = document.getElementById('arcadeVisualText');
+        if (visualText) {
+            visualText.innerHTML = '<span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>';
+            visualText.className = "text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words";
         }
     };
 
     const setupArcadeKeyboard = () => {
         const input = document.getElementById('arcadeInput');
-        const leak = document.getElementById('waterLeak');
+        const visualText = document.getElementById('arcadeVisualText');
 
         input.addEventListener('input', () => {
-            input.classList.remove('animate-pop-box');
-            void input.offsetWidth;
-            input.classList.add('animate-pop-box');
+            if (visualText) {
+                const val = input.value.trim();
+                if (val.length > 0) {
+                    visualText.innerHTML = val;
+                    visualText.classList.remove('text-gray-400', 'text-xl', 'md:text-2xl', 'lowercase', 'tracking-normal');
+                    visualText.classList.remove('animate-pop-text');
+                    void visualText.offsetWidth;
+                    visualText.classList.add('animate-pop-text');
+                } else {
+                    visualText.innerHTML = '<span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>';
+                }
+            }
         });
 
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && input.value.length > 0) {
-                leak.classList.remove('animate-leak'); void leak.offsetWidth;
-                leak.classList.add('animate-leak');
-            }
-
             if (e.key === ' ' || e.key === 'Enter') {
                 e.preventDefault();
                 const typedWord = input.value.trim().toLowerCase();
@@ -1997,18 +1989,38 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 const matchedIndex = correctArray.findIndex((ans, idx) => ans === typedWord && phase2Answers[idx] === null);
 
                 if (matchedIndex !== -1) {
+                    // Jawaban Benar
                     phase2Answers[matchedIndex] = q.correct_answer[matchedIndex];
                     studentAnswers[q.id] = [...phase2Answers];
                     localStorage.setItem(getStorageKey(), JSON.stringify(studentAnswers));
 
+                    // [UPDATE] Auto-kosongkan nilai input & reset visual text secara instan
+                    input.value = '';
+                    if (visualText) {
+                        visualText.innerHTML = '<span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>';
+                        visualText.className = "text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words";
+                    }
+
                     renderPhase2Question();
 
+                    // Periksa apakah semua kolom pada soal aktif saat ini sudah lengkap
                     if (!phase2Answers.includes(null)) {
-                        setTimeout(() => window.navigate(1), 800);
+                        if (currentIndex === questions.length - 1) {
+                            // [UPDATE] Jika ini soal terakhir di Fase 2, langsung auto-submit ujian
+                            setTimeout(() => {
+                                submitExam();
+                            }, 500);
+                        } else {
+                            // Jika masih ada soal berikutnya, pindah otomatis ke soal selanjutnya
+                            setTimeout(() => window.navigate(1), 800);
+                        }
                     }
                 } else {
-                    input.classList.add('animate-shake-error');
-                    setTimeout(() => input.classList.remove('animate-shake-error'), 400);
+                    // Jawaban Salah
+                    if (visualText) {
+                        visualText.classList.add('animate-shake-error');
+                        setTimeout(() => visualText.classList.remove('animate-shake-error'), 400);
+                    }
                 }
             }
         });

@@ -4,7 +4,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 <audio id="bgmAudio" loop src="/audio/bgm.mp3"></audio>
 <audio id="sfxCoin" src="/audio/coin.mp3"></audio>
-<audio id="sfxCombo" src="/audio/combo.mp3"></audio>
+<audio id="sfxClick" src="/audio/click.mp3"></audio>
 
 <div id="dcLoading" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
     <div class="loader-ring mb-6"></div>
@@ -30,7 +30,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
             <i class="fa-solid fa-gamepad animate-bounce"></i>
         </div>
         <h1 id="dcLandingTitle" class="text-4xl font-black text-white mb-2 tracking-tight">Daily Ngetik</h1>
-        <p id="dcLandingSubtitle" class="text-indigo-200 font-bold text-sm mb-8">Ketik materinya, raih combo, kumpulkan koin!</p>
+        <p id="dcLandingSubtitle" class="text-indigo-200 font-bold text-sm mb-6">Ketik materinya, raih combo, kumpulkan koin!</p>
 
         <div class="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-8 border border-white/20 inline-block min-w-[200px]">
             <p class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Koinmu</p>
@@ -206,7 +206,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
             <button onclick="window.goToLevelMap(true)" class="flex-1 py-4 rounded-xl bg-gray-200 text-gray-700 font-black hover:bg-gray-300 active:scale-95 text-sm transition-all shadow-sm">
                 Ke Peta
             </button>
-            <button onclick="window.startNextLevel()" class="flex-[2] py-4 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 border-b-4 border-indigo-800 active:scale-95 text-sm transition-all shadow-md">
+            <button id="dcNextLevelBtn" onclick="window.startNextLevel()" class="flex-[2] py-4 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 border-b-4 border-indigo-800 active:scale-95 text-sm transition-all shadow-md">
                 Lanjut Level <i class="fa-solid fa-arrow-right ml-1"></i>
             </button>
         </div>
@@ -220,7 +220,58 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     </div>
 </div>
 
+<div id="dcResetModal" class="fixed inset-0 z-[600] hidden items-center justify-center bg-gray-900/90 backdrop-blur-md p-6">
+    <div class="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl text-center border-4 border-indigo-500 relative overflow-hidden animate-slide-up">
+        <div class="absolute top-0 left-0 w-full h-32 bg-indigo-50 -z-10 rounded-t-[3rem]"></div>
+        <div class="text-6xl text-indigo-500 mb-4 mt-4 animate-bounce">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-800 mb-2">Misi Selesai!</h3>
+        <p class="text-sm font-bold text-gray-500 leading-relaxed mb-6">
+            Luar biasa! 10 Level hari ini sudah dibabat habis. Tantangan baru akan terbuka pada jam 07:00 pagi dalam:
+        </p>
+        <div class="text-4xl font-black text-amber-500 mb-8 font-mono bg-amber-50 py-4 rounded-2xl border border-amber-200" id="dcCountdownTimerDisplay">
+            00:00:00
+        </div>
+        <button onclick="window.location.reload()" class="btn-3d w-full py-4 text-sm bg-indigo-600 hover:bg-indigo-500 text-white border-b-4 border-indigo-800 rounded-2xl font-black shadow-lg shadow-indigo-200 transition-all active:scale-95">
+            <i class="fa-solid fa-arrows-rotate mr-2"></i> Refresh Halaman
+        </button>
+    </div>
+</div>
+
+<div id="dcPelitModal" class="fixed inset-0 z-[600] hidden items-center justify-center bg-gray-900/80 backdrop-blur-sm p-6">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-7 shadow-2xl text-center border-4 border-amber-400 relative overflow-hidden animate-slide-up">
+        <div class="absolute top-0 left-0 w-full h-24 bg-amber-50 -z-10 rounded-t-[2rem]"></div>
+        <div class="text-6xl text-amber-400 mb-4 mt-2">
+            <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-800 mb-2">Info Koin Baru!</h3>
+        <p class="text-sm font-bold text-gray-600 leading-relaxed mb-6">
+            Waduh, sepertinya Kak Aziz lagi pelit nih! 1 level sekarang cuma dapet <span class="text-amber-500 font-black">5 Koin</span> (Lvl 1-5) & <span class="text-amber-500 font-black">10 Koin</span> (Lvl 6-10). <br><br>
+            Tapi tenang, multiplier combo hingga <span class="text-green-500 font-black">x4</span> tetap membara! 🔥
+        </p>
+        <button onclick="window.closePelitModal()" class="btn-3d w-full py-4 text-sm bg-amber-400 hover:bg-amber-300 text-amber-900 border-b-4 border-amber-600 rounded-2xl font-black transition-all active:scale-95">
+            Oke, Siap Berburu!
+        </button>
+    </div>
+</div>
+
 <script define:vars={{ API_URL }}>
+    // --- TAMBAHAN: FUNGSI TANGGAL CLIENT & RESET COUNTDOWN ---
+    let dcResetTimerInterval = null;
+
+    // Fungsi untuk mendapatkan tanggal berdasarkan device dengan pergeseran jam 7 pagi
+    const getClientChallengeDate = () => {
+        const now = new Date();
+        // Jika saat ini belum jam 7 pagi, anggap masih masuk progres hari kemarin
+        if (now.getHours() < 7) {
+            now.setDate(now.getDate() - 1);
+        }
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
     // --- KONFIGURASI GLOBAL ---
     const dcParams = new URLSearchParams(window.location.search);
     const dcUrlToken = dcParams.get('token');
@@ -249,7 +300,21 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         bgm.play().catch(() => console.log('BGM pending interaction'));
     };
     const playCoinSFX = () => document.getElementById('sfxCoin').play().catch(()=>{});
-    const playComboSFX = () => document.getElementById('sfxCombo').play().catch(()=>{});
+
+    const playClickSFX = () => {
+        const clickAudio = document.getElementById('sfxClick');
+        if (clickAudio) {
+            clickAudio.currentTime = 0; // Reset waktu agar bisa diputar cepat berulang-ulang
+            clickAudio.play().catch(()=>{});
+        }
+    };
+
+    document.addEventListener('click', (e) => {
+        // Cek apakah yang diklik adalah tombol atau berada di dalam tombol (seperti icon <i> di dalam button)
+        if (e.target.closest('button')) {
+            playClickSFX();
+        }
+    });
 
     // --- GLOBAL FUNCTIONS EXPOSED TO WINDOW ---
     window.setScreen = (screenId) => {
@@ -264,6 +329,68 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                 el.classList.remove('flex');
             }
         });
+    };
+
+    window.checkAndShowResetModal = () => {
+        if (dcCompletedLevels.length >= 10) {
+            // Sembunyikan screen lain jika masih terbuka
+            ['dcLoading', 'dcLobby', 'dcLanding', 'dcLevelSelect', 'dcLevelLoading', 'dcGame', 'dcModalSuccess'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+            });
+
+            document.getElementById('dcResetModal').classList.replace('hidden', 'flex');
+            window.startResetCountdown();
+            return true; // true = modal aktif, cegah aksi lain
+        }
+        return false;
+    };
+
+    window.startResetCountdown = () => {
+        clearInterval(dcResetTimerInterval);
+
+        const updateTimer = () => {
+            const now = new Date();
+            let resetTime = new Date(now);
+
+            resetTime.setHours(7, 0, 0, 0); // Target jam 7 pagi
+
+            // Jika sekarang sudah jam 7 pagi atau lebih, maka targetnya adalah jam 7 pagi BESOK
+            if (now >= resetTime) {
+                resetTime.setDate(resetTime.getDate() + 1);
+            }
+
+            const diff = resetTime - now;
+
+            if (diff <= 0) {
+                clearInterval(dcResetTimerInterval);
+                document.getElementById('dcCountdownTimerDisplay').innerText = "00:00:00";
+                return;
+            }
+
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('dcCountdownTimerDisplay').innerText =
+                `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        };
+
+        updateTimer();
+        dcResetTimerInterval = setInterval(updateTimer, 1000);
+    };
+
+    // --- FUNGSI MODAL PELIT ---
+    window.checkAndShowPelitModal = () => {
+        const hasSeenPelitModal = localStorage.getItem('dc_pelit_notif_seen');
+        if (hasSeenPelitModal !== 'true') {
+            document.getElementById('dcPelitModal').classList.replace('hidden', 'flex');
+        }
+    };
+
+    window.closePelitModal = () => {
+        localStorage.setItem('dc_pelit_notif_seen', 'true'); // Tandai sudah dilihat
+        document.getElementById('dcPelitModal').classList.replace('flex', 'hidden');
     };
 
     window.showCustomAlert = (title, message, type = 'info') => {
@@ -282,11 +409,15 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const initDailyChallenge = async () => {
         try {
             if (!dcToken) return window.location.replace('/');
-
             if (dcIsPreview) {
                 dcActiveStudentId = 'preview_mode';
                 await loadDailyState();
                 window.setScreen('dcLanding');
+
+                // [TAMBAHKAN INI] Tampilkan di mode simulasi juga
+                setTimeout(() => {
+                    window.checkAndShowPelitModal();
+                }, 300);
                 return;
             }
             await loadStudentsForDailyChallenge();
@@ -328,7 +459,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
     // --- UPDATE SELECT STUDENT ---
     window.selectDailyStudent = async (id, name) => {
-        showSpinner(true); // Tampilkan spinner saat fetch
+        showSpinner(true);
         try {
             dcActiveStudentId = id;
             dcActiveStudentName = name;
@@ -338,20 +469,35 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                 document.getElementById('dcLandingSubtitle').innerText = "Selamat datang di Daily Ngetik. Siap berburu koin?";
             }
             await loadDailyState();
+
+            // Cek apakah 10 level sudah selesai untuk memunculkan hitung mundur
+            if (window.checkAndShowResetModal()) {
+                showSpinner(false);
+                return;
+            }
+
             window.setScreen('dcLanding');
+
+            // [TAMBAHKAN INI] Tampilkan Modal info "Kak Aziz Pelit" jika belum pernah muncul
+            setTimeout(() => {
+                window.checkAndShowPelitModal();
+            }, 300);
+
         } catch (err) {
             window.showCustomAlert('Error', 'Gagal memuat profil siswa.', 'error');
         } finally {
-            showSpinner(false); // Hilangkan spinner
+            showSpinner(false);
         }
     };
 
     const loadDailyState = async () => {
-        const query = dcIsPreview ? '?preview=true' : `?student_id=${dcActiveStudentId}`;
+        const cDate = getClientChallengeDate();
+        const query = dcIsPreview ? `?preview=true&client_date=${cDate}` : `?student_id=${dcActiveStudentId}&client_date=${cDate}`;
         const res = await fetch(`${API_URL}/api/daily-challenge/state${query}`, { headers: { 'Authorization': `Bearer ${dcToken}` } });
         const result = await res.json();
 
-        dcCompletedLevels = result.data.completed_levels || [];
+        // Ditambahkan .map(Number) agar tidak terjadi bug mismatch tipe data string/number
+        dcCompletedLevels = (result.data.completed_levels || []).map(Number);
         dcWallet = result.data.student?.poin ?? dcWallet;
         document.getElementById('dcLandingWallet').innerText = dcWallet;
         document.getElementById('dcMapWallet').innerText = dcWallet;
@@ -362,25 +508,27 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         if (fromModal) document.getElementById('dcModalSuccess').classList.replace('flex', 'hidden');
         playBGM();
 
+        if (window.checkAndShowResetModal()) return;
+
         const grid = document.getElementById('dcLevelGrid');
         let html = '';
         let maxUnlocked = dcCompletedLevels.length > 0 ? Math.max(...dcCompletedLevels) + 1 : 1;
 
         for(let i=1; i<=10; i++) {
             const isDone = dcCompletedLevels.includes(i);
-            const reward = i <= 5 ? 20 : 30;
+
+            // Perubahan nilai teks reward di peta sesuai instruksi baru
+            const reward = i <= 5 ? 5 : 10;
 
             if (isDone) {
-                // Selesai (Checkmark, Coret Koin)
                 html += `
-                    <div onclick="window.prepLevel(${i})" class="bg-indigo-50/60 border-2 border-indigo-200 p-5 rounded-[2rem] text-center cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 transition-all">
+                    <div class="bg-indigo-50/60 border-2 border-indigo-200 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center gap-1 transition-all">
                         <div class="w-8 h-8 bg-green-100 text-green-500 rounded-full flex items-center justify-center text-sm mb-1 shadow-sm"><i class="fa-solid fa-check"></i></div>
                         <h3 class="font-black text-lg text-indigo-400">Level ${i}</h3>
                         <span class="line-through decoration-2 decoration-gray-400 text-gray-400 text-[10px] font-black uppercase tracking-widest">+${reward} KOIN</span>
                     </div>
                 `;
             } else if (i === maxUnlocked) {
-                // Terbuka, Belum diselesaikan
                 html += `
                     <div onclick="window.prepLevel(${i})" class="bg-white border-2 border-indigo-500 shadow-xl shadow-indigo-100/60 p-5 rounded-[2rem] text-center cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 transform transition-transform hover:-translate-y-1">
                         <h3 class="font-black text-2xl text-indigo-600 mt-2 mb-1">Level ${i}</h3>
@@ -388,7 +536,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                     </div>
                 `;
             } else {
-                // Terkunci
                 html += `
                     <div onclick="window.showCustomAlert('Level Terkunci', 'Selesaikan level sebelumnya dulu ya!', 'warning')" class="bg-gray-50 border-2 border-gray-200 p-5 rounded-[2rem] text-center flex flex-col items-center justify-center gap-1 opacity-60 cursor-not-allowed transition-all">
                         <div class="text-2xl mb-1 text-gray-400"><i class="fa-solid fa-lock"></i></div>
@@ -571,10 +718,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const finishLevel = async () => {
         clearInterval(dcTimerInterval);
         document.getElementById('dcTypingInput').disabled = true;
-
-        // Tampilkan spinner sesaat setelah selesai ngetik
         showSpinner(true);
-
         const timeTaken = Number(((Date.now() - dcStartedAt) / 1000).toFixed(1));
 
         try {
@@ -587,20 +731,19 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                     level: dcCurrentLevelObj,
                     sentence_id: dcCurrentSentence.id,
                     typed_text: document.getElementById('dcTypingInput').value,
-                    time_taken_seconds: timeTaken
+                    time_taken_seconds: timeTaken,
+                    client_date: getClientChallengeDate()
                 })
             });
             const result = await res.json();
-
-            // Hapus spinner sebelum munculkan modal success
             showSpinner(false);
-
             if (result.status === 'error') throw new Error(result.message);
 
             const d = result.data;
             if (d.new_poin !== null) dcWallet = d.new_poin;
             document.getElementById('dcLandingWallet').innerText = dcWallet;
             document.getElementById('dcMapWallet').innerText = dcWallet;
+
             if (!dcCompletedLevels.includes(dcCurrentLevelObj)) dcCompletedLevels.push(dcCurrentLevelObj);
 
             document.getElementById('dcResultTime').innerText = `${timeTaken}s`;
@@ -608,12 +751,19 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
             document.getElementById('dcResultMultiplier').innerHTML = `<i class="fa-solid fa-bolt"></i> x${d.combo_multiplier || 1} COMBO`;
             document.getElementById('dcResultTotal').innerText = `+${d.total_reward}`;
 
-            if (d.combo_multiplier > 1 && d.is_rewarded) playComboSFX();
-            else if (d.is_rewarded) playCoinSFX();
+            // Perubahan teks tombol CTA dinamis berdasarkan level aktif saat ini
+            const nextBtn = document.getElementById('dcNextLevelBtn');
+            if (nextBtn) {
+                if (dcCurrentLevelObj >= 10) {
+                    nextBtn.innerHTML = 'Kembali ke Peta <i class="fa-solid fa-map ml-1"></i>';
+                } else {
+                    nextBtn.innerHTML = 'Lanjut Level <i class="fa-solid fa-arrow-right ml-1"></i>';
+                }
+            }
+
+            if (d.is_rewarded) playCoinSFX();
 
             document.getElementById('dcModalSuccess').classList.replace('hidden', 'flex');
-
-            // Perbaikan Z-Index Confetti agar meletus di atas modal success
             if (window.confetti) window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 1000 });
 
         } catch(err) {
@@ -625,8 +775,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
     window.startNextLevel = () => {
         document.getElementById('dcModalSuccess').classList.replace('flex', 'hidden');
-        if(dcCurrentLevelObj >= 10) {
-            window.showCustomAlert('Selesai!', 'Luar Biasa! Kamu sudah menyelesaikan semua 10 level hari ini.', 'success');
+        if (dcCurrentLevelObj >= 10) {
+            // Langsung panggil pengecekan peta & modal reset hitung mundur
             window.goToLevelMap();
         } else {
             window.prepLevel(dcCurrentLevelObj + 1);

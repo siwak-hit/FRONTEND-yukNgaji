@@ -96,7 +96,7 @@ import Mascot from '../components/Mascot.astro';
 
                 <div class="bg-indigo-50/50 border-2 border-indigo-100 p-6 rounded-3xl w-full text-center shadow-inner">
                     <h2 class="text-xl md:text-2xl font-black text-indigo-900 leading-relaxed">
-                        Lengkapi doa berikut dengan jawaban yang benar:
+                        Jawab pertanyaan dibawah ini:
                     </h2>
                 </div>
 
@@ -108,27 +108,15 @@ import Mascot from '../components/Mascot.astro';
                     </div>
                 </div>
 
-                <div class="relative flex flex-col items-center mt-2 w-full">
-                    <div class="relative w-32 h-32 rounded-[2rem] border-4 border-slate-300 bg-slate-100 overflow-hidden shadow-inner flex items-center justify-center mb-6" id="waterTank">
-                        <div id="waterLevel" class="absolute bottom-0 left-0 w-full transition-all duration-700 ease-in-out" style="height: 0%;">
-                            <div class="absolute top-[-10px] left-1/2 -ml-[150px] w-[300px] h-[300px] bg-blue-400 opacity-60 rounded-[43%] animate-spin-wave-slow"></div>
-                            <div class="absolute top-[-5px] left-1/2 -ml-[150px] w-[300px] h-[300px] bg-blue-500 rounded-[40%] animate-spin-wave"></div>
-                            <div class="absolute top-[20px] left-0 w-full h-[300px] bg-blue-500"></div>
-                        </div>
+                <div id="arcadeInputWrapper" class="relative flex flex-col items-center justify-center mt-8 w-full flex-1 min-h-[160px] z-10 bg-slate-50/40 rounded-[2rem] border-2 border-dashed border-indigo-200 cursor-text hover:bg-slate-50/80 transition-colors" onclick="document.getElementById('arcadeInput').focus()">
 
-                        <i class="fa-solid fa-keyboard relative z-10 text-3xl text-slate-800/20 mix-blend-overlay"></i>
+                    <div id="arcadeVisualText" class="text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words">
+                        <span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>
                     </div>
 
-                    <div id="waterLeak" class="absolute top-[140px] text-blue-400 opacity-0 pointer-events-none z-10">
-                        <i class="fa-solid fa-droplet text-lg"></i>
-                    </div>
-
-                    <input type="text" id="arcadeInput" disabled
-                        class="w-full max-w-sm text-center text-2xl md:text-3xl font-black text-indigo-700 uppercase tracking-widest bg-white border-4 border-indigo-200 rounded-2xl py-4 shadow-[0_8px_0_#c7d2fe] focus:outline-none focus:border-indigo-500 focus:shadow-[0_8px_0_#6366f1] transition-all placeholder:text-gray-300 placeholder:text-sm placeholder:font-bold placeholder:normal-case placeholder:tracking-normal relative z-20"
-                        placeholder="Ketik jawaban di sini..."
-                        autocomplete="off"
-                        autocorrect="off"
-                        spellcheck="false" />
+                    <textarea id="arcadeInput" disabled
+                        class="absolute inset-0 w-full h-full opacity-0 z-20 resize-none outline-none text-transparent bg-transparent cursor-text"
+                        autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none"></textarea>
                 </div>
 
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
@@ -562,7 +550,7 @@ import Mascot from '../components/Mascot.astro';
             iconColor: "indigo",
             title: "Ketik jawabannya!",
             desc: "Isi kotak kosong pada pernyataan. Tekan SPASI atau ENTER setelah mengetik.",
-            highlight: "arcadeInput",
+            highlight: "arcadeInputWrapper", // <--- UBAH DI SINI
             interactive: true,
             backdrop: false,
             action: () => {
@@ -1151,6 +1139,7 @@ import Mascot from '../components/Mascot.astro';
 
     function setupArcadeInput() {
         const input = document.getElementById('arcadeInput');
+        const visualText = document.getElementById('arcadeVisualText');
         if (!input) return;
 
         input.addEventListener('keydown', (e) => {
@@ -1165,20 +1154,25 @@ import Mascot from '../components/Mascot.astro';
         input.addEventListener('input', () => {
             if (currentStep !== 13) return;
 
-            const val = input.value.trim().toLowerCase();
-            const totalBlocks = arcadeAnswers.length;
-            const filledCount = filledBlocks.size;
-            const currentAnswer = arcadeAnswers[filledCount] || '';
-            const progress = currentAnswer ? Math.min(val.length / currentAnswer.length, 1) : 1;
-            const totalProgress = ((filledCount + progress) / totalBlocks) * 100;
-
-            const waterLevel = document.getElementById('waterLevel');
-            if (waterLevel) waterLevel.style.height = `${totalProgress}%`;
+            if (visualText) {
+                const val = input.value.trim();
+                if (val.length > 0) {
+                    visualText.innerHTML = val;
+                    visualText.classList.remove('text-gray-400', 'text-xl', 'md:text-2xl', 'lowercase', 'tracking-normal');
+                    visualText.classList.remove('animate-pop-text');
+                    void visualText.offsetWidth;
+                    visualText.classList.add('animate-pop-text');
+                } else {
+                    visualText.innerHTML = '<span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>';
+                    visualText.className = "text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words";
+                }
+            }
         });
     }
 
     function checkArcadeInput() {
         const input = document.getElementById('arcadeInput');
+        const visualText = document.getElementById('arcadeVisualText');
         if (!input) return;
 
         const val = input.value.trim().toLowerCase();
@@ -1186,30 +1180,22 @@ import Mascot from '../components/Mascot.astro';
 
         const currentBlockIdx = filledBlocks.size;
         if (currentBlockIdx >= arcadeAnswers.length) return;
-
         const correct = arcadeAnswers[currentBlockIdx];
 
         if (val === correct) {
             filledBlocks.add(currentBlockIdx);
-
             const blockEl = document.getElementById(`targetBlock${currentBlockIdx}`);
             if (blockEl) {
                 blockEl.classList.add('filled');
-
                 const blockText = blockEl.querySelector('.block-text');
                 if (blockText) blockText.innerText = correct.toUpperCase();
             }
 
+            // Auto-kosongkan input & reset UI visual text
             input.value = '';
-            input.classList.add('!border-green-400', '!shadow-[0_8px_0_#86efac]');
-
-            setTimeout(() => {
-                input.classList.remove('!border-green-400', '!shadow-[0_8px_0_#86efac]');
-            }, 600);
-
-            const waterLevel = document.getElementById('waterLevel');
-            if (waterLevel) {
-                waterLevel.style.height = `${(filledBlocks.size / arcadeAnswers.length) * 100}%`;
+            if (visualText) {
+                visualText.innerHTML = '<span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>';
+                visualText.className = "text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words";
             }
 
             const phase2Progress = document.getElementById('phase2Progress');
@@ -1219,36 +1205,22 @@ import Mascot from '../components/Mascot.astro';
 
             const toastTitle = document.getElementById('tutToastTitle');
             const toastDesc = document.getElementById('tutToastDesc');
-
             if (toastTitle) toastTitle.innerText = '🎉 Kolom Terisi!';
             if (toastDesc) toastDesc.innerText = 'Pernyataan sudah lengkap dan benar. Tutorial hampir selesai!';
 
             if (typeof confetti !== 'undefined') {
-                confetti({
-                    particleCount: 80,
-                    spread: 60,
-                    origin: { y: 0.5 },
-                    zIndex: 1000,
-                });
+                confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 }, zIndex: 1000 });
             }
 
             if (filledBlocks.size >= arcadeAnswers.length) {
-                setTimeout(() => handleNextStep(), 1000);
+                setTimeout(() => handleNextStep(), 1000); // Lanjut ke step penyelesaian tutorial
             }
         } else {
-            input.classList.add('animate-shake-error');
-
-            setTimeout(() => {
-                input.classList.remove('animate-shake-error');
-            }, 500);
-
-            const leak = document.getElementById('waterLeak');
-            if (leak) {
-                leak.classList.add('animate-leak');
-                setTimeout(() => leak.classList.remove('animate-leak'), 700);
+            // Jawaban Salah
+            if (visualText) {
+                visualText.classList.add('animate-shake-error');
+                setTimeout(() => visualText.classList.remove('animate-shake-error'), 400);
             }
-
-            input.value = '';
         }
     }
 
@@ -1651,6 +1623,14 @@ import Mascot from '../components/Mascot.astro';
         padding: 6px 14px;
         background: white;
         transition: all 0.5s ease;
+    }
+
+    .animate-pop-text {
+        animation: popText 0.15s ease-out;
+    }
+    @keyframes popText {
+        0% { transform: scale(0.9); }
+        100% { transform: scale(1); }
     }
 </style>
 
