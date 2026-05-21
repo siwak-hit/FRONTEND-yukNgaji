@@ -354,6 +354,21 @@ import Toast from '../../components/Toast.astro';
     </div>
 </div>
 
+<div id="modalCloseBrowser" class="fixed inset-0 bg-black/60 z-[300] hidden items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl flex flex-col text-center border border-pink-100 animate-slide-up">
+        <div class="w-16 h-16 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h3 class="font-black text-slate-800 text-xl mb-2">Selesai Dilihat!</h3>
+        <p class="text-xs font-bold text-slate-500 mb-6 leading-relaxed">
+            Kamu sudah melihat semua catatan Ngajimu. Silakan tutup tab atau aplikasi browser ini untuk kembali.
+        </p>
+        <button onclick="document.getElementById('modalCloseBrowser').classList.replace('flex', 'hidden')" class="w-full bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold py-3 rounded-xl active:scale-95 transition-colors">
+            Kembali Melihat
+        </button>
+    </div>
+</div>
+
   <Toast />
 </Layout>
 
@@ -368,17 +383,20 @@ import Toast from '../../components/Toast.astro';
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const urlParams = new URLSearchParams(window.location.search);
-    const token = localStorage.getItem('token');
+
+    const token = urlParams.get('token') || localStorage.getItem('token');
     const studentId = window.location.pathname.split('/').pop();
+
     const isPreview = urlParams.get('preview') === 'true';
-    const afterWrappedUrl = urlParams.get('after')
+    const isViewOnly = urlParams.get('view_only') === 'true';
+    const afterWrappedUrl = urlParams.get('after') ? decodeURIComponent(urlParams.get('after')) : null;
+
     gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-    ? decodeURIComponent(urlParams.get('after'))
-    : null;
-
     let currentSlide = 0;
-    const totalSlides = 8; // 0 to 7
+    const totalSlides = isViewOnly ? 7 : 8;
+    let hasReachedEnd = false; // FLAG BARU: Deteksi apakah sudah sampai slide terakhir
+
     const base64Audio = sessionStorage.getItem('easterEggAudio');
     let bgMusic, userAudio;
     let audioFadeTimeout;
@@ -387,15 +405,44 @@ import Toast from '../../components/Toast.astro';
     // INITIALIZATION & FETCH DATA
     // ========================================================
     const initData = async () => {
-
-        if (!isPreview && !base64Audio) {
-            // 1. Sembunyikan seluruh UI Wrapped
+        if (!isPreview && !isViewOnly && !base64Audio) {
             document.getElementById('wrappedContainer').style.display = 'none';
-            // 2. Munculkan tembok peringatan
             document.getElementById('modalForceRecord').classList.replace('hidden', 'flex');
-            // 3. STOP proses! Jangan ambil data apapun dari database.
             return;
         }
+
+        // --- INJEKSI TOMBOL "SEBELUMNYA" SECARA DINAMIS ---
+        for (let i = 1; i <= 7; i++) {
+            const slide = document.getElementById(`slide-${i}`);
+            if (!slide) continue;
+
+            let navContainer = slide.querySelector('.next-btn-container');
+
+            // Buat container navigasi untuk slide 7 jika belum ada
+            if (!navContainer && i === 7) {
+                navContainer = document.createElement('div');
+                navContainer.className = 'nav-btn-container absolute bottom-6 inset-x-0 flex justify-center gap-3 opacity-0 pointer-events-none transition-opacity duration-300 z-40';
+                slide.appendChild(navContainer);
+            } else if (navContainer) {
+                navContainer.classList.remove('next-btn-container');
+                navContainer.classList.add('nav-btn-container', 'gap-3');
+            }
+
+            if (navContainer) {
+                // Bikin tombol Sebelumnya (Sembunyikan di awal)
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'prev-btn hidden bg-white text-slate-800 px-6 py-3 rounded-full font-black text-sm shadow-lg border border-slate-200 items-center gap-2 active:scale-95 transition-transform';
+                prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Sebelumnya';
+                prevBtn.onclick = () => prevSlide();
+
+                navContainer.insertBefore(prevBtn, navContainer.firstChild);
+
+                // Ubah class tombol Lanjut agar mudah ditarget
+                const nextBtn = navContainer.querySelector('button:not(.prev-btn)');
+                if (nextBtn) nextBtn.classList.add('next-btn');
+            }
+        }
+        // ------------------------------------------------
 
         bgMusic = document.getElementById('bgMusic');
         userAudio = document.getElementById('userAudio');
@@ -406,10 +453,26 @@ import Toast from '../../components/Toast.astro';
             icon.classList.replace('fa-pause', 'fa-play');
             icon.classList.replace('ml-0', 'ml-1');
             document.getElementById('audioStatusText').innerText = "Selesai (Tekan untuk ulang)";
-
             clearTimeout(audioFadeTimeout);
             gsap.to(bgMusic, { volume: 0.5, duration: 2 });
         };
+
+        // --- DAFTAR JUZ AMMA ---
+        const JUZ_AMMA = [
+            { id: 1, name: "An-Nas", ayahs: 6 }, { id: 2, name: "Al-Falaq", ayahs: 5 }, { id: 3, name: "Al-Ikhlas", ayahs: 4 },
+            { id: 4, name: "Al-Lahab", ayahs: 5 }, { id: 5, name: "An-Nasr", ayahs: 3 }, { id: 6, name: "Al-Kafirun", ayahs: 6 },
+            { id: 7, name: "Al-Kausar", ayahs: 3 }, { id: 8, name: "Al-Ma'un", ayahs: 7 }, { id: 9, name: "Quraisy", ayahs: 4 },
+            { id: 10, name: "Al-Fil", ayahs: 5 }, { id: 11, name: "Al-Humazah", ayahs: 9 }, { id: 12, name: "Al-'Asr", ayahs: 3 },
+            { id: 13, name: "At-Takasur", ayahs: 8 }, { id: 14, name: "Al-Qari'ah", ayahs: 11 }, { id: 15, name: "Al-'Adiyat", ayahs: 11 },
+            { id: 16, name: "Az-Zalzalah", ayahs: 8 }, { id: 17, name: "Al-Bayyinah", ayahs: 8 }, { id: 18, name: "Al-Qadr", ayahs: 5 },
+            { id: 19, name: "Al-'Alaq", ayahs: 19 }, { id: 20, name: "At-Tin", ayahs: 8 }, { id: 21, name: "Al-Insyirah", ayahs: 8 },
+            { id: 22, name: "Ad-Duha", ayahs: 11 }, { id: 23, name: "Al-Lail", ayahs: 21 }, { id: 24, name: "Asy-Syams", ayahs: 15 },
+            { id: 25, name: "Al-Balad", ayahs: 20 }, { id: 26, name: "Al-Fajr", ayahs: 30 }, { id: 27, name: "Al-Gasyiyah", ayahs: 26 },
+            { id: 28, name: "Al-A'la", ayahs: 19 }, { id: 29, name: "At-Tariq", ayahs: 17 }, { id: 30, name: "Al-Buruj", ayahs: 22 },
+            { id: 31, name: "Al-Insyiqaq", ayahs: 25 }, { id: 32, name: "Al-Mutaffifin", ayahs: 36 }, { id: 33, name: "Al-Infitar", ayahs: 19 },
+            { id: 34, name: "At-Takwir", ayahs: 29 }, { id: 35, name: "Abasa", ayahs: 42 }, { id: 36, name: "An-Nazi'at", ayahs: 46 },
+            { id: 37, name: "An-Naba'", ayahs: 40 }
+        ];
 
         try {
             if (isPreview) {
@@ -418,25 +481,16 @@ import Toast from '../../components/Toast.astro';
                 document.getElementById('s1_initial').innerText = "ST";
                 document.getElementById('s1_photo').src = "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto";
                 document.getElementById('s1_photo_timeline').src = "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto";
-
                 document.getElementById('s3_hadir').innerText = "45";
                 document.getElementById('s3_izin').innerText = "3";
                 document.getElementById('s3_alpa').innerText = "0";
-                document.getElementById('s3_details').innerHTML = `
-                    <div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div>
-                        <div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin karena sakit. Kami doakan semoga kamu selalu diberikan kesehatan yang prima ya!</p></div>
-                    </div>`;
-
+                document.getElementById('s3_details').innerHTML = `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin karena sakit. Kami doakan semoga kamu selalu diberikan kesehatan yang prima ya!</p></div></div>`;
                 document.getElementById('s4_count').innerText = "15";
                 document.getElementById('s4_pct_val').innerText = "75%";
                 document.getElementById('s4_percentile').classList.remove('hidden');
                 document.getElementById('s4_surahList').innerHTML = ["An-Nas", "Al-Falaq", "Al-Ikhlas"].map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
-
-                // Set Animasi Timeline Dummy
                 document.getElementById('s4_timeline_fill').style.width = "40%";
                 document.getElementById('s4_timeline_user').style.left = "40%";
-
                 document.getElementById('s5_poin').innerText = "5200";
                 document.getElementById('s5_item').innerText = "Perisai 🛡️";
                 document.getElementById('s5_target').innerText = "Si Fulan";
@@ -444,14 +498,13 @@ import Toast from '../../components/Toast.astro';
                 document.getElementById('s5_listDiserang').innerHTML = `<li>Budi <span class="text-[9px] text-slate-400 font-normal ml-1">(2x)</span></li>`;
 
                 const dummyPhotos = [
-                    "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto+1",
-                    "https://dummyimage.com/400x400/cbd5e1/475569&text=Foto+2",
-                    "https://dummyimage.com/400x400/94a3b8/334155&text=Foto+3"
+                    { url: "https://dummyimage.com/400x400/e2e8f0/64748b&text=Foto+1", label: "Ini pas kamu lagi ngerjain PR" },
+                    { url: "https://dummyimage.com/400x400/cbd5e1/475569&text=Foto+2", label: "Ini pas kamu lagi ngerjain Tugas" },
+                    { url: "https://dummyimage.com/400x400/94a3b8/334155&text=Foto+3", label: "Ini pas kamu lagi ngerjain Ujian" }
                 ];
                 renderBentoGrid(dummyPhotos);
 
                 if (base64Audio) userAudio.src = base64Audio;
-
             } else {
                 const stdRes = await fetch(`${API_URL}/api/students/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const stdData = (await stdRes.json()).data;
@@ -468,35 +521,35 @@ import Toast from '../../components/Toast.astro';
                     document.getElementById('s3_alpa').innerText = attData.stats.alpa || 0;
 
                     let detHtml = "";
-                    if(attData.stats.alpa > 0) {
-                        detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Ada <b class="text-red-600">${attData.stats.alpa} hari</b> tanpa keterangan nih. Harus lebih rajin masuk ya biar makin pinter!</p></div></div>`;
-                    }
-                    if(attData.stats.izin > 0) {
-                        detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin/sakit. Kami doakan semoga kamu sehat dan semangat terus ngajinya.</p></div></div>`;
-                    }
+                    if(attData.stats.alpa > 0) detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Ada <b class="text-red-600">${attData.stats.alpa} hari</b> tanpa keterangan nih. Harus lebih rajin masuk ya biar makin pinter!</p></div></div>`;
+                    if(attData.stats.izin > 0) detHtml += `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kamu sempat izin/sakit. Kami doakan semoga kamu sehat dan semangat terus ngajinya.</p></div></div>`;
                     if(detHtml === "") detHtml = `<div class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-green-100 text-green-500 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-star"></i></div><div class="flex-1 text-left"><p class="text-xs font-bold text-slate-700 leading-relaxed">Kehadiran sempurna! Luar biasa dedikasi dan semangatmu buat ngaji!</p></div></div>`;
-
                     document.getElementById('s3_details').innerHTML = detHtml;
                 } catch(e) {}
 
                 try {
                     const memRes = await fetch(`${API_URL}/api/students/${studentId}/memorization-logs`, { headers: { 'Authorization': `Bearer ${token}` }});
                     const memData = (await memRes.json()).data || [];
-                    const uniqueSurahs = [...new Set(memData.map(m => m.surah_name))];
-                    document.getElementById('s4_count').innerText = uniqueSurahs.length;
 
-                    // Setup UI Timeline Posisi
-                    const totalSurah = 37;
-                    const pctUser = Math.min(100, (uniqueSurahs.length / totalSurah) * 100);
+                    let maxSurahId = 0;
+                    memData.forEach(m => {
+                        const found = JUZ_AMMA.find(s => s.name.toLowerCase() === m.surah_name.toLowerCase());
+                        if (found && found.id > maxSurahId) maxSurahId = found.id;
+                    });
+
+                    const completedSurahs = JUZ_AMMA.filter(s => s.id <= maxSurahId).map(s => s.name);
+                    document.getElementById('s4_count').innerText = completedSurahs.length;
+
+                    const pctUser = Math.min(100, (completedSurahs.length / 37) * 100);
                     document.getElementById('s4_timeline_fill').style.width = `${pctUser}%`;
                     document.getElementById('s4_timeline_user').style.left = `${pctUser}%`;
 
-                    if(uniqueSurahs.length > 15) {
+                    if(completedSurahs.length > 15) {
                         document.getElementById('s4_percentile').classList.remove('hidden');
                         document.getElementById('s4_pct_val').innerText = Math.min(99, Math.floor(pctUser) + 20) + "%";
                     }
 
-                    document.getElementById('s4_surahList').innerHTML = uniqueSurahs.map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
+                    document.getElementById('s4_surahList').innerHTML = completedSurahs.map(s => `<span class="px-3 py-1 bg-white text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200 shadow-sm">${s}</span>`).join('');
                 } catch(e) {}
 
                 document.getElementById('s5_poin').innerText = stdData.poin || 0;
@@ -536,22 +589,41 @@ import Toast from '../../components/Toast.astro';
                 } catch(e) {}
 
                 try {
-                    const [galReq, satpamReq] = await Promise.all([
-                        fetch(`${API_URL}/api/students/${studentId}/gallery`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]})),
-                        fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]}))
+                    const [satpamReq, consReq, examReq] = await Promise.all([
+                        fetch(`${API_URL}/api/students/${studentId}/satpam-logs`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]})),
+                        fetch(`${API_URL}/api/students/${studentId}/consultations`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]})),
+                        fetch(`${API_URL}/api/students/${studentId}/exam-captures`, { headers: { 'Authorization': `Bearer ${token}` }}).then(r=>r.json()).catch(()=>({data:[]}))
                     ]);
-                    const allPhotos = [...(galReq.data||[]).map(i=>i.image_url), ...(satpamReq.data||[]).map(i=>i.photo_url)];
+
+                    let rawPhotos = [];
+                    (satpamReq.data || []).forEach(item => { if(item.photo_url) rawPhotos.push({ url: item.photo_url, label: "Ini pas kamu lagi ngerjain PR" }); });
+                    (consReq.data || []).forEach(item => { if(item.image_url) rawPhotos.push({ url: item.image_url, label: "Ini pas kamu lagi ngerjain tugas" }); });
+                    (examReq.data || []).forEach(item => { if(item.capture_url) rawPhotos.push({ url: item.capture_url, label: "Ini pas kamu lagi ngerjain ujian" }); });
+
+                    let uniquePhotos = [];
+                    const seenUrls = new Set();
+                    rawPhotos.forEach(p => {
+                        if (!seenUrls.has(p.url)) {
+                            seenUrls.add(p.url);
+                            uniquePhotos.push(p);
+                        }
+                    });
+
+                    uniquePhotos = uniquePhotos.sort(() => 0.5 - Math.random());
+                    let finalPhotos = uniquePhotos.slice(0, 12);
+
+                    if (finalPhotos.length === 1) finalPhotos.push({ ...finalPhotos[0] });
 
                     const avatarUrl = `https://ui-avatars.com/api/?name=${stdData.name}&background=e2e8f0&color=64748b`;
 
-                    if(allPhotos.length > 0) {
-                        document.getElementById('s1_photo').src = allPhotos[0];
-                        document.getElementById('s1_photo_timeline').src = allPhotos[0];
-                        renderBentoGrid(allPhotos);
+                    if(finalPhotos.length > 0) {
+                        document.getElementById('s1_photo').src = finalPhotos[0].url;
+                        document.getElementById('s1_photo_timeline').src = finalPhotos[0].url;
+                        renderBentoGrid(finalPhotos);
                     } else {
                         document.getElementById('s1_photo').src = avatarUrl;
                         document.getElementById('s1_photo_timeline').src = avatarUrl;
-                        renderBentoGrid([avatarUrl]);
+                        renderBentoGrid([{ url: avatarUrl, label: "Foto Profilmu" }]);
                     }
                 } catch(e) {}
 
@@ -559,27 +631,30 @@ import Toast from '../../components/Toast.astro';
             }
 
             document.getElementById('slide-0').classList.replace('hidden', 'flex');
-
         } catch (error) {
             console.error(error);
             window.showToast?.('danger', 'Error', 'Gagal memuat data.');
         }
     };
 
-    const renderBentoGrid = (images) => {
+    const renderBentoGrid = (photosObj) => {
         const grid = document.getElementById('bentoGrid');
         grid.innerHTML = '';
-
-        images.forEach((url, i) => {
+        photosObj.forEach((item, i) => {
             let rowSpan = (i % 3 === 0) ? 'row-span-2' : 'row-span-1';
             let colSpan = (i % 4 === 0) ? 'col-span-2' : 'col-span-1';
 
             grid.innerHTML += `
-                <div class="${colSpan} ${rowSpan} relative bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer group" onclick="openPhotoViewer('${url}')">
-                    <img src="${url}" crossorigin="anonymous" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <div class="${colSpan} ${rowSpan} relative bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer group" onclick="openPhotoViewer('${item.url}')">
+                    <img src="${item.url}" crossorigin="anonymous" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center z-10">
                         <i class="fa-solid fa-expand text-white opacity-0 group-hover:opacity-100 text-xl transition-opacity"></i>
                     </div>
+                    ${item.label ? `
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-2 px-2 text-white text-[8px] font-bold text-center leading-tight z-0">
+                            ${item.label}
+                        </div>
+                    ` : ''}
                 </div>
             `;
         });
@@ -595,7 +670,6 @@ import Toast from '../../components/Toast.astro';
 
     window.nextSlide = () => {
         if(currentSlide === totalSlides - 1) return;
-
         const currEl = document.getElementById(`slide-${currentSlide}`);
         if(currEl) currEl.classList.replace('flex', 'hidden');
 
@@ -605,13 +679,20 @@ import Toast from '../../components/Toast.astro';
         nextEl.classList.replace('hidden', 'flex');
 
         const bar = document.getElementById('scrollProgress');
-        bar.style.width = '0%';
-        bar.classList.remove('bg-green-500'); bar.classList.add('bg-indigo-500');
 
-        const nextBtn = nextEl.querySelector('.next-btn-container');
-        if(nextBtn) {
-            nextBtn.classList.replace('opacity-100', 'opacity-0');
-            nextBtn.classList.replace('pointer-events-auto', 'pointer-events-none');
+        // Jika belum sampai di akhir, reset progress barnya
+        if (!hasReachedEnd) {
+            bar.style.width = '0%';
+            bar.classList.remove('bg-green-500'); bar.classList.add('bg-indigo-500');
+        }
+
+        const navBtn = nextEl.querySelector('.nav-btn-container');
+        if(navBtn && !hasReachedEnd) {
+            navBtn.classList.replace('opacity-100', 'opacity-0');
+            navBtn.classList.replace('pointer-events-auto', 'pointer-events-none');
+        } else if (navBtn && hasReachedEnd) {
+            navBtn.classList.replace('opacity-0', 'opacity-100');
+            navBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
         }
 
         if(typeof confetti !== 'undefined' && currentSlide > 0 && currentSlide < 7) {
@@ -621,95 +702,160 @@ import Toast from '../../components/Toast.astro';
         setupSlide(currentSlide);
     };
 
+    // [BARU] FUNGSI MUNDUR SLIDE
+    window.prevSlide = () => {
+        if(currentSlide === 0) return;
+
+        const currEl = document.getElementById(`slide-${currentSlide}`);
+        if(currEl) currEl.classList.replace('flex', 'hidden');
+
+        currentSlide--;
+
+        const prevEl = document.getElementById(`slide-${currentSlide}`);
+        if(prevEl) prevEl.classList.replace('hidden', 'flex');
+
+        // Paksa navigasi muncul utuh karena user sudah menamatkan layar ini
+        const navBtn = prevEl.querySelector('.nav-btn-container');
+        if (navBtn) {
+            navBtn.classList.replace('opacity-0', 'opacity-100');
+            navBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
+        }
+
+        const bar = document.getElementById('scrollProgress');
+        bar.style.width = '100%';
+        bar.classList.replace('bg-indigo-500', 'bg-green-500');
+
+        setupSlide(currentSlide);
+    };
+
     const setupSlide = (index) => {
         const btnDownload = document.getElementById('btnDownload');
         const btnCloseHeader = document.getElementById('btnCloseHeader');
 
-        // Atur Header Icons
+        // CEK APAKAH INI SLIDE TERAKHIR
+        if (index === totalSlides - 1) {
+            hasReachedEnd = true;
+
+            // [PERBAIKAN] Pastikan container navigasinya DIPAKSA MUNCUL dan bisa diklik
+            const lastSlide = document.getElementById(`slide-${index}`);
+            if (lastSlide) {
+                const navContainer = lastSlide.querySelector('.nav-btn-container');
+                if (navContainer) {
+                    navContainer.classList.replace('opacity-0', 'opacity-100');
+                    navContainer.classList.replace('pointer-events-none', 'pointer-events-auto');
+                }
+
+                // Di slide terakhir, sembunyikan tombol Lanjut (biar sisa tombol Sebelumnya saja)
+                const nextBtn = lastSlide.querySelector('.next-btn');
+                if (nextBtn) nextBtn.classList.add('hidden');
+            }
+
+            // Munculkan semua tombol "Sebelumnya" di semua slide lainnya
+            for (let i = 1; i < totalSlides; i++) {
+                const s = document.getElementById(`slide-${i}`);
+                if (s) {
+                    const pb = s.querySelector('.prev-btn');
+                    if (pb) pb.classList.replace('hidden', 'flex');
+                }
+            }
+
+            // Munculkan tombol Close di Header agar user tetap bisa keluar
+            btnCloseHeader.classList.replace('hidden', 'flex');
+        } else {
+            // Sembunyikan Header Close jika bukan di slide terakhir
+            btnCloseHeader.classList.replace('flex', 'hidden');
+        }
+
+        // Atur Header Icons (Download)
         if (index > 0 && index < 7) btnDownload.classList.replace('hidden', 'flex');
         else btnDownload.classList.replace('flex', 'hidden');
 
         // GSAP SLIDE 2: Efek Ngetik per Card Full Screen
         if (index === 2) {
             ScrollTrigger.getAll().forEach(t => t.kill());
-
             gsap.utils.toArray('#slide-2 .narrative-card').forEach((card) => {
                 const textTarget = card.querySelector('.type-target');
                 const fullText = textTarget.getAttribute('data-text');
-                textTarget.innerText = ''; // Kosongin dulu sebelum animasi
+                textTarget.innerText = '';
 
                 ScrollTrigger.create({
                     trigger: card,
                     scroller: "#scroller-2",
                     start: "top 70%",
                     onEnter: () => {
-                        // Animasi Muncul Card
                         gsap.to(card, { opacity: 1, y: 0, duration: 0.8, ease: "back.out(1.5)" });
-                        // Animasi Ngetik Teks
-                        gsap.to(textTarget, {
-                            text: fullText,
-                            duration: 3.5,
-                            delay: 0.4,
-                            ease: "none"
-                        });
+                        gsap.to(textTarget, { text: fullText, duration: 3.5, delay: 0.4, ease: "none" });
                     }
                 });
             });
         }
 
-        // SLIDE 7: GSAP Sequence (Credit -> Audio Play)
-        if (index === 7) {
-            // Sembunyikan UI Audio & tampilkan Credit
+        // SLIDE 7: GSAP Sequence (Credit -> Audio Play) khusus untuk murid (bukan view only)
+        if (index === 7 && !isViewOnly) {
             document.getElementById('slide-7-credits').classList.replace('hidden', 'flex');
             document.getElementById('slide-7-audio').classList.replace('flex', 'hidden');
             gsap.set("#slide-7-audio", { opacity: 0 });
 
-            // GSAP Timeline untuk Credit Scene
+            // Sembunyikan navigasi Sementara saat credit rolling
+            const slide7Nav = document.getElementById('slide-7').querySelector('.nav-btn-container');
+            if (slide7Nav) gsap.set(slide7Nav, { opacity: 0, display: 'none' });
+
             const tl = gsap.timeline({
                 onComplete: () => {
-                    // Setelah Credit beres, Munculin Audio Player + Tombol Silang Header
                     document.getElementById('slide-7-credits').classList.replace('flex', 'hidden');
                     document.getElementById('slide-7-audio').classList.replace('hidden', 'flex');
 
                     gsap.to("#slide-7-audio", { opacity: 1, duration: 1.5 });
-                    btnCloseHeader.classList.replace('hidden', 'flex');
 
-                    // Kalau audio aslinya kosong/error, lgsg tunjukin tombol silang di header aja
+                    // [PERBAIKAN] Fade in tombol navigasi Sebelumnya dan pastikan pointer-events nyala
+                    if (slide7Nav) {
+                        slide7Nav.style.display = 'flex';
+                        slide7Nav.classList.replace('pointer-events-none', 'pointer-events-auto');
+                        gsap.to(slide7Nav, { opacity: 1, duration: 1.5 });
+                    }
+
                     if(!userAudio.src || userAudio.src.endsWith('undefined')) {
                         document.getElementById('audioStatusText').innerText = "Rekaman tidak tersedia.";
                     }
                 }
             });
-
-            // Animasi Credit dari bawah ke atas layar lalu ilang
             tl.fromTo("#creditsRoll",
                 { y: "100vh" },
                 { y: "-150vh", duration: 12, ease: "linear" }
             ).to("#slide-7-credits", { opacity: 0, duration: 1 });
         }
 
-        // Pancing fungsi scroll biar tombol Next bisa muncul kalo content layar pendek
         const scroller = document.getElementById(`slide-${index}`).querySelector('.scroll-area');
-        if (scroller) handleScroll(scroller);
+        if (scroller) {
+            if (hasReachedEnd) {
+                const bar = document.getElementById('scrollProgress');
+                bar.style.width = '100%';
+                bar.classList.replace('bg-indigo-500', 'bg-green-500');
+            } else {
+                handleScroll(scroller);
+            }
+        }
     };
 
     window.handleScroll = (el) => {
+        // Kalau sudah menamatkan Wrapped, abaikan fungsi scroll untuk memunculkan tombol
+        if (hasReachedEnd) return;
+
         const { scrollTop, scrollHeight, clientHeight } = el;
         const maxScroll = scrollHeight - clientHeight;
 
         const progress = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 100;
-
         const bar = document.getElementById('scrollProgress');
         bar.style.width = `${progress}%`;
 
         if (progress >= 99) {
             bar.classList.replace('bg-indigo-500', 'bg-green-500');
             const slideEl = el.closest('.wrapped-slide');
-            const nextBtn = slideEl.querySelector('.next-btn-container');
+            const navBtn = slideEl.querySelector('.nav-btn-container');
 
-            if (nextBtn) {
-                nextBtn.classList.replace('opacity-0', 'opacity-100');
-                nextBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
+            if (navBtn) {
+                navBtn.classList.replace('opacity-0', 'opacity-100');
+                navBtn.classList.replace('pointer-events-none', 'pointer-events-auto');
             }
         }
     };
@@ -725,7 +871,6 @@ import Toast from '../../components/Toast.astro';
 
         const icon = document.getElementById('playIcon');
         const statusText = document.getElementById('audioStatusText');
-
         if (userAudio.paused) {
             userAudio.play();
             icon.classList.replace('fa-play', 'fa-pause');
@@ -734,7 +879,6 @@ import Toast from '../../components/Toast.astro';
 
             clearTimeout(audioFadeTimeout);
             gsap.to(bgMusic, { volume: 0.1, duration: 1 });
-
         } else {
             userAudio.pause();
             icon.classList.replace('fa-pause', 'fa-play');
@@ -749,11 +893,17 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.closeWrapped = () => {
+        // Jika dibuka lewat link WA (view_only), tampilkan modal karena browser memblokir window.close()
+        if (isViewOnly) {
+            document.getElementById('modalCloseBrowser').classList.replace('hidden', 'flex');
+            return;
+        }
+
+        // Jika dari ujian langsung, arahkan kembali sesuai rutenya
         if (afterWrappedUrl) {
             window.location.replace(afterWrappedUrl);
             return;
         }
-
         if (isPreview) {
             window.location.href = `/exams`;
             return;
@@ -787,7 +937,8 @@ import Toast from '../../components/Toast.astro';
             window.URL.revokeObjectURL(blobUrl);
             window.showToast?.('success', 'Tersimpan!', 'Foto berhasil diunduh.');
         } catch(e) {
-            const link = document.createElement('a'); link.href = url; link.target = '_blank'; link.download = `Ngaji_Memori_${Date.now()}.jpg`; link.click();
+            const link = document.createElement('a');
+            link.href = url; link.target = '_blank'; link.download = `Ngaji_Memori_${Date.now()}.jpg`; link.click();
         }
     };
 
@@ -799,10 +950,10 @@ import Toast from '../../components/Toast.astro';
 
         const headerUI = document.getElementById('headerUI');
         const activeSlide = document.querySelector('.wrapped-slide:not(.hidden)');
-        const nextBtnContainer = activeSlide.querySelector('.next-btn-container');
+        const navBtnContainer = activeSlide.querySelector('.nav-btn-container'); // DIUBAH
 
         headerUI.style.display = 'none';
-        if(nextBtnContainer) nextBtnContainer.style.display = 'none';
+        if(navBtnContainer) navBtnContainer.style.display = 'none'; // DIUBAH
 
         try {
             let elementToCapture = currentSlide === 6 ? document.getElementById('bentoGallery') : activeSlide.querySelector('.scroll-area > div');
@@ -810,7 +961,6 @@ import Toast from '../../components/Toast.astro';
             const dataUrl = await htmlToImage.toJpeg(elementToCapture, {
                 quality: 0.9, pixelRatio: 2, skipFonts: true, backgroundColor: '#f8fafc'
             });
-
             const link = document.createElement('a');
             link.download = `Ngaji_Catatan_${currentSlide}_${Date.now()}.jpg`;
             link.href = dataUrl;
@@ -821,7 +971,7 @@ import Toast from '../../components/Toast.astro';
             window.showToast?.('danger', 'Ups!', 'Gagal menyimpan gambar.');
         } finally {
             headerUI.style.display = 'flex';
-            if(nextBtnContainer) nextBtnContainer.style.display = 'flex';
+            if(navBtnContainer) navBtnContainer.style.display = 'flex'; // DIUBAH
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
