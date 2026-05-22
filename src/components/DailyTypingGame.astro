@@ -13,8 +13,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 
 <div id="dcLobby" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
     <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0">
-        <h2 class="text-3xl font-black text-white mb-2">Siapa Kamu?</h2>
-        <p class="text-indigo-200 text-sm font-bold">Pilih nama kamu sebelum mulai berburu koin.</p>
+        <h2 id="lobbyTitle" class="text-3xl font-black text-white mb-2">Siapa Kamu?</h2>
+        <p id="lobbySubtitle" class="text-indigo-200 text-sm font-bold">Pilih nama kamu sebelum mulai berburu koin.</p>
     </div>
     <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
         <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6">
@@ -31,6 +31,15 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         </div>
         <h1 id="dcLandingTitle" class="text-4xl font-black text-white mb-2 tracking-tight">Daily Ngetik</h1>
         <p id="dcLandingSubtitle" class="text-indigo-200 font-bold text-sm mb-6">Ketik materinya, raih combo, kumpulkan koin!</p>
+
+        <div id="dcEventCountdownBox" class="hidden bg-rose-500/20 border border-rose-500/40 backdrop-blur-md rounded-3xl p-4 mb-4 shadow-inner w-full max-w-[200px] mx-auto animate-pulse">
+            <p class="text-[10px] font-black text-rose-200 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                <i class="fa-solid fa-stopwatch"></i> Sisa Waktu Event
+            </p>
+            <div id="dcEventCountdownText" class="text-2xl font-black text-white font-mono tracking-wider drop-shadow-md">
+                00:00:00
+            </div>
+        </div>
 
         <div class="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-8 border border-white/20 inline-block min-w-[200px]">
             <p class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Koinmu</p>
@@ -245,10 +254,9 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         <div class="text-6xl text-amber-400 mb-4 mt-2">
             <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
         </div>
-        <h3 class="text-2xl font-black text-gray-800 mb-2">Info Koin Baru!</h3>
-        <p class="text-sm font-bold text-gray-600 leading-relaxed mb-6">
-            Waduh, sepertinya Kak Aziz lagi pelit nih! 1 level sekarang cuma dapet <span class="text-amber-500 font-black">5 Koin</span> (Lvl 1-5) & <span class="text-amber-500 font-black">10 Koin</span> (Lvl 6-10). <br><br>
-            Tapi tenang, multiplier combo hingga <span class="text-green-500 font-black">x4</span> tetap membara! 🔥
+        <h3 id="dcInfoModalTitle" class="text-2xl font-black text-gray-800 mb-2">Info Koin Baru!</h3>
+        <p id="dcInfoModalDesc" class="text-sm font-bold text-gray-600 leading-relaxed mb-6">
+            Waduh, sepertinya Kak Aziz lagi pelit nih! ... (biarkan isi defaultnya tidak apa-apa) ...
         </p>
         <button onclick="window.closePelitModal()" class="btn-3d w-full py-4 text-sm bg-amber-400 hover:bg-amber-300 text-amber-900 border-b-4 border-amber-600 rounded-2xl font-black transition-all active:scale-95">
             Oke, Siap Berburu!
@@ -259,6 +267,22 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
 <script define:vars={{ API_URL }}>
     // --- TAMBAHAN: FUNGSI TANGGAL CLIENT & RESET COUNTDOWN ---
     let dcResetTimerInterval = null;
+    const urlParams = new URLSearchParams(window.location.search);
+    let eventName = urlParams.get('eventName');
+    let eventCoinBase = parseInt(urlParams.get('eventCoin')) || 5;
+    const eventDeadline = parseInt(urlParams.get('eventDeadline')); // Bisa bernilai NaN jika tidak ada
+
+    // --- VALIDASI EVENT TERBATAS ---
+    if (eventName && eventDeadline) {
+        if (Date.now() > eventDeadline) {
+            // Jika waktu sekarang sudah MELEWATI deadline, BATALKAN EVENT!
+            eventName = null;
+            eventCoinBase = 5;
+            setTimeout(() => {
+                window.showCustomAlert('Event Berakhir', 'Sayang sekali, event spesial sudah berakhir. Koin kembali normal ya.', 'warning');
+            }, 1000);
+        }
+    }
 
     // Fungsi untuk mendapatkan tanggal berdasarkan device dengan pergeseran jam 7 pagi
     const getClientChallengeDate = () => {
@@ -272,6 +296,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         const dd = String(now.getDate()).padStart(2, '0');
         return `${yyyy}-${mm}-${dd}`;
     };
+
+
     // --- KONFIGURASI GLOBAL ---
     const dcParams = new URLSearchParams(window.location.search);
     const dcUrlToken = dcParams.get('token');
@@ -380,16 +406,33 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
         dcResetTimerInterval = setInterval(updateTimer, 1000);
     };
 
-    // --- FUNGSI MODAL PELIT ---
+    // --- FUNGSI MODAL INFO (REUSABLE PELIT / EVENT) ---
     window.checkAndShowPelitModal = () => {
-        const hasSeenPelitModal = localStorage.getItem('dc_pelit_notif_seen');
-        if (hasSeenPelitModal !== 'true') {
+        // Buat storage key dinamis. Jika ada event, gunakan nama event agar modal muncul lagi
+        const storageKey = eventName ? `dc_seen_event_${eventName}` : 'dc_pelit_notif_seen';
+        const hasSeen = localStorage.getItem(storageKey);
+
+        if (hasSeen !== 'true') {
+            const titleEl = document.getElementById('dcInfoModalTitle');
+            const descEl = document.getElementById('dcInfoModalDesc');
+
+            if (eventName && eventCoinBase > 5) {
+                // REUSABLE: Ubah menjadi Modal Event
+                titleEl.innerText = `Event: ${eventName}!`;
+                descEl.innerHTML = `Luar biasa! Saat ini sedang ada event khusus.<br>Level 1-5 mendapat <span class="text-amber-500 font-black">${eventCoinBase} Koin</span> & Level 6-10 mendapat <span class="text-amber-500 font-black">${eventCoinBase + 5} Koin</span>.<br><br>Manfaatkan multiplier combo hingga <span class="text-green-500 font-black">x4</span>! 🔥`;
+            } else {
+                // REUSABLE: Kembalikan ke Modal Pelit Default
+                titleEl.innerText = 'Info Koin Baru!';
+                descEl.innerHTML = `Waduh, sepertinya Kak Aziz lagi pelit nih!<br>1 level sekarang cuma dapet <span class="text-amber-500 font-black">5 Koin</span> (Lvl 1-5) & <span class="text-amber-500 font-black">10 Koin</span> (Lvl 6-10).<br><br>Tapi tenang, multiplier combo hingga <span class="text-green-500 font-black">x4</span> tetap membara! 🔥`;
+            }
+
             document.getElementById('dcPelitModal').classList.replace('hidden', 'flex');
         }
     };
 
     window.closePelitModal = () => {
-        localStorage.setItem('dc_pelit_notif_seen', 'true'); // Tandai sudah dilihat
+        const storageKey = eventName ? `dc_seen_event_${eventName}` : 'dc_pelit_notif_seen';
+        localStorage.setItem(storageKey, 'true');
         document.getElementById('dcPelitModal').classList.replace('flex', 'hidden');
     };
 
@@ -419,6 +462,39 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                     window.checkAndShowPelitModal();
                 }, 300);
                 return;
+            }
+            if (eventName && eventCoinBase > 5) {
+                document.getElementById('lobbyTitle').innerHTML = `🎉 ${eventName}!`;
+                document.getElementById('lobbySubtitle').innerHTML = `Event Sedang Berlangsung! Base koin dilipatgandakan menjadi <span class="text-amber-300 font-black text-base px-1">${eventCoinBase} Koin</span>.`;
+
+                // --- JALANKAN TIMER JIKA ADA DEADLINE ---
+                if (eventDeadline) {
+                    const countdownBox = document.getElementById('dcEventCountdownBox');
+                    const countdownText = document.getElementById('dcEventCountdownText');
+
+                    if (countdownBox && countdownText) {
+                        countdownBox.classList.replace('hidden', 'block');
+
+                        const updateEventTimer = () => {
+                            const diff = eventDeadline - Date.now();
+                            if (diff <= 0) {
+                                countdownText.innerText = "BERAKHIR";
+                                countdownBox.classList.remove('animate-pulse');
+                                return;
+                            }
+
+                            // Hitung jam (bisa > 24), menit, detik
+                            const h = Math.floor(diff / (1000 * 60 * 60));
+                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                            countdownText.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                        };
+
+                        updateEventTimer();
+                        setInterval(updateEventTimer, 1000);
+                    }
+                }
             }
             await loadStudentsForDailyChallenge();
             window.setScreen('dcLobby');
@@ -518,7 +594,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
             const isDone = dcCompletedLevels.includes(i);
 
             // Perubahan nilai teks reward di peta sesuai instruksi baru
-            const reward = i <= 5 ? 5 : 10;
+            const reward = i <= 5 ? eventCoinBase : eventCoinBase + 5;
 
             if (isDone) {
                 html += `
@@ -732,7 +808,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
                     sentence_id: dcCurrentSentence.id,
                     typed_text: document.getElementById('dcTypingInput').value,
                     time_taken_seconds: timeTaken,
-                    client_date: getClientChallengeDate()
+                    client_date: getClientChallengeDate(),
+                    event_coin: eventCoinBase
                 })
             });
             const result = await res.json();
