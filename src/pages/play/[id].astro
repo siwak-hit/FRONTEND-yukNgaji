@@ -325,6 +325,28 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         </div>
     </div>
 
+    <div id="modalSecretOffer" class="fixed inset-0 z-[350] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative animate-slide-up text-center border border-indigo-100">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-mask"></i>
+            </div>
+
+            <h3 class="font-black text-gray-800 text-2xl mb-2">Misi Tersembunyi!</h3>
+            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-6">
+                Luar biasa, ujian terakhir telah diselesaikan! Ada sebuah misi rahasia yang menunggu. Apakah berani untuk melihatnya?
+            </p>
+
+            <div class="flex gap-3">
+                <button onclick="skipSecret()" class="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl active:scale-95 transition-all">
+                    Tidak
+                </button>
+                <button onclick="acceptSecret()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all">
+                    Ya, Lihat
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalLockWeek5" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-slide-up text-center border border-amber-100 relative overflow-hidden">
             <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-4 border border-amber-100 shadow-inner">
@@ -342,6 +364,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 
     <div id="modalEasterEgg" class="fixed inset-0 z-[400] hidden flex-col justify-end bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300">
         <div class="bg-white w-full max-w-md mx-auto rounded-t-[2rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-slide-up-drawer">
+
+            <button onclick="closeEasterEggDrawer()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors z-50 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
             <div class="w-full flex justify-center py-3 shrink-0">
                 <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
             </div>
@@ -2746,15 +2773,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     window.returnFromExam = () => {
         isExamActive = false;
 
-        if (isPreview && isPreviewFinalFlow) {
+        // Cek jika ini adalah akhir perjalanan (Semua ujian beres)
+        if ((isPreview && isPreviewFinalFlow) || isAllExamsDone) {
             document.getElementById('modalFinish')?.classList.replace('flex', 'hidden');
-            window.showEasterEggTrigger();
-            return;
-        }
-
-        if (isAllExamsDone) {
-            document.getElementById('modalFinish')?.classList.replace('flex', 'hidden');
-            window.showEasterEggTrigger();
+            // Tampilkan modal penawaran rahasia
+            document.getElementById('modalSecretOffer').classList.replace('hidden', 'flex');
             return;
         }
 
@@ -2763,10 +2786,64 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             return;
         }
 
+        proceedToFinalRedirect();
+    };
+
+    // Fungsi jika "Tidak" ditekan
+    window.skipSecret = () => {
+        document.getElementById('modalSecretOffer').classList.replace('flex', 'hidden');
+        proceedToFinalRedirect();
+    };
+
+    // Fungsi jika "Ya, Lihat" ditekan
+    window.acceptSecret = () => {
+        document.getElementById('modalSecretOffer').classList.replace('flex', 'hidden');
+        window.showEasterEggTrigger();
+    };
+
+    // Fungsi saat tombol X pada drawer ditekan
+    window.closeEasterEggDrawer = () => {
+        // Hentikan proses perekaman jika sedang berjalan
+        if (streamRef) streamRef.getTracks().forEach(t => t.stop());
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+
+        // Sembunyikan drawer, kembalikan status aktif, dan munculkan lagi modal tawaran
+        document.getElementById('modalEasterEgg').classList.replace('flex', 'hidden');
+        window.isEasterEggActive = false;
+        document.getElementById('modalSecretOffer').classList.replace('hidden', 'flex');
+
+        // Reset UI Drawer ke kondisi semula agar bersih jika dibuka lagi
+        currentRecordPhase = 'start';
+        const btnMain = document.getElementById('btnMainAction');
+        if (btnMain) {
+            btnMain.disabled = false;
+            btnMain.classList.remove('btn-red', 'btn-green');
+            btnMain.classList.add('btn-indigo');
+            btnMain.innerHTML = '<i class="fa-solid fa-microphone"></i> <span>Mulai Merekam</span>';
+        }
+
+        const status = document.getElementById('recordStatus');
+        if (status) {
+            status.innerText = "Izinkan akses mikrofon untuk memulai";
+            status.className = "text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 bg-amber-50 py-2 px-3 rounded-lg border border-amber-100 shrink-0 transition-colors";
+        }
+
+        document.getElementById('visualizerPlaceholder')?.classList.remove('hidden');
+        document.getElementById('audioVisualizer')?.classList.add('hidden');
+        document.getElementById('audioPreview')?.classList.add('hidden');
+        document.getElementById('btnRetake')?.classList.add('hidden');
+    };
+
+    // Fungsi eksekusi rute final (Feedback)
+    window.proceedToFinalRedirect = () => {
+        if (isPreview) {
+            window.location.href = getPreviewFinalSelesaiUrl();
+            return;
+        }
+
         const fallbackRedirect = appendTokenToUrl(
             `/selesai?mode=exam&exam_id=${encodeURIComponent(examId)}&subject=${encodeURIComponent(examData?.subject || 'Ujian')}&student_id=${encodeURIComponent(activeStudentId)}`
         );
-
         window.location.replace(nextAfterExamRedirect || fallbackRedirect);
     };
 

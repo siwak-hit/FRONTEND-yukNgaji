@@ -115,66 +115,80 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 <div id="absensiPulse" class="absolute inset-0 border-2 border-transparent rounded-2xl pointer-events-none"></div>
             </a>
 
-            <div class="grid grid-cols-4 gap-2 sm:gap-3">
-                <a href="/timer" class="relative bg-yellow-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-yellow-100">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-stopwatch text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-yellow-800 text-[10px] sm:text-sm leading-tight">Timer</h3>
-                        <p class="text-[7px] sm:text-[9px] text-yellow-500 font-bold uppercase tracking-wider truncate">Durasi</p>
-                    </div>
-                </a>
+            <div class="flex flex-col gap-2 sm:gap-3">
+                <div class="grid grid-cols-4 gap-2 sm:gap-3">
+                    <a href="/timer" class="relative bg-yellow-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-yellow-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-stopwatch text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-yellow-800 text-[10px] sm:text-sm leading-tight">Timer</h3>
+                            <p class="text-[7px] sm:text-[9px] text-yellow-500 font-bold uppercase tracking-wider truncate">Durasi</p>
+                        </div>
+                    </a>
 
-                <a href="/seats" class="relative bg-green-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-green-100">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-chair text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-green-800 text-[10px] sm:text-sm leading-tight">Denah</h3>
-                        <p class="text-[7px] sm:text-[9px] text-green-500 font-bold uppercase tracking-wider truncate">Posisi</p>
-                    </div>
-                </a>
+                    <a href="/seats" class="relative bg-green-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-green-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-chair text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-green-800 text-[10px] sm:text-sm leading-tight">Denah</h3>
+                            <p class="text-[7px] sm:text-[9px] text-green-500 font-bold uppercase tracking-wider truncate">Posisi</p>
+                        </div>
+                    </a>
 
-                <a href="/hafalan" class="relative bg-emerald-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-emerald-100">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-book-quran text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-emerald-800 text-[10px] sm:text-sm leading-tight">Hafalan</h3>
-                        <p class="text-[7px] sm:text-[9px] text-emerald-500 font-bold uppercase tracking-wider truncate">Juz Amma</p>
-                    </div>
-                </a>
+                    <a href="/hafalan" class="relative bg-emerald-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-emerald-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-book-quran text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-emerald-800 text-[10px] sm:text-sm leading-tight">Hafalan</h3>
+                            <p class="text-[7px] sm:text-[9px] text-emerald-500 font-bold uppercase tracking-wider truncate">Juz Amma</p>
+                        </div>
+                    </a>
 
-                <a href="/galeri" class="relative bg-purple-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-purple-100 shadow-sm">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-images text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-purple-800 text-[10px] sm:text-sm leading-tight">Galeri</h3>
-                        <p class="text-[7px] sm:text-[9px] text-purple-500 font-bold uppercase tracking-wider truncate">Foto Raport</p>
-                    </div>
-                </a>
+                    <a href="/galeri" class="relative bg-purple-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-purple-100 shadow-sm">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-images text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-purple-800 text-[10px] sm:text-sm leading-tight">Galeri</h3>
+                            <p class="text-[7px] sm:text-[9px] text-purple-500 font-bold uppercase tracking-wider truncate">Foto Raport</p>
+                        </div>
+                    </a>
+                </div>
 
-                <button onclick="openDailyChallengeLinkModal()" class="col-span-2 relative bg-indigo-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-indigo-100">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-keyboard text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-indigo-800 text-[10px] sm:text-sm leading-tight">Challenge</h3>
-                        <p class="text-[7px] sm:text-[9px] text-indigo-500 font-bold uppercase tracking-wider truncate">Koin Harian</p>
-                    </div>
-                </button>
+                <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                    <button onclick="openDailyChallengeLinkModal()" class="relative bg-indigo-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-indigo-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-keyboard text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-indigo-800 text-[10px] sm:text-sm leading-tight">Challenge</h3>
+                            <p class="text-[7px] sm:text-[9px] text-indigo-500 font-bold uppercase tracking-wider truncate">Koin Harian</p>
+                        </div>
+                    </button>
 
-                <button onclick="openWrappedModal()" class="col-span-2 relative bg-pink-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-pink-100 shadow-sm">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-gift text-base sm:text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-pink-800 text-[10px] sm:text-sm leading-tight">Wrapped</h3>
-                        <p class="text-[7px] sm:text-[9px] text-pink-500 font-bold uppercase tracking-wider truncate">Kilas Balik</p>
-                    </div>
-                </button>
+                    <button onclick="openWrappedModal()" class="relative bg-pink-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-pink-100 shadow-sm">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-gift text-base sm:text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-pink-800 text-[10px] sm:text-sm leading-tight">Wrapped</h3>
+                            <p class="text-[7px] sm:text-[9px] text-pink-500 font-bold uppercase tracking-wider truncate">Kilas Balik</p>
+                        </div>
+                    </button>
+
+                    <button onclick="copyShopLink()" class="relative bg-amber-50 p-2 sm:p-4 rounded-2xl overflow-hidden active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center border border-amber-100 shadow-sm group">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-store text-base sm:text-lg group-hover:animate-bounce"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-amber-800 text-[10px] sm:text-sm leading-tight">Toko</h3>
+                            <p class="text-[7px] sm:text-[9px] text-amber-500 font-bold uppercase tracking-wider truncate">Salin Link</p>
+                        </div>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -689,6 +703,28 @@ import NavbarGuru from '../components/NavbarGuru.astro';
                 </div>
             `;
         }).join('');
+    };
+
+    window.copyShopLink = () => {
+        // Ambil token dari localStorage atau sesuai metode yang kamu gunakan di dashboard
+        const token = localStorage.getItem('token');
+
+        // Asumsi rute halamannya adalah /toko-kenangan
+        const shopUrl = `${window.location.origin}/toko-kenangan?token=${token}`;
+
+        navigator.clipboard.writeText(shopUrl).then(() => {
+            if (window.showToastAlert) {
+                window.showToastAlert('success', 'Tersalin!', 'Link Toko Kenangan berhasil disalin. Silakan bagikan ke murid!');
+            } else {
+                alert('Link Toko Kenangan berhasil disalin!');
+            }
+        }).catch(() => {
+            if (window.showToastAlert) {
+                window.showToastAlert('danger', 'Gagal', 'Browser tidak mendukung copy otomatis.');
+            } else {
+                alert('Gagal menyalin link.');
+            }
+        });
     };
 
     window.shareWrappedLink = async (studentId, studentName, event) => {

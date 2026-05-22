@@ -1,0 +1,530 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Toko Kenangan">
+    <div id="loadingScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
+        <div class="loader-ring mb-6"></div>
+        <p class="text-indigo-600 text-xs font-black tracking-widest uppercase animate-pulse">Menyiapkan Toko...</p>
+    </div>
+
+    <div id="lobbyScreen" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
+        <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0 text-center">
+            <h2 class="text-3xl font-black text-white mb-2">Toko Kenangan</h2>
+            <p class="text-indigo-200 text-sm font-bold">Siapa yang ingin berbelanja?</p>
+        </div>
+        <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
+            <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6 relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-9 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" id="lobbySearch" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none" placeholder="Cari namamu di sini...">
+            </div>
+            <div id="lobbyStudentGrid" class="grid grid-cols-2 gap-3"></div>
+        </div>
+    </div>
+
+    <div id="shopScreen" class="fixed inset-0 z-[150] hidden flex-col bg-slate-50 overflow-y-auto pb-20">
+        <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="backToLobby()" class="w-10 h-10 bg-gray-100 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div>
+                    <h1 class="text-sm font-black text-gray-800 line-clamp-1 capitalize" id="shopStudentName">Nama Siswa</h1>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selamat Berbelanja</p>
+                </div>
+            </div>
+            <div class="bg-amber-100 border-2 border-amber-200 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-coins text-amber-500"></i>
+                <span id="shopWallet" class="font-black text-amber-600 text-lg">0</span>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <div class="mb-6">
+                <h3 class="text-xl font-black text-gray-800">Koleksi Eksklusif</h3>
+                <p class="text-xs font-bold text-gray-500">Tukarkan sisa koinmu dengan kenangan digital.</p>
+            </div>
+            <div id="mediaGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                </div>
+        </main>
+    </div>
+
+    <div id="modalBuy" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-indigo-100">
+            <button onclick="closeBuyModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i id="buyIcon" class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-1">Beli Item Ini?</h3>
+            <p id="buyFilename" class="text-[10px] font-bold text-gray-400 mb-5 break-all">filename.jpg</p>
+
+            <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex justify-between items-center">
+                <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Harga</span>
+                <span id="buyCost" class="text-lg font-black text-amber-500">💰 0</span>
+            </div>
+
+            <button id="btnConfirmBuy" onclick="executeBuy()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all">
+                Beli Sekarang
+            </button>
+        </div>
+    </div>
+
+    <div id="modalPreview" class="fixed inset-0 z-[300] hidden items-center justify-center bg-black/95 backdrop-blur-md p-4" onclick="closePreview()">
+        <button onclick="closePreview()" class="absolute top-6 right-6 z-50 text-white text-2xl w-12 h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="previewContainer" class="relative w-full h-full flex items-center justify-center overflow-hidden pointer-events-none" onclick="event.stopPropagation()">
+            </div>
+    </div>
+
+    <div id="modalPinInput" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-indigo-100">
+            <button onclick="closePinModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-1">Masukkan PIN</h3>
+            <p class="text-[10px] font-bold text-gray-400 mb-5">Masukkan 3 digit PIN rahasiamu untuk masuk.</p>
+
+            <input type="password" id="inputPin" maxlength="3" inputmode="numeric" class="w-full text-center text-3xl font-black tracking-[0.5em] p-4 bg-gray-50 border border-gray-200 rounded-xl mb-6 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:tracking-normal placeholder:text-base" placeholder="***">
+
+            <button onclick="executeVerifyPin()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all" id="btnSubmitPin">
+                Buka Toko
+            </button>
+        </div>
+    </div>
+
+    <div id="modalCustomAlert" class="fixed inset-0 z-[400] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-red-100">
+            <div id="alertIcon" class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="alertTitle" class="font-black text-gray-800 text-lg mb-2">Peringatan</h3>
+            <p id="alertMessage" class="text-xs font-bold text-gray-500 leading-relaxed mb-6">Pesan peringatan di sini.</p>
+
+            <button onclick="closeCustomAlert()" id="btnAlertClose" class="w-full py-4 bg-red-500 text-white font-black rounded-xl shadow-[0_5px_0_#ef4444] active:translate-y-[5px] active:shadow-none transition-all">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
+    <Toast />
+</Layout>
+
+<style>
+    .loader-ring { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    .blur-cover { filter: blur(12px) grayscale(50%); transform: scale(1.1); transition: all 0.5s ease; }
+    .media-card:hover .blur-cover { filter: blur(8px) grayscale(30%); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token') || localStorage.getItem('token');
+
+    // === SISTEM ALERT CUSTOM ===
+    let alertCallback = null;
+
+    window.showCustomAlert = (title, message, type = 'danger', callback = null) => {
+        const modal = document.getElementById('modalCustomAlert');
+        document.getElementById('alertTitle').innerText = title;
+        document.getElementById('alertMessage').innerText = message;
+
+        const icon = document.getElementById('alertIcon');
+        const btn = document.getElementById('btnAlertClose');
+
+        if (type === 'danger') {
+            icon.className = "w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100 shadow-inner";
+            icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            btn.className = "w-full py-4 bg-red-500 text-white font-black rounded-xl shadow-[0_5px_0_#ef4444] active:translate-y-[5px] active:shadow-none transition-all";
+        } else {
+            icon.className = "w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner";
+            icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            btn.className = "w-full py-4 bg-amber-500 text-white font-black rounded-xl shadow-[0_5px_0_#f59e0b] active:translate-y-[5px] active:shadow-none transition-all";
+        }
+
+        alertCallback = callback;
+        modal.classList.replace('hidden', 'flex');
+    };
+
+    window.closeCustomAlert = () => {
+        document.getElementById('modalCustomAlert').classList.replace('flex', 'hidden');
+        if (alertCallback) alertCallback();
+        alertCallback = null;
+    };
+
+    // Fungsi pembungkus Toast agar aman
+    window.showToastAlert = (type, title, msg) => {
+        if (typeof window.showToast === 'function') {
+            window.showToast(type, title, msg);
+        } else {
+            window.showCustomAlert(title, msg, type);
+        }
+    };
+
+    // 1. DAFTAR BARANG TOKO (Sesuaikan dengan file di folder public/shop/)
+    const shopItems = [
+        { id: 'item1', filename: 'ICA.jpg', type: 'photo', url: '/shop/ICA.jpg', cost: 150 },
+        { id: 'item2', filename: 'LINA.jpg', type: 'photo', url: '/shop/LINA.jpg', cost: 150 },
+        { id: 'item3', filename: 'NABILA.jpg', type: 'photo', url: '/shop/NABILA.jpg', cost: 150 },
+        { id: 'item4', filename: 'NADIFAH 2.jpg', type: 'photo', url: '/shop/NADIFAH 2.jpg', cost: 150 },
+        { id: 'item5', filename: 'NADIFAH.jpg', type: 'photo', url: '/shop/NADIFAH.jpg', cost: 150 },
+        { id: 'item6', filename: 'PUTRI.jpg', type: 'photo', url: '/shop/PUTRI.jpg', cost: 150 },
+        { id: 'item7', filename: 'SABIRA.jpg', type: 'photo', url: '/shop/SABIRA.jpg', cost: 150 },
+        { id: 'item8', filename: 'STIKER.jpg', type: 'photo', url: '/shop/STIKER.png', cost: 150 },
+        { id: 'item9', filename: 'YASMIN.jpg', type: 'photo', url: '/shop/YASMIN.jpg', cost: 150 },
+        { id: 'item10', filename: 'ARA.jpg', type: 'photo', url: '/shop/ARA.jpg', cost: 150 },
+        { id: 'item11', filename: 'NABILA COOL.jpg', type: 'photo', url: '/shop/NABILA COOL.png', cost: 150 },
+        { id: 'item12', filename: 'SALSA.jpg', type: 'photo', url: '/shop/SALSA.jpg', cost: 150 },
+        { id: 'item13', filename: 'AINI.mp4', type: 'video', url: '/shop/AINI.mp4', cost: 700 },
+        { id: 'item14', filename: 'DIRA.mp4', type: 'video', url: '/shop/DIRA.mp4', cost: 700 },
+        { id: 'item15', filename: 'HAIDAR.mp4', type: 'video', url: '/shop/HAIDAR.mp4', cost: 700 },
+        { id: 'item16', filename: 'WAWA.mp4', type: 'video', url: '/shop/WAWA.mp4', cost: 700 },
+    ];
+
+    let allStudents = [];
+    let activeStudent = null;
+    let unlockedFilenames = [];
+    let pendingBuyItem = null;
+
+    const init = async () => {
+        if (!token) {
+            window.showCustomAlert("Akses Ditolak", "Sepertinya ada kesalahan dalam login")
+            return window.location.replace('/');
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const data = await res.json();
+            allStudents = data.data || [];
+
+            renderLobbyGrid();
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+        } catch (e) {
+            console.error(e);
+            window.showToastAlert('danger', 'Error', 'Gagal memuat data siswa.');
+        }
+    };
+
+    // === SISTEM LOGIN & LOCK DEVICE ===
+    let pendingLoginStudentId = null;
+
+    // UPDATE: Render grid diubah agar memanggil handleStudentClick
+    const renderLobbyGrid = () => {
+        const grid = document.getElementById('lobbyStudentGrid');
+        const query = document.getElementById('lobbySearch').value.toLowerCase();
+
+        // 👇 AMBIL STATUS LOCK DARI LOCAL STORAGE 👇
+        const lockedStudentId = localStorage.getItem('shop_locked_student_id');
+
+        const filtered = allStudents.filter(s => (s.name || '').toLowerCase().includes(query));
+        if (filtered.length === 0) {
+            grid.innerHTML = '<p class="col-span-2 text-center py-8 text-gray-400 text-xs italic">Siswa tidak ditemukan.</p>';
+            return;
+        }
+
+        grid.innerHTML = filtered.map(s => {
+            const initial = (s.name || '??').substring(0,2).toUpperCase();
+
+            // 👇 CEK APAKAH KARTU INI MILIK ORANG LAIN SAAT DEVICE SUDAH TERKUNCI 👇
+            const isOtherStudentLocked = lockedStudentId && lockedStudentId !== s.id;
+
+            // Atur class kemasan kartu secara dinamis
+            const cardClass = isOtherStudentLocked
+                ? "bg-gray-100 p-4 rounded-3xl border border-gray-200 shadow-sm flex flex-col items-center text-center gap-3 opacity-40 grayscale scale-95 transition-all cursor-not-allowed"
+                : "bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 cursor-pointer hover:border-indigo-300 transition-all";
+
+            // Atur class avatar inisial secara dinamis
+            const avatarClass = isOtherStudentLocked
+                ? "w-14 h-14 bg-gray-200 text-gray-400 rounded-2xl flex items-center justify-center text-lg font-black relative"
+                : "w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg font-black relative";
+
+            // Tambahkan indikator gembok kecil merah di pojok avatar jika terkunci
+            const lockBadge = isOtherStudentLocked
+                ? `<div class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] rounded-full border-2 border-white flex items-center justify-center shadow-md animate-pulse"><i class="fa-solid fa-lock"></i></div>`
+                : '';
+
+            // Klik tetap diarahkan ke handleStudentClick agar modal pengunci tetap muncul
+            return `
+                <div class="${cardClass}" onclick="handleStudentClick('${s.id}')">
+                    <div class="${avatarClass}">
+                        ${initial}
+                        ${lockBadge}
+                    </div>
+                    <h4 class="font-black text-gray-800 text-[11px] line-clamp-1 capitalize">${s.name}</h4>
+                </div>
+            `;
+        }).join('');
+    };
+
+    // FUNGSI BARU: Cegah klik akun teman & Tampilkan PIN
+    window.handleStudentClick = (studentId) => {
+        const lockedStudentId = localStorage.getItem('shop_locked_student_id');
+
+        // 1. Jika device sudah dikunci orang lain, TENDANG!
+        if (lockedStudentId && lockedStudentId !== studentId) {
+            return window.showCustomAlert(
+                'Perangkat Terkunci!',
+                'Perangkat ini sudah digunakan oleh siswa lain. Kamu tidak bisa membuka toko milik temanmu.'
+            );
+        }
+
+        activeStudent = allStudents.find(s => s.id === studentId);
+        if (!activeStudent) return;
+
+        // 2. Jika dia klik namanya sendiri dan sudah punya izin (terkunci di local), langsung masuk tanpa PIN
+        if (lockedStudentId === studentId) {
+            return window.selectStudent(studentId);
+        }
+
+        // 3. Jika device ini masih kosong (belum ada yg login), minta PIN
+        pendingLoginStudentId = studentId;
+        document.getElementById('inputPin').value = '';
+        document.getElementById('modalPinInput').classList.replace('hidden', 'flex');
+        document.getElementById('inputPin').focus();
+    };
+
+    window.closePinModal = () => {
+        document.getElementById('modalPinInput').classList.replace('flex', 'hidden');
+        pendingLoginStudentId = null;
+    };
+
+    window.executeVerifyPin = async () => {
+        const pin = document.getElementById('inputPin').value;
+        const btn = document.getElementById('btnSubmitPin');
+
+        if (pin.length !== 3) {
+            return window.showCustomAlert('PIN Tidak Valid', 'PIN harus diisi persis 3 angka.');
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa...';
+
+        try {
+            // Cek ke Backend
+            const res = await fetch(`${API_URL}/api/students/${pendingLoginStudentId}/verify-pin`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+
+            const result = await res.json();
+            if (!res.ok || result.status !== 'success') {
+                throw new Error(result.message || 'PIN salah!');
+            }
+
+            // SUKSES: Kunci LocalStorage agar selamanya device ini milik dia
+            localStorage.setItem('shop_locked_student_id', pendingLoginStudentId);
+
+            closePinModal();
+            window.selectStudent(pendingLoginStudentId);
+
+        } catch (error) {
+            window.showCustomAlert('Akses Ditolak', error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Buka Toko';
+        }
+    };
+
+    document.getElementById('lobbySearch')?.addEventListener('input', renderLobbyGrid);
+
+    window.selectStudent = async (studentId) => {
+        activeStudent = allStudents.find(s => s.id === studentId);
+        if (!activeStudent) return;
+
+        document.getElementById('lobbyScreen').classList.replace('flex', 'hidden');
+        document.getElementById('loadingScreen').classList.remove('hidden');
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/unlocked/${studentId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            unlockedFilenames = data.data || [];
+
+            updateShopUI();
+
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('shopScreen').classList.replace('hidden', 'flex');
+        } catch (e) {
+            console.error(e);
+            window.showToastAlert('danger', 'Error', 'Gagal mengambil data inventaris.');
+            window.backToLobby();
+        }
+    };
+
+    window.backToLobby = () => {
+        activeStudent = null;
+        document.getElementById('shopScreen').classList.replace('flex', 'hidden');
+        document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+    };
+
+    const updateShopUI = () => {
+        document.getElementById('shopStudentName').innerText = activeStudent.name;
+        document.getElementById('shopWallet').innerText = activeStudent.poin || 0;
+
+        const grid = document.getElementById('mediaGrid');
+        grid.innerHTML = shopItems.map(item => {
+            const isUnlocked = unlockedFilenames.includes(item.filename);
+            const icon = item.type === 'video' ? '<i class="fa-solid fa-play"></i>' : '<i class="fa-solid fa-image"></i>';
+
+            if (isUnlocked) {
+                // Tampilan Terbuka
+                return `
+                    <div onclick="openPreview('${item.id}')" class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm active:scale-95 transition-all cursor-pointer group">
+                        <div class="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center">
+                            ${item.type === 'video'
+                                ? `<div class="absolute inset-0 bg-black/20 z-10 flex items-center justify-center"><div class="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white text-lg"><i class="fa-solid fa-play"></i></div></div><video src="${item.url}#t=0.1" class="w-full h-full object-cover" preload="metadata"></video>`
+                                : `<img src="${item.url}" class="w-full h-full object-cover" loading="lazy">`
+                            }
+                        </div>
+                        <div class="p-3 bg-white flex justify-between items-center border-t border-gray-100">
+                            <span class="text-[10px] font-black text-gray-500 line-clamp-1">${item.filename}</span>
+                            <span class="text-[10px] text-green-500 font-black"><i class="fa-solid fa-check-circle"></i></span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Tampilan Terkunci
+                return `
+                    <div onclick="openBuyModal('${item.id}')" class="media-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm active:scale-95 transition-all cursor-pointer relative group">
+                        <div class="aspect-square bg-gray-200 relative overflow-hidden flex items-center justify-center">
+
+                            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl gap-2 transition-all duration-300 group-hover:backdrop-blur-md">
+                                <div class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-white text-lg border border-white/30 shadow-lg">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <span class="text-[10px] font-black text-white/80 uppercase tracking-widest mt-1">Terkunci</span>
+                            </div>
+
+                            ${item.type === 'video'
+                                ? `<video src="${item.url}#t=0.1" class="w-full h-full object-cover" preload="metadata"></video>`
+                                : `<img src="${item.url}" class="w-full h-full object-cover" loading="lazy">`
+                            }
+                        </div>
+                        <div class="p-3 bg-white flex justify-between items-center border-t border-gray-100 relative z-20">
+                            <span class="text-[10px] font-black text-gray-800 flex gap-1.5 items-center">${icon} ${item.type.toUpperCase()}</span>
+                            <span class="text-[10px] font-black text-amber-500 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">💰 ${item.cost}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+    };
+
+    window.openBuyModal = (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        pendingBuyItem = item;
+        document.getElementById('buyFilename').innerText = item.filename;
+        document.getElementById('buyCost').innerText = `💰 ${item.cost}`;
+        document.getElementById('buyIcon').className = item.type === 'video' ? 'fa-solid fa-film' : 'fa-solid fa-image';
+
+        const btn = document.getElementById('btnConfirmBuy');
+        if (activeStudent.poin < item.cost) {
+            btn.disabled = true;
+            btn.innerHTML = 'Koin Tidak Cukup';
+            btn.className = 'w-full py-4 bg-gray-200 text-gray-500 font-black rounded-xl cursor-not-allowed';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Beli Sekarang';
+            btn.className = 'w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all';
+        }
+
+        document.getElementById('modalBuy').classList.replace('hidden', 'flex');
+    };
+
+    window.closeBuyModal = () => {
+        pendingBuyItem = null;
+        document.getElementById('modalBuy').classList.replace('flex', 'hidden');
+    };
+
+    window.executeBuy = async () => {
+        if (!pendingBuyItem || !activeStudent) return;
+
+        const btn = document.getElementById('btnConfirmBuy');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/buy`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: activeStudent.id,
+                    filename: pendingBuyItem.filename,
+                    type: pendingBuyItem.type,
+                    cost: pendingBuyItem.cost
+                })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status !== 'success') {
+                throw new Error(result.message || 'Gagal membeli item');
+            }
+
+            // Sukses
+            activeStudent.poin = result.data.new_poin;
+            unlockedFilenames.push(pendingBuyItem.filename);
+
+            window.showToastAlert('success', 'Berhasil Dibeli!', 'Koleksimu telah bertambah.');
+            updateShopUI();
+
+            // 👇 AMANKAN ID DI SINI SEBELUM MODAL DITUTUP 👇
+            const purchasedItemId = pendingBuyItem.id;
+
+            closeBuyModal(); // Di dalam sini pendingBuyItem diubah menjadi null
+
+            // 👇 GUNAKAN VARIABEL LOKAL YANG AMAN DARI NULL 👇
+            setTimeout(() => window.openPreview(purchasedItemId), 500);
+
+        } catch (error) {
+            console.error("Gagal Beli:", error);
+            if (typeof window.showToastAlert === 'function') {
+                window.showToastAlert('danger', 'Gagal', error.message);
+            } else {
+                alert('Gagal membeli: ' + error.message);
+            }
+            btn.disabled = false;
+            btn.innerHTML = 'Coba Lagi';
+        }
+    };
+
+    window.openPreview = (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const container = document.getElementById('previewContainer');
+        if (item.type === 'video') {
+            container.innerHTML = `<video src="${item.url}" controls autoplay class="max-w-full max-h-full rounded-xl shadow-2xl pointer-events-auto outline-none"></video>`;
+        } else {
+            container.innerHTML = `<img src="${item.url}" class="max-w-full max-h-full rounded-xl shadow-2xl pointer-events-auto object-contain">`;
+        }
+
+        document.getElementById('modalPreview').classList.replace('hidden', 'flex');
+    };
+
+    window.closePreview = () => {
+        const container = document.getElementById('previewContainer');
+        const video = container.querySelector('video');
+        if (video) video.pause();
+
+        container.innerHTML = '';
+        document.getElementById('modalPreview').classList.replace('flex', 'hidden');
+    };
+
+    init();
+</script>
