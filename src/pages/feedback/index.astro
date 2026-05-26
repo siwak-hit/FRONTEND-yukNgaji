@@ -8,29 +8,35 @@ import Toast from '../../components/Toast.astro';
         <div class="absolute top-[-10%] left-[-10%] w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-[80px] opacity-80"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-72 h-72 bg-amber-100 rounded-full mix-blend-multiply filter blur-[80px] opacity-80"></div>
 
-        <div id="feedbackCard" class="relative z-10 w-full max-w-md bg-white rounded-[2rem] p-6 shadow-xl border border-indigo-100 animate-slide-up">
+        <div id="identitySelection" class="hidden relative z-10 w-full max-w-md bg-white rounded-[2rem] p-6 shadow-xl border border-indigo-100 animate-slide-up">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h1 class="text-xl font-black text-gray-800 mb-2">Kamu Siapa?</h1>
+                <p class="text-xs font-bold text-gray-500">Pilih namamu dari daftar di bawah ini untuk mengisi raport akhir.</p>
+            </div>
+
+            <div id="studentSelectionList" class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                <div class="text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>
+            </div>
+        </div>
+
+        <div id="feedbackCard" class="hidden relative z-10 w-full max-w-md bg-white rounded-[2rem] p-6 shadow-xl border border-indigo-100 animate-slide-up">
             <div class="text-center mb-6">
                 <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[1.5rem] flex items-center justify-center text-4xl mx-auto mb-4 border border-indigo-100 shadow-inner">
                     <i class="fa-solid fa-heart-circle-check animate-bounce"></i>
                 </div>
-
-                <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">
-                    Misi Terakhir
-                </p>
-                <h1 class="text-2xl font-black text-gray-800 mb-2">
-                    Bantu Ustadz Sebentar
-                </h1>
+                <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Misi Terakhir</p>
+                <h1 class="text-2xl font-black text-gray-800 mb-2">Bantu Ustadz Sebentar</h1>
                 <p class="text-xs font-bold text-gray-500 leading-relaxed">
-                    Jawab singkat saja ya. Setelah ini Ujian kamu lengkap dan kamu boleh menutup browser.
+                    Jawab jujur ya <span id="displayStudentName" class="text-indigo-600 font-black"></span>. Setelah ini evaluasimu lengkap!
                 </p>
             </div>
 
             <form id="feedbackForm" class="space-y-5">
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">
-                        Aplikasinya nyaman dipakai?
-                    </label>
-
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Aplikasinya nyaman dipakai?</label>
                     <div class="grid grid-cols-5 gap-2" data-rating-group="comfort">
                         <button type="button" onclick="selectRating('comfort', 1)" class="rating-btn" data-value="1">😵<span>1</span></button>
                         <button type="button" onclick="selectRating('comfort', 2)" class="rating-btn" data-value="2">😕<span>2</span></button>
@@ -41,10 +47,7 @@ import Toast from '../../components/Toast.astro';
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">
-                        Ujiannya terasa susah?
-                    </label>
-
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Ujiannya terasa susah?</label>
                     <div class="grid grid-cols-5 gap-2" data-rating-group="difficulty">
                         <button type="button" onclick="selectRating('difficulty', 1)" class="rating-btn" data-value="1">😎<span>1</span></button>
                         <button type="button" onclick="selectRating('difficulty', 2)" class="rating-btn" data-value="2">🙂<span>2</span></button>
@@ -52,16 +55,12 @@ import Toast from '../../components/Toast.astro';
                         <button type="button" onclick="selectRating('difficulty', 4)" class="rating-btn" data-value="4">😵<span>4</span></button>
                         <button type="button" onclick="selectRating('difficulty', 5)" class="rating-btn" data-value="5">😭<span>5</span></button>
                     </div>
-                    <p class="text-[9px] font-bold text-gray-400 mt-2">
-                        1 = gampang, 5 = susah banget
-                    </p>
+                    <p class="text-[9px] font-bold text-gray-400 mt-2">1 = gampang, 5 = susah banget</p>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                        Bagian yang paling kamu suka
-                    </label>
-                    <select id="favoritePart" class="input-field">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Bagian yang paling kamu suka</label>
+                    <select id="favoritePart" class="input-field cursor-pointer">
                         <option value="">Pilih salah satu...</option>
                         <option value="soal">Soal ujiannya</option>
                         <option value="miaw">Maskot Miaw</option>
@@ -73,28 +72,21 @@ import Toast from '../../components/Toast.astro';
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                        Bagian mana yang bikin bingung?
-                    </label>
-                    <textarea id="hardestPart" rows="3" class="input-field resize-none" placeholder="Contoh: bagian koin, tombol hint, soal mengetik, dll..."></textarea>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Bagian mana yang bikin bingung?</label>
+                    <textarea id="hardestPart" rows="3" class="input-field resize-none" placeholder="Contoh: bagian koin, tombol hint, dll..."></textarea>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                        Saran fitur tambahan
-                    </label>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Saran fitur tambahan</label>
                     <textarea id="suggestion" rows="3" class="input-field resize-none" placeholder="Menurut kamu, aplikasi ini perlu ditambah apa?"></textarea>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                        Pesan bebas buat Ustadz / Kak Aziz
-                    </label>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Pesan bebas buat Ustadz / Kak Aziz</label>
                     <textarea id="message" rows="3" class="input-field resize-none" placeholder="Boleh dikosongkan kalau tidak ada."></textarea>
                 </div>
 
-                <button type="submit" id="btnSubmitFeedback"
-                    class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-[0_6px_0_#4f46e5] active:translate-y-[6px] active:shadow-none transition-all">
+                <button type="submit" id="btnSubmitFeedback" class="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-[0_6px_0_#4f46e5] active:translate-y-[6px] active:shadow-none transition-all">
                     Kirim & Simpan ke Raport
                 </button>
             </form>
@@ -102,26 +94,16 @@ import Toast from '../../components/Toast.astro';
 
         <div id="successCard" class="hidden relative z-10 w-full max-w-md bg-white rounded-[2rem] p-8 shadow-xl border border-green-100 text-center animate-slide-up">
             <div class="text-6xl mb-4 animate-bounce">✅</div>
-            <h2 class="text-2xl font-black text-gray-800 mb-2">
-                Terima Kasih!
-            </h2>
-            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-6">
-                Feedback kamu sudah terkirim. Laporan akhir kamu sudah lengkap.
-            </p>
-
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Terima Kasih!</h2>
+            <p class="text-xs font-bold text-gray-500 leading-relaxed mb-6">Feedback kamu sudah terkirim. Laporan akhir kamu sudah lengkap.</p>
             <div class="bg-green-50 border border-green-100 rounded-2xl p-4 mb-6">
-                <p class="text-[10px] font-black text-green-700 uppercase tracking-widest">
-                    Sekarang kamu boleh menutup browser ini.
-                </p>
+                <p class="text-[10px] font-black text-green-700 uppercase tracking-widest">Sekarang kamu boleh menutup browser ini.</p>
             </div>
-
-            <button onclick="window.location.replace('/selesai')"
-                class="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-[0_6px_0_#16a34a] active:translate-y-[6px] active:shadow-none transition-all">
+            <button onclick="window.location.replace('/selesai')" class="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-[0_6px_0_#16a34a] active:translate-y-[6px] active:shadow-none transition-all">
                 Selesai
             </button>
         </div>
     </div>
-
     <Toast />
 </Layout>
 
@@ -129,79 +111,134 @@ import Toast from '../../components/Toast.astro';
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const urlParams = new URLSearchParams(window.location.search);
 
-    const studentId = urlParams.get('student_id');
+    let studentId = urlParams.get('student_id');
     const examId = urlParams.get('exam_id');
-
     const isPreview = urlParams.get('preview') === 'true';
     const isTeacherPreview = urlParams.get('teacher_preview') === 'true';
-
     let token = urlParams.get('token') || localStorage.getItem('token') || sessionStorage.getItem('temp_pr_token');
 
-    const ratings = {
-        comfort: 0,
-        difficulty: 0
+    const ratings = { comfort: 0, difficulty: 0 };
+
+    // ALUR HALAMAN SAAT DIMUAT
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (studentId) {
+            document.getElementById('feedbackCard').classList.remove('hidden');
+        } else if (token) {
+            document.getElementById('identitySelection').classList.remove('hidden');
+            await loadStudentsForSelection();
+        } else {
+            document.getElementById('identitySelection').classList.remove('hidden');
+            document.getElementById('studentSelectionList').innerHTML = '<p class="text-center text-xs text-rose-500 font-bold py-4">Akses Ditolak.<br>Buka melalui link resmi dari Ustadz.</p>';
+        }
+    });
+
+    // PENGAMBILAN & FILTER IDENTITAS MURID
+    async function loadStudentsForSelection() {
+        const container = document.getElementById('studentSelectionList');
+        try {
+            // Ambil daftar murid & feedback secara paralel
+            const [studentRes, fbRes] = await Promise.all([
+                fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/api/feedbacks`, { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+
+            const [studentData, fbData] = await Promise.all([studentRes.json(), fbRes.json()]);
+            const students = studentData.data || [];
+            const feedbacks = fbData.data || [];
+
+            // Identifikasi siapa yang sudah mengisi feedback
+            const submittedIds = new Set(feedbacks.map(fb => String(fb.student_id)));
+
+            // Filter: Hanya yang belum mengisi feedback yang dimunculkan di list
+            const pendingStudents = students.filter(s => !submittedIds.has(String(s.id)));
+
+            if (pendingStudents.length === 0) {
+                container.innerHTML = `<div class="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl text-center"><i class="fa-solid fa-circle-check text-emerald-500 text-3xl mb-2"></i><p class="text-xs text-emerald-700 font-bold">Alhamdulillah, seluruh murid sudah mengisi form evaluasi!</p></div>`;
+                return;
+            }
+
+            container.innerHTML = pendingStudents.map(s => {
+                // CATATAN UNTUK BACKEND: Pastikan endpoint /api/students me-return properti "is_exams_completed" (boolean).
+                // Jika data tersebut belum tersedia dari backend, kita atur default ke true sementara waktu.
+                const isCompleted = s.is_exams_completed !== false;
+
+                // Jika sudah komplit: style interaktif (hover). Jika belum: style pudar (opacity-60)
+                const btnClass = isCompleted
+                    ? 'border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 active:scale-[0.98]'
+                    : 'border-slate-200 opacity-60 bg-slate-100';
+
+                const avatarClass = isCompleted
+                    ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white'
+                    : 'bg-slate-200 text-slate-500';
+
+                const textNameClass = isCompleted
+                    ? 'text-slate-700 group-hover:text-indigo-800'
+                    : 'text-slate-500';
+
+                const iconTrailing = isCompleted
+                    ? '<i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-400 text-[10px]"></i>'
+                    : '<i class="fa-solid fa-lock text-slate-400 text-[10px]" title="Belum Selesai Ujian"></i>';
+
+                return `
+                    <button onclick="selectIdentity('${s.id}', '${s.name}', ${isCompleted})" class="w-full text-left bg-slate-50 border ${btnClass} p-3.5 rounded-xl transition-all flex items-center gap-3 group">
+                        <div class="w-9 h-9 rounded-full ${avatarClass} font-black flex items-center justify-center text-xs shrink-0 transition-colors">${s.name.substring(0,2).toUpperCase()}</div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold ${textNameClass} text-xs truncate">${s.name}</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">${s.grade || 'Siswa'}</p>
+                        </div>
+                        ${iconTrailing}
+                    </button>
+                `;
+            }).join('');
+        } catch (err) {
+            container.innerHTML = `<p class="text-center text-xs text-rose-500 font-bold py-4">Gagal memuat data kelas.</p>`;
+        }
+    }
+
+    // PEMILIHAN IDENTITAS (Validasi Ujian Selesai)
+    window.selectIdentity = (id, name, isCompleted) => {
+        // Blokir dan munculkan toast jika ujian belum selesai
+        if (!isCompleted) {
+            return window.showToast?.('warning', 'Ujian Belum Selesai', 'Maaf, kamu harus menyelesaikan semua ujian terlebih dahulu sebelum mengisi form evaluasi ini.');
+        }
+
+        studentId = id;
+        document.getElementById('displayStudentName').innerText = name.split(' ')[0];
+        document.getElementById('identitySelection').classList.add('hidden');
+        document.getElementById('feedbackCard').classList.remove('hidden');
     };
 
+    // RATING LOGIC
     window.selectRating = (type, value) => {
         ratings[type] = value;
-
-        document.querySelectorAll(`[data-rating-group="${type}"] .rating-btn`).forEach(btn => {
-            btn.classList.remove('selected');
-        });
-
+        document.querySelectorAll(`[data-rating-group="${type}"] .rating-btn`).forEach(btn => btn.classList.remove('selected'));
         document.querySelector(`[data-rating-group="${type}"] [data-value="${value}"]`)?.classList.add('selected');
     };
 
+    // PENGIRIMAN FORM
     document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        if (!studentId) {
-            window.showToast?.('danger', 'Gagal', 'Data siswa tidak ditemukan.');
-            return;
-        }
-
-        if (!ratings.comfort || !ratings.difficulty) {
-            window.showToast?.('warning', 'Isi Dulu', 'Pilih nilai kenyamanan dan tingkat kesulitan dulu ya.');
-            return;
-        }
+        if (!studentId) return window.showToast?.('danger', 'Gagal', 'Identitas siswa tidak ditemukan.');
+        if (!ratings.comfort || !ratings.difficulty) return window.showToast?.('warning', 'Isi Dulu', 'Pilih nilai kenyamanan dan kesulitan dulu ya.');
 
         const btn = document.getElementById('btnSubmitFeedback');
         const originalText = btn.innerHTML;
-
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
 
         try {
-            // [BARU] Mode simulasi guru:
             if (isPreview && isTeacherPreview) {
                 await new Promise(resolve => setTimeout(resolve, 700));
-
-                const successTitle = document.querySelector('#successCard h2');
-                const successDesc = document.querySelector('#successCard p');
-
-                if (successTitle) successTitle.innerText = 'Simulasi Selesai!';
-                if (successDesc) {
-                    successDesc.innerText = 'Alur feedback berhasil ditampilkan. Data tidak dikirim ke database karena ini mode simulasi guru.';
-                }
-
                 document.getElementById('feedbackCard').classList.add('hidden');
                 document.getElementById('successCard').classList.remove('hidden');
-
-                window.showToast?.(
-                    'success',
-                    'Simulasi Berhasil',
-                    'Feedback tidak dikirim ke database karena ini mode simulasi guru.'
-                );
-
+                window.showToast?.('success', 'Simulasi Berhasil', 'Data tidak dikirim karena ini mode simulasi.');
                 return;
             }
 
             const res = await fetch(`${API_URL}/api/onboarding/feedback`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     student_id: studentId,
                     exam_id: examId,
@@ -211,23 +248,19 @@ import Toast from '../../components/Toast.astro';
                     hardest_part: document.getElementById('hardestPart').value.trim(),
                     suggestion: document.getElementById('suggestion').value.trim(),
                     message: document.getElementById('message').value.trim(),
-                    source: 'exam_final'
+                    source: 'app_general'
                 })
             });
 
             const result = await res.json();
-
-            if (!res.ok || result.status !== 'success') {
-                throw new Error(result.message || 'Gagal mengirim feedback.');
-            }
+            if (!res.ok) throw new Error(result.message || 'Gagal mengirim feedback.');
 
             document.getElementById('feedbackCard').classList.add('hidden');
             document.getElementById('successCard').classList.remove('hidden');
-
             window.showToast?.('success', 'Terkirim', 'Feedback kamu berhasil disimpan.');
+
         } catch (err) {
-            console.error(err);
-            window.showToast?.('danger', 'Gagal', err.message || 'Gagal mengirim feedback.');
+            window.showToast?.('danger', 'Gagal', err.message);
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
@@ -235,67 +268,17 @@ import Toast from '../../components/Toast.astro';
 </script>
 
 <style is:global>
-    .animate-slide-up {
-        animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
+    .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { 0% { transform: translateY(20px) scale(0.96); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 
-    @keyframes slideUp {
-        0% {
-            transform: translateY(20px) scale(0.96);
-            opacity: 0;
-        }
+    .input-field { width: 100%; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 1rem; padding: 0.85rem 1rem; font-size: 0.75rem; font-weight: 700; color: #334155; outline: none; transition: all 0.2s ease; }
+    .input-field:focus { border-color: #6366f1; background: #ffffff; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12); }
 
-        100% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-    }
+    .rating-btn { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 1rem; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 1.35rem; font-weight: 900; color: #64748b; transition: all 0.2s ease; }
+    .rating-btn span { font-size: 0.65rem; font-weight: 900; }
+    .rating-btn.selected { background: #eef2ff; border-color: #6366f1; color: #4f46e5; transform: translateY(-3px); box-shadow: 0 6px 0 #c7d2fe; }
 
-    .input-field {
-        width: 100%;
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 1rem;
-        padding: 0.85rem 1rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #334155;
-        outline: none;
-        transition: all 0.2s ease;
-    }
-
-    .input-field:focus {
-        border-color: #6366f1;
-        background: #ffffff;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
-    }
-
-    .rating-btn {
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 1rem;
-        min-height: 64px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        font-size: 1.35rem;
-        font-weight: 900;
-        color: #64748b;
-        transition: all 0.2s ease;
-    }
-
-    .rating-btn span {
-        font-size: 0.65rem;
-        font-weight: 900;
-    }
-
-    .rating-btn.selected {
-        background: #eef2ff;
-        border-color: #6366f1;
-        color: #4f46e5;
-        transform: translateY(-3px);
-        box-shadow: 0 6px 0 #c7d2fe;
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 </style>

@@ -39,7 +39,10 @@ import Toast from '../../../../components/Toast.astro';
                         <h2 class="text-[10px] font-black opacity-80 uppercase tracking-widest mb-0.5">Timer Sesi</h2>
                         <div id="timerBox" class="text-4xl font-black tabular-nums tracking-tight leading-none">10:00</div>
                     </div>
-                    <div class="relative z-10 text-right">
+                    <div class="relative z-10 text-right flex items-center gap-2">
+                        <button id="btnResetSession" onclick="resetSessionWithConfirm()" class="hidden px-3 py-2.5 bg-red-500/20 hover:bg-red-500/40 active:scale-95 rounded-xl text-xs font-black backdrop-blur-sm transition-all flex items-center gap-1.5 border border-red-500/30 text-red-200 hover:text-white">
+                            <i class="fa-solid fa-rotate-left"></i> Reset
+                        </button>
                         <button id="btnToggleSlot" onclick="toggleSlotAccordion()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-xl text-xs font-black backdrop-blur-sm transition-all flex items-center gap-2 border border-white/20">
                             <i class="fa-solid fa-users"></i> Peserta (<span id="slotCounterTop">0/5</span>)
                             <i id="slotAccordionIcon" class="fa-solid fa-chevron-up transition-transform duration-300"></i>
@@ -47,6 +50,38 @@ import Toast from '../../../../components/Toast.astro';
                     </div>
                     <div class="absolute bottom-0 left-0 w-full h-1.5 bg-black/20">
                         <div id="timerBar" class="h-full bg-white/80 transition-all duration-1000" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <div id="modalStartMode" class="fixed inset-0 z-[600] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border-4 border-indigo-500 animate-slide-up">
+                        <div class="text-center mb-5">
+                            <div class="w-16 h-16 bg-indigo-50 text-indigo-600 border-2 border-indigo-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                            <h3 class="text-xl font-black text-slate-800">Mulai Sesi?</h3>
+                            <p class="text-xs font-bold text-slate-500 mt-2 leading-relaxed">
+                                Tentukan target waktu dan pilih mode sesi.
+                            </p>
+                        </div>
+
+                        <div class="mb-5 text-left bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <label class="text-xs font-black text-slate-700 block mb-1.5">Durasi Target Sesi (Menit):</label>
+                            <input type="number" id="sessionDurationInput" value="10" min="1" max="180" class="w-full bg-white border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 outline-none focus:border-indigo-500 transition-all text-center" />
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                            <button onclick="startSession('simulation')" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black active:scale-95 transition-all border-2 border-slate-200">
+                                Simulasi Saja
+                            </button>
+                            <button onclick="startSession('real')" class="w-full py-4 bg-green-500 text-white rounded-2xl font-black shadow-[0_6px_0_#16a34a] active:translate-y-1 active:shadow-none transition-all">
+                                Real, Simpan Data
+                            </button>
+                        </div>
+
+                        <button onclick="closeStartModeModal()" class="w-full mt-5 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">
+                            Batal
+                        </button>
                     </div>
                 </div>
 
@@ -78,82 +113,76 @@ import Toast from '../../../../components/Toast.astro';
             </div>
         </div>
 
-        <div id="preAssessmentArea">
-            <section class="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-sm mb-6">
-                <div class="flex items-center justify-between mb-6">
+        <section id="mainAssessmentSection" class="hidden animate-slide-up mt-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between bg-white border-2 border-slate-100 rounded-3xl p-4 shadow-sm mb-6 gap-3">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg shadow-inner">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </div>
                     <div>
-                        <h2 class="text-lg font-black text-slate-800">Patokan Materi</h2>
-                        <p class="text-[11px] font-bold text-slate-400 mt-1">Acuan guru dalam melakukan uji hafalan</p>
-                    </div>
-                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 border-2 border-indigo-100 rounded-2xl flex items-center justify-center text-xl shadow-inner">
-                        <i class="fa-solid fa-list-check"></i>
+                        <h2 class="text-sm font-black text-slate-800">Panel Evaluasi</h2>
+                        <p class="text-[10px] font-bold text-slate-400">Pilih tahap penilaian</p>
                     </div>
                 </div>
-                <div id="sessionSections" class="space-y-4">
-                    <div class="text-center py-6"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>
-                </div>
-            </section>
-        </div>
-
-        <section id="assessmentMatrixSection" class="hidden animate-slide-up">
-            <div class="flex flex-col lg:flex-row gap-6 items-start">
-                <div class="w-full lg:w-2/3 bg-white border-2 border-slate-100 rounded-3xl p-5 md:p-6 shadow-sm">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-                        <div>
-                            <h2 class="text-lg font-black text-slate-800">Matriks Evaluasi</h2>
-                            <p class="text-[11px] font-bold text-slate-400 mt-1">Selesaikan materi secara berurutan ke bawah.</p>
-                        </div>
-                        <div class="flex gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl p-2 shrink-0">
-                            <span class="text-[10px] font-bold text-slate-500 px-2 py-1 rounded bg-white shadow-sm border border-slate-200">Belum: 0</span>
-                            <span class="text-[10px] font-bold text-amber-600 px-2 py-1 rounded bg-amber-50 shadow-sm border border-amber-200">Ikut: 1</span>
-                            <span class="text-[10px] font-bold text-green-600 px-2 py-1 rounded bg-green-50 shadow-sm border border-green-200">Hafal: 2</span>
-                        </div>
-                    </div>
-
-                    <div id="assessmentMatrixContainer" class="space-y-4">
-                        </div>
-                </div>
-
-                <div class="w-full lg:w-1/3 bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-6 sticky top-4">
-                    <h3 class="text-sm font-black text-indigo-900 mb-1">Preview Poin</h3>
-                    <p class="text-[10px] font-bold text-indigo-400 mb-4">Skor akan dikalkulasi otomatis.</p>
-
-                    <div id="memorizationPreview" class="space-y-2 mb-6">
-                        </div>
-
-                    <button onclick="openUnderstandingStep()" class="w-full py-4 bg-green-500 text-white rounded-2xl text-sm font-black shadow-[0_6px_0_#16a34a] active:translate-y-1 active:shadow-none transition-all">
-                        Lanjut Tes Pemahaman
-                    </button>
-                </div>
+                <select id="modeSelect" onchange="switchAssessmentMode(this.value)" class="w-full sm:w-auto bg-slate-50 border-2 border-slate-200 text-slate-700 font-black text-xs rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                    <option value="hafalan">Tahap 1: Hafalan</option>
+                    <option value="pemahaman">Tahap 2: Pemahaman</option>
+                </select>
             </div>
-        </section>
 
-        <section id="understandingSection" class="hidden animate-slide-up bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-sm mt-6">
-            <div class="flex items-center justify-between mb-5">
-                <div>
-                    <h2 class="text-lg font-black text-slate-800">Tes Pemahaman Individu</h2>
-                    <p class="text-[11px] font-bold text-slate-400 mt-1">
-                        Tanyakan soal acak di bawah ini lalu beri rating untuk tiap siswa.
-                    </p>
-                </div>
+            <div id="hafalanView" class="block animate-slide-up">
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <div class="w-full lg:w-2/3 bg-white border-2 border-slate-100 rounded-3xl p-5 md:p-6 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-800">Matriks Evaluasi</h2>
+                                <p class="text-[11px] font-bold text-slate-400 mt-1">Selesaikan materi secara berurutan ke bawah.</p>
+                            </div>
+                            <div class="flex gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl p-2 shrink-0">
+                                <span class="text-[10px] font-bold text-slate-500 px-2 py-1 rounded bg-white shadow-sm border border-slate-200">Belum: 0</span>
+                                <span class="text-[10px] font-bold text-amber-600 px-2 py-1 rounded bg-amber-50 shadow-sm border border-amber-200">Ikut: 1</span>
+                                <span class="text-[10px] font-bold text-green-600 px-2 py-1 rounded bg-green-50 shadow-sm border border-green-200">Hafal: 2</span>
+                            </div>
+                        </div>
+                        <div id="assessmentMatrixContainer" class="space-y-4"></div>
+                    </div>
 
-                <div class="w-12 h-12 bg-purple-50 text-purple-600 border-2 border-purple-100 rounded-2xl flex items-center justify-center text-xl shadow-inner shrink-0">
-                    <i class="fa-solid fa-brain"></i>
+                    <div class="w-full lg:w-1/3 bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-6 sticky top-4">
+                        <h3 class="text-sm font-black text-indigo-900 mb-1">Preview Poin</h3>
+                        <p class="text-[10px] font-bold text-indigo-400 mb-4">Skor akan dikalkulasi otomatis.</p>
+                        <div id="memorizationPreview" class="space-y-2 mb-6"></div>
+                        <button onclick="openUnderstandingStep()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black shadow-[0_6px_0_#4338ca] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2">
+                            Lanjut Pemahaman <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div id="understandingCards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
+            <div id="pemahamanView" class="hidden animate-slide-up">
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <div class="w-full lg:w-2/3 bg-white border-2 border-slate-100 rounded-3xl p-5 md:p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-5">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-800">Tes Pemahaman Individu</h2>
+                                <p class="text-[11px] font-bold text-slate-400 mt-1">Tanyakan soal lalu beri rating untuk tiap siswa.</p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-50 text-purple-600 border-2 border-purple-100 rounded-2xl flex items-center justify-center text-xl shadow-inner shrink-0">
+                                <i class="fa-solid fa-brain"></i>
+                            </div>
+                        </div>
 
-            <div class="mt-6 bg-green-50 border-2 border-green-100 rounded-3xl p-6">
-                <h3 class="text-sm font-black text-green-900 mb-3">Preview Nilai Akhir</h3>
-                <div id="finalScorePreview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                        <div id="understandingCardsContainer"></div>
                     </div>
 
-                <button onclick="submitAssessment()" id="btnSubmitFinalAssessment"
-                    class="w-full py-4 bg-green-500 text-white rounded-2xl text-base font-black shadow-[0_6px_0_#16a34a] active:translate-y-1 active:shadow-none transition-all">
-                    Simpan Evaluasi Sesi
-                </button>
+                    <div class="w-full lg:w-1/3 bg-green-50 border-2 border-green-100 rounded-3xl p-6 sticky top-4">
+                        <h3 class="text-sm font-black text-green-900 mb-3">Preview Nilai Akhir</h3>
+                        <div id="finalScorePreview" class="flex flex-col gap-3 mb-6"></div>
+
+                        <button onclick="submitAssessment()" id="btnSubmitFinalAssessment" class="w-full py-4 bg-green-500 text-white rounded-2xl text-base font-black shadow-[0_6px_0_#16a34a] active:translate-y-1 active:shadow-none transition-all">
+                            Simpan Evaluasi Sesi
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -195,7 +224,6 @@ import Toast from '../../../../components/Toast.astro';
     const pathParts = window.location.pathname.split('/');
     const templateId = pathParts[2];
     const sessionId = pathParts[4];
-
     let sessionData = null;
     let remainingSeconds = 600;
     let totalSeconds = 600;
@@ -206,6 +234,58 @@ import Toast from '../../../../components/Toast.astro';
 
     let assessmentScores = {};
     let understandingScores = {};
+
+    // VARIABLE BARU
+    let activeUnderstandingStudent = null;
+    let testedItems = {};             // Format: { studentId: { itemId: true/false } }
+    let activeStudentPerSection = {}; // Format: { sectionIndex: studentId }
+
+    const STORAGE_KEY = `oral_exam_session_${sessionId}`;
+
+    const saveSessionToStorage = () => {
+        if (!hasSessionStarted) return;
+        const state = {
+            remainingSeconds, totalSeconds, hasSessionStarted, sessionMode, selectedStudents,
+            assessmentScores, understandingScores, testedItems, activeStudentPerSection,
+            activeUnderstandingStudent // Tambahkan ke storage
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    };
+
+    const loadSessionFromStorage = () => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return false;
+        try {
+            const state = JSON.parse(saved);
+            remainingSeconds = state.remainingSeconds;
+            totalSeconds = state.totalSeconds;
+            hasSessionStarted = state.hasSessionStarted;
+            sessionMode = state.sessionMode;
+            selectedStudents = state.selectedStudents;
+            assessmentScores = state.assessmentScores;
+            understandingScores = state.understandingScores;
+            testedItems = state.testedItems || {};
+            activeStudentPerSection = state.activeStudentPerSection || {};
+            activeUnderstandingStudent = state.activeUnderstandingStudent || null; // Muat dari storage
+            return true;
+        } catch (e) {
+            console.error("Gagal load session storage", e);
+            return false;
+        }
+    };
+
+    const clearSessionStorage = () => {
+        localStorage.removeItem(STORAGE_KEY);
+    };
+
+    // Fungsi memicu pembatalan/reset ber-konfirmasi
+    window.resetSessionWithConfirm = () => {
+        if (confirm("Apakah Anda yakin ingin mengulang sesi ini? Semua progres penilaian saat ini di local storage akan dihapus.")) {
+            clearInterval(timerInterval);
+            clearSessionStorage();
+            window.location.reload();
+        }
+    };
 
     // ==========================================
     // LOGIKA FLOATING TIMER (Intersection Observer)
@@ -284,6 +364,7 @@ import Toast from '../../../../components/Toast.astro';
             }
 
             remainingSeconds--;
+            saveSessionToStorage();
             const percent = Math.max(0, (remainingSeconds / totalSeconds) * 100);
             const txt = formatTime(remainingSeconds);
             timerBox.innerText = txt; floatText.innerText = txt;
@@ -303,17 +384,60 @@ import Toast from '../../../../components/Toast.astro';
 
     const fetchSession = async () => {
         try {
-            // Asumsi endpoint API Anda menyertakan data prompt atau Anda bisa menambah fetch terpisah
             const res = await fetch(`${API_URL}/api/oral-exams/${templateId}/sessions/${sessionId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const result = await res.json();
             if (!res.ok || result.status !== 'success') throw new Error(result.message || 'Gagal memuat sesi.');
-
             sessionData = result.data;
-            // Pastikan sessionData sekarang berisi properti 'understanding_prompts' dari database
+
+            // Deteksi refresh halaman
+            const hasCache = loadSessionFromStorage();
             renderSession();
+
+            if (hasCache && hasSessionStarted) {
+                executeStartSessionUI();
+                renderActiveParticipants();
+                startTimer();
+                document.getElementById('mainAssessmentSection').classList.remove('hidden'); // UPDATE ID
+                renderAssessmentMatrix();
+                updatePreviewScores();
+
+                // Hapus kondisi document.getElementById('understandingSection') bawaan yang lama
+                if (Object.keys(understandingScores).length > 0) {
+                    renderUnderstandingCards();
+                    renderFinalScorePreview();
+                }
+            }
         } catch (error) { window.showToast?.('danger', 'Gagal', error.message); }
+    };
+
+    const initAssessmentState = () => {
+        selectedStudents.forEach(student => {
+            if (!assessmentScores[student.id]) assessmentScores[student.id] = {};
+        });
+
+        sessionData.sections.forEach(section => {
+            (section.oral_exam_items || []).forEach(item => {
+                // Inisialisasi checkbox global
+                if (testedItems[item.id] === undefined) testedItems[item.id] = false;
+
+                // Inisialisasi skor siswa
+                selectedStudents.forEach(student => {
+                    if (assessmentScores[student.id][item.id] === undefined) assessmentScores[student.id][item.id] = 0;
+                });
+            });
+        });
+    };
+
+    const executeStartSessionUI = () => {
+        document.getElementById('sessionDesc').innerText = `${selectedStudents.length} Peserta Diuji • Target ${Math.floor(totalSeconds / 60)} Menit`;
+        document.getElementById('slotAccordionBody').classList.replace('block', 'hidden');
+        document.getElementById('btnToggleSlot').classList.add('hidden');
+        // document.getElementById('preAssessmentArea').classList.add('hidden');
+        document.getElementById('activeSessionBody').classList.replace('hidden', 'block');
+        document.getElementById('sessionDashboardCard').classList.replace('border-indigo-500', 'border-green-500');
+        document.getElementById('btnResetSession')?.classList.remove('hidden');
     };
 
     const renderSession = () => {
@@ -323,31 +447,18 @@ import Toast from '../../../../components/Toast.astro';
         document.getElementById('sessionTitle').innerText = template.title;
 
         const availableCount = available_students ? available_students.length : 0;
-        document.getElementById('sessionDesc').innerText = `${availableCount} Siswa Tersedia • Target ${Math.floor(session.target_duration_seconds / 60)} Menit`;
 
-        totalSeconds = session.target_duration_seconds || 600;
-        remainingSeconds = totalSeconds;
+        // FIX: Hanya set durasi default jika sesi belum berjalan agar tidak menimpa data local storage
+        if (!hasSessionStarted) {
+            totalSeconds = session.target_duration_seconds || 600;
+            remainingSeconds = totalSeconds;
+        }
+
+        document.getElementById('sessionDesc').innerText = hasSessionStarted
+            ? `${selectedStudents.length} Peserta Diuji • Target ${Math.floor(totalSeconds / 60)} Menit`
+            : `${availableCount} Siswa Tersedia • Target ${Math.floor(totalSeconds / 60)} Menit`;
+
         document.getElementById('timerBox').innerText = formatTime(remainingSeconds);
-
-        document.getElementById('sessionSections').innerHTML = sections.map((section, index) => {
-            const totalItems = section.oral_exam_items?.length || 0;
-            return `
-                <div class="bg-slate-50 border-2 border-slate-100 rounded-3xl p-5 mb-3">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 shrink-0 rounded-2xl bg-white border-2 border-slate-200 text-indigo-600 flex items-center justify-center text-sm font-black shadow-sm">${index + 1}</div>
-                            <h3 class="text-sm font-black text-slate-800 leading-tight">${section.title}</h3>
-                        </div>
-                        <span class="px-3 py-1.5 bg-white border-2 border-slate-200 text-slate-600 text-[10px] font-black rounded-xl uppercase tracking-widest shrink-0 self-start md:self-auto shadow-sm">
-                            Wajib ${section.min_required} dari ${totalItems}
-                        </span>
-                    </div>
-                    <div class="flex flex-wrap gap-2 md:ml-[3.25rem]">
-                        ${(section.oral_exam_items || []).map(item => `<span class="text-[10px] font-bold bg-white text-indigo-600 border-2 border-indigo-100 px-3 py-2 rounded-xl shadow-sm">${item.short_label || item.title}</span>`).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
 
         renderSlots();
     };
@@ -430,18 +541,18 @@ import Toast from '../../../../components/Toast.astro';
     window.startSession = async (mode) => {
         if (selectedStudents.length === 0) return window.showToast?.('warning', 'Pilih Siswa', 'Masukkan minimal 1 siswa ke slot.');
 
+        // Ambil menit kustom dari UI input
+        const customMinutes = parseInt(document.getElementById('sessionDurationInput').value) || 10;
+        totalSeconds = customMinutes * 60;
+        remainingSeconds = totalSeconds;
+
         sessionMode = mode;
         hasSessionStarted = true;
         window.closeStartModeModal();
 
-        document.getElementById('sessionDesc').innerText = `${selectedStudents.length} Peserta Diuji • Target ${Math.floor(totalSeconds / 60)} Menit`;
-
-        document.getElementById('slotAccordionBody').classList.replace('block', 'hidden');
-        document.getElementById('btnToggleSlot').classList.add('hidden');
-        document.getElementById('preAssessmentArea').classList.add('hidden');
-
-        document.getElementById('activeSessionBody').classList.replace('hidden', 'block');
-        document.getElementById('sessionDashboardCard').classList.replace('border-indigo-500', 'border-green-500');
+        initAssessmentState();
+        saveSessionToStorage();
+        executeStartSessionUI();
 
         if (mode === 'simulation') {
             window.showToast?.('info', 'Mode Simulasi', 'Timer berjalan, tapi data penilaian tidak dikirim ke database.');
@@ -459,7 +570,6 @@ import Toast from '../../../../components/Toast.astro';
             });
             const result = await res.json();
             if (!res.ok || result.status !== 'success') throw new Error(result.message || 'Gagal memulai sesi real.');
-
             window.showToast?.('success', 'Sesi Real Dimulai', 'Silakan mulai evaluasi.');
             renderActiveParticipants();
             startTimer();
@@ -468,10 +578,8 @@ import Toast from '../../../../components/Toast.astro';
             console.error(error);
             hasSessionStarted = false;
             sessionMode = 'setup';
-
-            document.getElementById('sessionDesc').innerText = `${sessionData.available_students?.length || 0} Siswa Tersedia • Target ${Math.floor(totalSeconds / 60)} Menit`;
-            document.getElementById('preAssessmentArea').classList.remove('hidden');
-            window.showToast?.('danger', 'Gagal', error.message);
+            clearSessionStorage();
+            window.location.reload();
         }
     };
 
@@ -491,19 +599,79 @@ import Toast from '../../../../components/Toast.astro';
     // RENDER MATRIKS HORIZONTAL
     // ==========================================
     const startAssessmentMatrix = () => {
-        if (Object.keys(assessmentScores).length === 0) {
-            selectedStudents.forEach(student => {
-                assessmentScores[student.id] = {};
-                sessionData.sections.forEach(section => {
-                    (section.oral_exam_items || []).forEach(item => { assessmentScores[student.id][item.id] = 0; });
-                });
-            });
-        }
-
-        document.getElementById('assessmentMatrixSection').classList.remove('hidden');
+        initAssessmentState();
+        document.getElementById('mainAssessmentSection').classList.remove('hidden'); // UPDATE ID
         renderAssessmentMatrix();
         updatePreviewScores();
     };
+
+    // Helper untuk menyingkat teks materi otomatis (DI-UPDATE: Paksa cek kata kunci duluan)
+    const getShortName = (item) => {
+        // Gabungkan title dan short_label agar pengecekan kebal terhadap struktur DB Anda
+        const text = ((item.title || '') + ' ' + (item.short_label || '')).toLowerCase();
+
+        // Tajwid - Nun Mati & Tanwin
+        if (text.includes('idzhar halqi')) return 'IDZ';
+        if (text.includes('idgham bighunnah')) return 'IDG BG';
+        if (text.includes('idgham bilaghunnah')) return 'IDG BLG';
+        if (text.includes('iqlab')) return 'IQ';
+        if (text.includes('ikhfa haqiqi') || (text.includes('ikhfa') && !text.includes('syafawi'))) return 'IKH';
+
+        // Tajwid - Mim Mati
+        if (text.includes('ikhfa syafawi')) return 'IKH SYF';
+        if (text.includes('idgham mimi') || text.includes('mutamatsilain')) return 'IDG MM';
+        if (text.includes('idzhar syafawi')) return 'IDZ SYF';
+
+        // Alif Lam
+        if (text.includes('syamsiyah')) return 'SYAM';
+        if (text.includes('qomariyah')) return 'QOM';
+
+        // Mad
+        if (text.includes('thobi') || text.includes('thabi')) return 'M THOB';
+        if (text.includes('aridh')) return 'M ARIDH';
+        if (text.includes('lin') || text.includes('layyin')) return 'M LIN';
+        if (text.includes('muttashil')) return 'WJB';
+        if (text.includes('munfashil')) return 'JAIZ';
+
+        // Fallback jika tidak ada di daftar atas
+        let fallback = (item.short_label || item.title || '').toUpperCase();
+        if (fallback.length > 15) {
+            const words = fallback.split(' ');
+            if (words.length >= 2) return words[0].substring(0, 3) + ' ' + words[1].substring(0, 3);
+        }
+        return fallback;
+    };
+
+    // Fungsi render khusus Checkbox Toggle Global (DI-UPDATE FLEX LAYOUT)
+    const renderGlobalCheckboxesHtml = (secIdx) => {
+        const section = sessionData.sections[secIdx];
+        const items = section.oral_exam_items || [];
+        const maxAllowed = section.min_required || items.length;
+
+        // Hitung berapa materi yang sudah di-ceklis di bab ini
+        const checkedCount = items.filter(item => testedItems[item.id]).length;
+        const isMaxReached = checkedCount >= maxAllowed;
+
+        return items.map(item => {
+            const isChecked = testedItems[item.id];
+            // Disable JIKA batas max sudah tercapai DAN item ini kebetulan sedang tidak di-ceklis
+            const isDisabled = !isChecked && isMaxReached;
+
+            return `
+                <label class="relative inline-flex flex-none ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}" title="${isDisabled ? `Maksimal ${maxAllowed} materi tercapai` : ''}">
+                    <input type="checkbox" onchange="toggleGlobalTestedItem('${item.id}', ${secIdx})" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} class="peer sr-only" />
+
+                    <div class="px-3 py-2 rounded-xl border-2 text-[10px] font-black transition-all select-none whitespace-nowrap w-max flex items-center justify-center
+                        border-slate-200 bg-white text-slate-400
+                        ${!isDisabled ? 'hover:border-indigo-200 hover:text-indigo-500' : ''}
+                        peer-checked:border-indigo-500 peer-checked:bg-indigo-50 peer-checked:text-indigo-700 peer-checked:shadow-sm">
+                        ${getShortName(item)}
+                    </div>
+                </label>
+            `;
+        }).join('');
+    };
+
 
     const renderAssessmentMatrix = () => {
         const container = document.getElementById('assessmentMatrixContainer');
@@ -516,34 +684,11 @@ import Toast from '../../../../components/Toast.astro';
             const iconClass = isFirst ? 'fa-chevron-up text-indigo-600' : 'fa-chevron-down text-slate-400';
             const bodyClass = isFirst ? 'block' : 'hidden';
 
-            const studentCards = selectedStudents.map(student => `
-                <div class="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm flex flex-col transition-all">
-                    <div class="flex items-center gap-3 mb-4 pb-4 border-b-2 border-slate-50">
-                        <div class="w-10 h-10 shrink-0 rounded-full bg-slate-50 border-2 border-slate-100 flex items-center justify-center text-xs font-black text-slate-600">${getInitials(student.name)}</div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-black text-slate-800 truncate">${student.name}</p>
-                        </div>
-                    </div>
+            if (!activeStudentPerSection[secIdx] && selectedStudents.length > 0) {
+                activeStudentPerSection[secIdx] = selectedStudents[0].id;
+            }
 
-                    <div class="space-y-2">
-                        ${items.map(item => {
-                            const score = assessmentScores[student.id][item.id] || 0;
-                            return `
-                            <div class="flex items-center justify-between gap-3 bg-slate-50/50 p-2 rounded-2xl hover:bg-slate-50 transition-colors">
-                                <p class="text-xs font-bold text-slate-600 truncate flex-1 pl-2" title="${item.title}">${item.short_label || item.title}</p>
-                                <div class="flex bg-white rounded-xl p-1 border-2 border-slate-100 gap-1 shrink-0 w-[150px] shadow-sm">
-                                    <button onclick="setScore('${student.id}', '${item.id}', 0, ${secIdx})" id="btn-0-${student.id}-${item.id}"
-                                        class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${score === 0 ? 'bg-slate-100 shadow-sm text-slate-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600 border border-transparent'}">Belum</button>
-                                    <button onclick="setScore('${student.id}', '${item.id}', 1, ${secIdx})" id="btn-1-${student.id}-${item.id}"
-                                        class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${score === 1 ? 'bg-amber-100 shadow-sm text-amber-600 border border-amber-200' : 'text-slate-400 hover:text-amber-500 border border-transparent'}">Ikut</button>
-                                    <button onclick="setScore('${student.id}', '${item.id}', 2, ${secIdx})" id="btn-2-${student.id}-${item.id}"
-                                        class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${score === 2 ? 'bg-green-100 shadow-sm text-green-600 border border-green-200' : 'text-slate-400 hover:text-green-500 border border-transparent'}">Hafal</button>
-                                </div>
-                            </div>
-                        `}).join('')}
-                    </div>
-                </div>
-            `).join('');
+            const maxAllowed = section.min_required || items.length;
 
             return `
                 <div class="mb-4">
@@ -560,9 +705,36 @@ import Toast from '../../../../components/Toast.astro';
                         </div>
                     </button>
 
-                    <div id="body-matrix-${secIdx}" class="matrix-body ${bodyClass} mt-3 animate-slide-up">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            ${studentCards}
+                    <div id="body-matrix-${secIdx}" class="matrix-body ${bodyClass} mt-3 animate-slide-up bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm">
+
+                        <div class="mb-5 pb-4 border-b-2 border-slate-50">
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <i class="fa-solid fa-list-check text-indigo-500"></i> Materi Diujikan
+                                </label>
+                                <span class="bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 px-2 py-1 rounded-md text-[9px]">
+                                    Pilih Maks: ${maxAllowed}
+                                </span>
+                            </div>
+
+                            <div id="global-checkboxes-container-${secIdx}" class="flex flex-row flex-wrap items-center gap-2">
+                                ${renderGlobalCheckboxesHtml(secIdx)}
+                            </div>
+                        </div>
+
+                        <div class="border-b-2 border-slate-50 flex flex-col gap-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <i class="fa-solid fa-user-graduate text-indigo-500"></i> Siswa Yang Sedang Diuji
+                            </label>
+                            <select onchange="switchMatrixStudent(${secIdx}, this.value)" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 outline-none focus:border-indigo-500 transition-all">
+                                ${selectedStudents.map(student => `
+                                    <option value="${student.id}" ${String(activeStudentPerSection[secIdx]) === String(student.id) ? 'selected' : ''}>${student.name}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <div id="matrix-student-card-container-${secIdx}">
+                            ${renderSingleStudentCardHtml(secIdx, activeStudentPerSection[secIdx], items)}
                         </div>
 
                         ${secIdx < sessionData.sections.length - 1 ? `
@@ -580,6 +752,96 @@ import Toast from '../../../../components/Toast.astro';
                 </div>
             `;
         }).join('');
+    };
+
+    const renderSingleStudentCardHtml = (secIdx, studentId, items) => {
+        const student = selectedStudents.find(s => String(s.id) === String(studentId));
+        if (!student) return '<p class="text-xs text-slate-400">Siswa tidak ditemukan.</p>';
+
+        // Filter: Hanya ambil item yang di-ceklis di pengaturan global atas
+        const testedItemsList = items.filter(item => testedItems[item.id]);
+
+        if (testedItemsList.length === 0) {
+            return `
+                <div class="bg-amber-50 border-2 border-amber-100 rounded-2xl p-6 text-center shadow-sm mt-5">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 text-3xl mb-2"></i>
+                    <h4 class="text-sm font-black text-amber-800">Belum ada materi dipilih</h4>
+                    <p class="text-[10px] font-bold text-amber-600 mt-1">Centang materi di atas terlebih dahulu untuk memunculkan kolom penilaian.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col transition-all">
+                <div class="space-y-2">
+                    ${testedItemsList.map(item => {
+                        const score = assessmentScores[student.id]?.[item.id] || 0;
+                        return `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 hover:border-indigo-200 transition-colors">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <span class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
+                                <p class="text-xs font-bold text-slate-700 truncate pr-2" title="${item.title}">
+                                    ${item.short_label || item.title}
+                                </p>
+                            </div>
+                            <div class="flex bg-slate-50 rounded-lg p-1 border border-slate-200 gap-1 shrink-0 w-full sm:w-[150px] shadow-inner">
+                                <button onclick="setScore('${student.id}', '${item.id}', 0, ${secIdx})" id="btn-0-${student.id}-${item.id}"
+                                    class="flex-1 py-1.5 text-[9px] font-black rounded-md transition-all ${score === 0 ? 'bg-white shadow-sm text-slate-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600 border border-transparent'}">Belum</button>
+                                <button onclick="setScore('${student.id}', '${item.id}', 1, ${secIdx})" id="btn-1-${student.id}-${item.id}"
+                                    class="flex-1 py-1.5 text-[9px] font-black rounded-md transition-all ${score === 1 ? 'bg-amber-100 shadow-sm text-amber-600 border border-amber-200' : 'text-slate-400 hover:text-amber-500 border border-transparent'}">Ikut</button>
+                                <button onclick="setScore('${student.id}', '${item.id}', 2, ${secIdx})" id="btn-2-${student.id}-${item.id}"
+                                    class="flex-1 py-1.5 text-[9px] font-black rounded-md transition-all ${score === 2 ? 'bg-green-100 shadow-sm text-green-600 border border-green-200' : 'text-slate-400 hover:text-green-500 border border-transparent'}">Hafal</button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    window.switchMatrixStudent = (secIdx, studentId) => {
+        activeStudentPerSection[secIdx] = studentId;
+        saveSessionToStorage();
+        const section = sessionData.sections[secIdx];
+        const container = document.getElementById(`matrix-student-card-container-${secIdx}`);
+        if (container && section) {
+            container.innerHTML = renderSingleStudentCardHtml(secIdx, studentId, section.oral_exam_items || []);
+        }
+    };
+
+    // FUNGSI BARU (Gantikan fungsi window.toggleTestedItem sebelumnya)
+    window.toggleGlobalTestedItem = (itemId, secIdx) => {
+        const section = sessionData.sections[secIdx];
+        const maxAllowed = section.min_required || section.oral_exam_items.length;
+
+        // Pengecekan sebelum mengubah status menjadi 'true' (diceklis)
+        if (!testedItems[itemId]) {
+            const currentCount = (section.oral_exam_items || []).filter(item => testedItems[item.id]).length;
+            if (currentCount >= maxAllowed) {
+                // Mencegah klik lebih dari batas
+                return;
+            }
+        }
+
+        // Toggle state
+        testedItems[itemId] = !testedItems[itemId];
+
+        // Render ulang Checkbox UI untuk langsung mendisable sisanya
+        const chkContainer = document.getElementById(`global-checkboxes-container-${secIdx}`);
+        if (chkContainer) {
+            chkContainer.innerHTML = renderGlobalCheckboxesHtml(secIdx);
+        }
+
+        // Render ulang form matriks penilaian siswa aktif (memunculkan/menghilangkan baris penilaian)
+        const studentId = activeStudentPerSection[secIdx];
+        const container = document.getElementById(`matrix-student-card-container-${secIdx}`);
+        if (container && section && studentId) {
+            container.innerHTML = renderSingleStudentCardHtml(secIdx, studentId, section.oral_exam_items || []);
+        }
+
+        saveSessionToStorage();
+        updatePreviewScores();
     };
 
     window.toggleMatrixSection = (index) => {
@@ -612,21 +874,17 @@ import Toast from '../../../../components/Toast.astro';
 
     window.setScore = (studentId, itemId, score, sectionIndex) => {
         assessmentScores[studentId][itemId] = score;
+        saveSessionToStorage();
 
+        // Manual update class tombol agar instan dan enteng tanpa re-render total select option
         [0, 1, 2].forEach(val => {
             const btn = document.getElementById(`btn-${val}-${studentId}-${itemId}`);
             if (!btn) return;
-
-            btn.className = 'flex-1 py-2 text-[10px] font-black rounded-lg transition-all border border-transparent text-slate-400';
-
+            btn.className = 'flex-1 py-1.5 text-[9px] font-black rounded-md transition-all border border-transparent text-slate-400';
             if (val === score) {
-                if (val === 0) btn.classList.add('bg-slate-100', 'shadow-sm', 'text-slate-600', 'border-slate-200');
+                if (val === 0) btn.classList.add('bg-white', 'shadow-sm', 'text-slate-600', 'border-slate-200');
                 if (val === 1) btn.classList.add('bg-amber-100', 'shadow-sm', '!text-amber-600', 'border-amber-200');
                 if (val === 2) btn.classList.add('bg-green-100', 'shadow-sm', '!text-green-600', 'border-green-200');
-            } else {
-                if (val === 0) btn.classList.add('hover:text-slate-600');
-                if (val === 1) btn.classList.add('hover:text-amber-500');
-                if (val === 2) btn.classList.add('hover:text-green-500');
             }
         });
         updatePreviewScores();
@@ -634,19 +892,28 @@ import Toast from '../../../../components/Toast.astro';
 
     const updatePreviewScores = () => {
         const previewContainer = document.getElementById('memorizationPreview');
+        if (!previewContainer) return;
+
         previewContainer.innerHTML = selectedStudents.map(student => {
-            let total = 0; let maxTotal = 0;
-            Object.values(assessmentScores[student.id]).forEach(score => { total += score; maxTotal += 2; });
+            const mem = calculateMemorizationScore(student.id);
+
+            let checkedCount = 0;
+            sessionData.sections.forEach(sec => {
+                (sec.oral_exam_items || []).forEach(item => {
+                    if (testedItems[item.id]) checkedCount++;
+                });
+            });
+
             return `
                 <div class="flex items-center justify-between bg-white p-3 rounded-2xl border-2 border-indigo-100/50 shadow-sm">
-                    <div class="flex items-center gap-3">
+                     <div class="flex items-center gap-3">
                          <div class="w-8 h-8 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black border border-indigo-100">${getInitials(student.name)}</div>
                          <div class="min-w-0">
                             <p class="text-[11px] font-black text-indigo-900 truncate">${student.name}</p>
-                            <p class="text-[9px] font-bold text-indigo-400">Max: ${maxTotal} Poin</p>
+                            <p class="text-[9px] font-bold text-indigo-400">${checkedCount} Materi Diujikan</p>
                          </div>
-                    </div>
-                    <div class="text-sm font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border-2 border-indigo-100">${total}</div>
+                     </div>
+                     <div class="text-sm font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border-2 border-indigo-100">${mem.score}%</div>
                 </div>
             `;
         }).join('');
@@ -673,104 +940,184 @@ import Toast from '../../../../components/Toast.astro';
         return shuffled.slice(0, count).map(p => p.prompt);
     };
 
-    window.openUnderstandingStep = () => {
-        if (!hasSessionStarted) {
-            window.showToast?.('warning', 'Sesi Belum Dimulai', 'Mulai sesi terlebih dahulu.');
-            return;
-        }
+    // FUNGSI BARU: Ganti mode antara Hafalan dan Pemahaman
+    window.switchAssessmentMode = (mode) => {
+        const hafalanView = document.getElementById('hafalanView');
+        const pemahamanView = document.getElementById('pemahamanView');
+        const modeSelect = document.getElementById('modeSelect');
 
-        selectedStudents.forEach(student => {
-            if (!understandingScores[student.id]) {
-                understandingScores[student.id] = {
-                    rating: 0,
-                    note: '',
-                    questions: generateQuestions() // Generate 2-3 pertanyaan acak untuk siswa ini
-                };
+        if (modeSelect) modeSelect.value = mode;
+
+        if (mode === 'hafalan') {
+            hafalanView.classList.replace('hidden', 'block');
+            pemahamanView.classList.replace('block', 'hidden');
+        } else {
+            hafalanView.classList.replace('block', 'hidden');
+            pemahamanView.classList.replace('hidden', 'block');
+
+            // Setup nilai default soal pemahaman jika siswa belum pernah buka tab ini
+            selectedStudents.forEach(student => {
+                if (!understandingScores[student.id]) {
+                    understandingScores[student.id] = {
+                        rating: 0,
+                        note: '',
+                        questions: generateQuestions(),
+                        questionStates: [] // Array track soal dicoret (true/false)
+                    };
+                }
+            });
+
+            if (!activeUnderstandingStudent && selectedStudents.length > 0) {
+                activeUnderstandingStudent = selectedStudents[0].id;
             }
-        });
 
-        document.getElementById('understandingSection')?.classList.remove('hidden');
-        renderUnderstandingCards();
-        renderFinalScorePreview();
+            renderUnderstandingCards();
+            renderFinalScorePreview();
+            saveSessionToStorage();
+        }
+    };
 
+    window.openUnderstandingStep = () => {
+        if (!hasSessionStarted) return window.showToast?.('warning', 'Sesi Belum Dimulai', 'Mulai sesi terlebih dahulu.');
+
+        switchAssessmentMode('pemahaman');
         setTimeout(() => {
-            document.getElementById('understandingSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('mainAssessmentSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150);
     };
 
     const renderUnderstandingCards = () => {
-        const container = document.getElementById('understandingCards');
+        const container = document.getElementById('understandingCardsContainer');
         if (!container) return;
 
-        container.innerHTML = selectedStudents.map(student => {
-            const current = understandingScores[student.id];
+        if (!activeUnderstandingStudent && selectedStudents.length > 0) {
+            activeUnderstandingStudent = selectedStudents[0].id;
+        }
 
-            return `
-                <div class="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-4 pb-4 border-b-2 border-slate-50">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-slate-50 border-2 border-slate-100 text-slate-700 rounded-full flex items-center justify-center font-black text-xs shadow-inner">
-                                ${getInitials(student.name)}
-                            </div>
-                            <div>
-                                <p class="text-sm font-black text-slate-800">${student.name}</p>
-                                <p class="text-[10px] font-bold text-slate-400">Tes lisan individu</p>
-                            </div>
+        const student = selectedStudents.find(s => String(s.id) === String(activeUnderstandingStudent));
+        if (!student) return;
+
+        const current = understandingScores[student.id];
+
+        // 1. Render Elemen Select Siswa
+        const selectHtml = `
+            <div class="mb-5 pb-4 border-b-2 border-slate-50 flex flex-col gap-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-graduate text-purple-500"></i> Siswa Yang Sedang Diuji (Pemahaman)
+                </label>
+                <select onchange="switchUnderstandingStudent(this.value)" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 outline-none focus:border-purple-500 transition-all cursor-pointer">
+                    ${selectedStudents.map(s => `
+                        <option value="${s.id}" ${String(activeUnderstandingStudent) === String(s.id) ? 'selected' : ''}>${s.name}</option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
+
+        // 2. Render Form Pemahaman
+        const cardHtml = `
+            <div class="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-4 pb-4 border-b-2 border-slate-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-purple-50 border-2 border-purple-100 text-purple-600 rounded-full flex items-center justify-center font-black text-xs shadow-inner">
+                            ${getInitials(student.name)}
                         </div>
-                        <button onclick="refreshStudentQuestions('${student.id}')"
-                                class="w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all">
-                            <i class="fa-solid fa-arrows-rotate"></i>
-                        </button>
+                        <div>
+                            <p class="text-sm font-black text-slate-800">${student.name}</p>
+                            <p class="text-[10px] font-bold text-slate-400">Tes lisan individu</p>
+                        </div>
                     </div>
+                    <button onclick="refreshStudentQuestions('${student.id}', event)" class="w-8 h-8 flex items-center justify-center bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all" title="Acak Soal Baru">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
 
-                    <div id="questions-container-${student.id}" class="mb-5 space-y-2.5">
-                        ${current.questions.map((q, i) => `
-                            <div class="flex items-start gap-2.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
-                                <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm">${i+1}</span>
-                                <p class="text-xs font-bold text-slate-700 leading-relaxed mt-0.5">${q}</p>
+                <div id="questions-container-${student.id}" class="mb-5 space-y-2.5">
+                    ${current.questions.map((q, i) => {
+                        const isAsked = current.questionStates?.[i] || false;
+                        return `
+                            <div onclick="toggleQuestionStrikethrough('${student.id}', ${i})" class="cursor-pointer flex items-start gap-2.5 bg-purple-50/50 hover:bg-purple-50 p-3 rounded-2xl border border-purple-100/50 transition-colors group">
+                                <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm group-hover:bg-purple-100 transition-colors">${i+1}</span>
+                                <p id="q-text-${student.id}-${i}" class="text-xs font-bold leading-relaxed mt-0.5 transition-all select-none ${isAsked ? 'text-slate-400 line-through' : 'text-slate-700'}">${q}</p>
                             </div>
+                        `;
+                    }).join('')}
+                    <p class="text-[9px] font-bold text-purple-400 mt-2 text-center">* Klik kotak soal jika sudah ditanyakan untuk mencoretnya</p>
+                </div>
+
+                <div class="border-t-2 border-slate-50 pt-4">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Rating Pemahaman (1-5)</label>
+                    <div class="flex gap-2 mb-4">
+                        ${[1, 2, 3, 4, 5].map(star => `
+                            <button onclick="setUnderstandingRating('${student.id}', ${star})" data-rating="${star}"
+                                    class="rating-btn-${student.id} flex-1 py-2 rounded-xl border-2 flex items-center justify-center text-sm font-black transition-all ${current.rating === star ? 'bg-amber-100 border-amber-400 text-amber-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-amber-200 hover:text-amber-500'}">
+                                ${star}
+                            </button>
                         `).join('')}
                     </div>
 
-                    </div>
-            `;
-        }).join('');
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan (Opsional)</label>
+                    <textarea oninput="setUnderstandingNote('${student.id}', this.value)"
+                              class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-xs font-bold text-slate-700 focus:border-purple-500 focus:ring-0 outline-none resize-none h-16 transition-all"
+                              placeholder="Tambahkan catatan evaluasi...">${current.note || ''}</textarea>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = selectHtml + cardHtml;
     };
 
-    window.refreshStudentQuestions = (studentId) => {
-        // 1. Generate soal baru
-        const newQuestions = generateQuestions();
-        understandingScores[studentId].questions = newQuestions;
+    window.switchUnderstandingStudent = (studentId) => {
+        activeUnderstandingStudent = studentId;
+        saveSessionToStorage();
+        renderUnderstandingCards();
+    };
 
-        // 2. Ambil container
-        const container = document.getElementById(`questions-container-${studentId}`);
+    window.toggleQuestionStrikethrough = (studentId, index) => {
+        const current = understandingScores[studentId];
+        if (!current.questionStates) current.questionStates = [];
 
-        if (container) {
-            // Berikan sedikit efek transisi pada container
-            container.classList.add('fade-in-content');
+        current.questionStates[index] = !current.questionStates[index];
 
-            // Update konten
-            container.innerHTML = newQuestions.map((q, i) => `
-                <div class="flex items-start gap-2.5 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
-                    <span class="w-5 h-5 shrink-0 rounded-full bg-white text-purple-500 border border-purple-200 flex items-center justify-center text-[10px] font-black shadow-sm">${i+1}</span>
-                    <p class="text-xs font-bold text-slate-700 leading-relaxed mt-0.5">${q}</p>
-                </div>
-            `).join('');
+        const qText = document.getElementById(`q-text-${studentId}-${index}`);
+        if (qText) {
+            if (current.questionStates[index]) {
+                qText.classList.replace('text-slate-700', 'text-slate-400');
+                qText.classList.add('line-through');
+            } else {
+                qText.classList.replace('text-slate-400', 'text-slate-700');
+                qText.classList.remove('line-through');
+            }
+        }
+        saveSessionToStorage();
+    };
 
-            // Hapus class setelah animasi selesai agar bisa dipicu lagi nanti
-            setTimeout(() => {
-                container.classList.remove('fade-in-content');
-            }, 300);
+    window.refreshStudentQuestions = (studentId, event) => {
+        const btn = event?.currentTarget;
+        if (btn) {
+            btn.querySelector('i').classList.add('fa-spin');
+            setTimeout(() => btn.querySelector('i').classList.remove('fa-spin'), 500);
         }
 
-        // Opsional: Berikan feedback visual pada tombolnya (spin sekali)
-        const btn = event.currentTarget;
-        btn.querySelector('i').classList.add('fa-spin');
-        setTimeout(() => btn.querySelector('i').classList.remove('fa-spin'), 500);
+        understandingScores[studentId].questions = generateQuestions();
+        understandingScores[studentId].questionStates = []; // Reset coretan
+        renderUnderstandingCards();
+        saveSessionToStorage();
     };
+
     window.setUnderstandingRating = (studentId, rating) => {
         understandingScores[studentId].rating = rating;
-        renderUnderstandingCards();
+
+        // Update styling tombol rating secara dinamis tanpa merender ulang seluruh komponen
+        document.querySelectorAll(`.rating-btn-${studentId}`).forEach(btn => {
+            const btnRating = parseInt(btn.dataset.rating);
+            if (btnRating === rating) {
+                btn.className = `rating-btn-${studentId} flex-1 py-2 rounded-xl border-2 flex items-center justify-center text-sm font-black transition-all bg-amber-100 border-amber-400 text-amber-600 shadow-sm`;
+            } else {
+                btn.className = `rating-btn-${studentId} flex-1 py-2 rounded-xl border-2 flex items-center justify-center text-sm font-black transition-all bg-slate-50 border-slate-100 text-slate-400 hover:border-amber-200 hover:text-amber-500`;
+            }
+        });
+
+        // Tetap kalkulasi dan update preview skor akhir
         renderFinalScorePreview();
     };
 
@@ -779,16 +1126,32 @@ import Toast from '../../../../components/Toast.astro';
     };
 
     const calculateMemorizationScore = (studentId) => {
-        let total = 0; let maxTotal = 0; let passedSections = 0; let totalSections = 0;
+        let total = 0;
+        let maxTotal = 0;
+        let passedSections = 0;
+        let totalSections = 0;
+
         sessionData.sections.forEach(section => {
             const items = section.oral_exam_items || [];
-            const hafalCount = items.filter(item => Number(assessmentScores?.[studentId]?.[item.id] || 0) === 2).length;
-            if (hafalCount >= Number(section.min_required || 0)) passedSections++;
-            totalSections++;
-            items.forEach(item => { total += Number(assessmentScores?.[studentId]?.[item.id] || 0); maxTotal += 2; });
+
+            // Filter hanya materi yang dicentang secara global (berlaku ke semua siswa)
+            const checkedItems = items.filter(item => testedItems[item.id]);
+
+            if (checkedItems.length > 0) {
+                totalSections++;
+
+                const hafalCount = checkedItems.filter(item => Number(assessmentScores?.[studentId]?.[item.id] || 0) === 2).length;
+                if (hafalCount >= Number(section.min_required || 0)) passedSections++;
+
+                checkedItems.forEach(item => {
+                    total += Number(assessmentScores?.[studentId]?.[item.id] || 0);
+                    maxTotal += 2; // Setiap 1 materi maksimal poinnya adalah 2 (Hafal)
+                });
+            }
         });
+
         const score = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
-        return { score, passedSections, totalSections, passedMinimum: passedSections >= totalSections };
+        return { score, passedSections, totalSections, passedMinimum: totalSections > 0 ? (passedSections >= totalSections) : false };
     };
 
     const calculateFinalScore = (studentId) => {
@@ -796,30 +1159,58 @@ import Toast from '../../../../components/Toast.astro';
         const rating = Number(understandingScores?.[studentId]?.rating || 0);
         const understandingScore = rating * 20;
         const finalScore = Math.round((mem.score * 0.7) + (understandingScore * 0.3));
-        const status = mem.passedMinimum && rating >= 3 ? 'passed' : 'need_remedial';
-        return { memorization_score: mem.score, understanding_score: understandingScore, final_score: finalScore, status, passedSections: mem.passedSections, totalSections: mem.totalSections };
+
+        // Logika Status Berdasarkan Nilai Akhir
+        let status = 'Kurang';
+        if (finalScore >= 90) status = 'Sempurna';
+        else if (finalScore >= 70) status = 'Bagus';
+        else if (finalScore >= 60) status = 'Cukup';
+        else if (finalScore >= 50) status = 'Belum Cukup';
+
+        return {
+            memorization_score: mem.score,
+            understanding_score: understandingScore,
+            final_score: finalScore,
+            status: status,
+            passedSections: mem.passedSections,
+            totalSections: mem.totalSections
+        };
     };
 
     const renderFinalScorePreview = () => {
         const container = document.getElementById('finalScorePreview');
         if (!container) return;
+
         container.innerHTML = selectedStudents.map(student => {
             const result = calculateFinalScore(student.id);
-            const passed = result.status === 'passed';
+
+            // Konfigurasi Tema Warna Berdasarkan Nilai Akhir
+            let theme = { border: 'border-red-100', bgIcon: 'bg-red-50', textIcon: 'text-red-600', textScore: 'text-red-600', textStatus: 'text-red-500' }; // < 50
+
+            if (result.final_score >= 90) { // Sempurna
+                theme = { border: 'border-emerald-200', bgIcon: 'bg-emerald-50', textIcon: 'text-emerald-600', textScore: 'text-emerald-600', textStatus: 'text-emerald-500' };
+            } else if (result.final_score >= 70) { // Bagus
+                theme = { border: 'border-green-200', bgIcon: 'bg-green-50', textIcon: 'text-green-600', textScore: 'text-green-600', textStatus: 'text-green-500' };
+            } else if (result.final_score >= 60) { // Cukup
+                theme = { border: 'border-blue-200', bgIcon: 'bg-blue-50', textIcon: 'text-blue-600', textScore: 'text-blue-600', textStatus: 'text-blue-500' };
+            } else if (result.final_score >= 50) { // Belum Cukup
+                theme = { border: 'border-amber-200', bgIcon: 'bg-amber-50', textIcon: 'text-amber-600', textScore: 'text-amber-500', textStatus: 'text-amber-500' };
+            }
+
             return `
-                <div class="bg-white border-2 ${passed ? 'border-green-100' : 'border-amber-100'} rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div class="bg-white border-2 ${theme.border} rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full ${passed ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'} border-2 flex items-center justify-center font-black text-xs">
+                        <div class="w-10 h-10 rounded-full ${theme.bgIcon} ${theme.textIcon} border-2 ${theme.border} flex items-center justify-center font-black text-xs">
                             ${getInitials(student.name)}
                         </div>
                         <div>
                             <p class="text-xs font-black text-slate-800">${student.name}</p>
-                            <p class="text-[9px] font-bold text-slate-400">H: ${result.memorization_score} • P: ${result.understanding_score}</p>
+                            <p class="text-[9px] font-bold text-slate-400">Hafalan: ${result.memorization_score} • Lisan: ${result.understanding_score}</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-2xl font-black ${passed ? 'text-green-600' : 'text-amber-500'}">${result.final_score}</p>
-                        <p class="text-[8px] font-black uppercase tracking-widest ${passed ? 'text-green-500' : 'text-amber-500'}">${passed ? 'Lulus' : 'Remedial'}</p>
+                        <p class="text-2xl font-black ${theme.textScore}">${result.final_score}</p>
+                        <p class="text-[8px] font-black uppercase tracking-widest ${theme.textStatus}">${result.status}</p>
                     </div>
                 </div>
             `;
@@ -833,21 +1224,44 @@ import Toast from '../../../../components/Toast.astro';
         const payloadResults = selectedStudents.map(student => {
             const final = calculateFinalScore(student.id);
             const items = [];
+
             sessionData.sections.forEach(section => {
-                (section.oral_exam_items || []).forEach(item => { items.push({ item_id: item.id, score: Number(assessmentScores?.[student.id]?.[item.id] || 0) }); });
+                (section.oral_exam_items || []).forEach(item => {
+                    // Cek status centang global
+                    const isTested = testedItems[item.id] || false;
+                    items.push({
+                        item_id: item.id,
+                        // Jika tidak diujikan, pastikan nilainya default 0 yang terkirim
+                        score: isTested ? Number(assessmentScores?.[student.id]?.[item.id] || 0) : 0
+                    });
+                });
             });
+
             return {
-                student_id: student.id, memorization_score: final.memorization_score, understanding_score: final.understanding_score,
-                final_score: final.final_score, understanding_rating: Number(understandingScores?.[student.id]?.rating || 0),
-                notes: understandingScores?.[student.id]?.note || null, status: final.status, duration_seconds: totalSeconds - remainingSeconds, items
+                student_id: student.id,
+                memorization_score: final.memorization_score,
+                understanding_score: final.understanding_score,
+                final_score: final.final_score,
+                understanding_rating: Number(understandingScores?.[student.id]?.rating || 0),
+                notes: understandingScores?.[student.id]?.note || null,
+                status: final.status,
+                duration_seconds: totalSeconds - remainingSeconds,
+                items
             };
         });
 
-        if (sessionMode === 'simulation') return window.showToast?.('success', 'Simulasi Selesai', 'Data tidak dikirim ke database karena ini mode simulasi.');
+        if (sessionMode === 'simulation') {
+            clearSessionStorage();
+            return window.showToast?.('success', 'Simulasi Selesai', 'Data tidak dikirim ke database karena ini mode simulasi.');
+        }
 
         const btn = document.getElementById('btnSubmitFinalAssessment');
         const originalText = btn?.innerHTML;
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.classList.add('opacity-70', 'cursor-not-allowed'); }
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+        }
 
         try {
             const res = await fetch(`${API_URL}/api/oral-exams/${templateId}/sessions/${sessionId}/results`, {
@@ -858,6 +1272,7 @@ import Toast from '../../../../components/Toast.astro';
             if (!res.ok || result.status !== 'success') throw new Error(result.message || 'Gagal menyimpan hasil evaluasi.');
 
             clearInterval(timerInterval);
+            clearSessionStorage(); // Bersihkan local storage karena data sudah aman masuk DB
             window.showToast?.('success', 'Tersimpan', 'Hasil evaluasi hafalan berhasil disimpan.');
             setTimeout(() => { window.location.href = `/ujian-hafalan/${templateId}`; }, 900);
         } catch (error) {
