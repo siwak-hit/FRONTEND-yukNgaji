@@ -538,7 +538,9 @@ import Toast from '../../components/Toast.astro';
         try {
             const [students, status, detail] = await Promise.all([
                 STATE.students.length ? Promise.resolve(STATE.students) : fetch(`${API_URL}/api/students/stats/enriched`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json()).then(d=>d.data||[]),
-                prCache.status[key] ? Promise.resolve(prCache.status[key]) : fetch(`${API_URL}/api/onboarding/status?subject=${subject}&week=${week}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json()).then(d=>d.data||[]),
+                // Status pengerjaan SELALU di-fetch fresh (jangan dari cache) supaya siswa yang
+                // baru selesai langsung muncul, tidak "kosong" karena cache lama.
+                fetch(`${API_URL}/api/onboarding/status?subject=${subject}&week=${week}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json()).then(d=>d.data||[]),
                 (key in prCache.detail) ? Promise.resolve(prCache.detail[key]) : fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json()).then(d=>Array.isArray(d.data)?d.data[0]:d.data)
             ]);
             if (!STATE.students.length) STATE.students = students;

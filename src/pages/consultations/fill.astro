@@ -648,9 +648,16 @@ import Mascot from '../../components/Mascot.astro';
     /* Huruf Arab tampil lebih besar & rapi tanpa memperbesar teks latin di sekitarnya.
        Dipasang global karena soal/opsi dirender lewat innerHTML. */
     .ar-text {
-        font-family: 'Amiri', 'Scheherazade New', 'Traditional Arabic', 'Noto Naskh Arabic', 'Geeza Pro', serif;
-        font-size: 1.4em;
-        line-height: 1.35;
+        font-family: 'Noto Naskh Arabic', 'Amiri', 'Geeza Pro', 'Traditional Arabic', serif !important;
+        /* Amiri/Noto hanya punya weight 400/500/700 — paksa 400 supaya tidak jatuh
+           ke fallback non-Arab (penyebab huruf jadi terpisah-pisah di HP). */
+        font-weight: 400 !important;
+        font-size: 1.45em;
+        line-height: 1.9;           /* longgar agar harakat tidak bertumpuk */
+        letter-spacing: normal !important;  /* letter-spacing memutus sambungan huruf Arab */
+        direction: rtl;
+        unicode-bidi: isolate;      /* pisahkan dari teks latin di sekitarnya */
+        font-feature-settings: "liga" 1, "calt" 1;  /* aktifkan shaping/penyambungan */
     }
 </style>
 
@@ -2943,8 +2950,9 @@ import Mascot from '../../components/Mascot.astro';
                     btnClass = 'bg-pink-500 text-white hover:bg-pink-600 shadow-md shadow-pink-500/30';
                 } else if (currentAttackMode === 'bully') {
                     const cost = getPrice('item_bullying');
-                    isDisabled = studentWallet < cost || p.has_shield;
-                    btnText = p.has_shield ? 'Aman 🛡️' : (studentWallet < cost ? 'Koin Kurang' : 'BULLY 😈');
+                    // Sudah dibully (dipesan untuk dibully) → tidak bisa dibully lagi, walau belum ngerjain.
+                    isDisabled = studentWallet < cost || p.has_shield || p.is_bullied;
+                    btnText = p.is_bullied ? 'Sudah Dibully 😵' : (p.has_shield ? 'Aman 🛡️' : (studentWallet < cost ? 'Koin Kurang' : 'BULLY 😈'));
                     btnClass = isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-purple-500 text-white hover:bg-purple-600 active:scale-95 shadow-md shadow-purple-500/30';
                 } else {
                     const isBroke = targetPoints <= 0;
@@ -3257,7 +3265,7 @@ import Mascot from '../../components/Mascot.astro';
             const timeUsed = finalTimeTaken > 0 ? finalTimeTaken : (maxTime - Math.max(0, timeLeft));
 
             if (!isPreview) {
-                await Promise.all([
+                const [gradeRes] = await Promise.all([
                     fetch(`${API_URL}/api/onboarding/submit-grade`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -3275,6 +3283,19 @@ import Mascot from '../../components/Mascot.astro';
                     }),
                     fetch(`${API_URL}/api/consultations`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData })
                 ]);
+
+                // [FIX] Jangan pura-pura "selesai" kalau penyimpanan nilai GAGAL
+                // (mis. deadline lewat / sudah pernah dikumpulkan). Dulu error ini diabaikan
+                // → siswa lihat layar selesai tapi data tak tersimpan → di guru kosong.
+                if (!gradeRes.ok) {
+                    const errData = await gradeRes.json().catch(() => ({}));
+                    window.isSubmittingData = false;
+                    btnSubmitGlobal.disabled = false;
+                    btnSubmitGlobal.className = 'w-full py-5 bg-green-600 text-white font-bold rounded-2xl shadow-sm mb-12 relative overflow-hidden active:scale-95 cursor-pointer transition-all text-lg';
+                    btnSubmitGlobal.innerHTML = 'Kirim Semua Jawaban';
+                    window.showToast?.('danger', 'Gagal Mengumpulkan', errData.message || 'Jawaban gagal disimpan. Coba lagi ya.');
+                    return;
+                }
             }
 
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0'); const secUsed = (timeUsed % 60).toString().padStart(2, '0');
@@ -3296,9 +3317,9 @@ import Mascot from '../../components/Mascot.astro';
             }
 
             // [E] Selalu tampilkan koin yang didapat dari mengerjakan tugas ini.
-            //     Koin = (nilai akhir + bonus tetap 75/tugas) × pengganda koin (kalau ada).
+            //     Koin = nilai akhir × pengganda koin (kalau ada).
             const coinContainer = document.getElementById('resultCoinContainer');
-            const earnedCoins = (finalScore + 75) * coinMultiplier;
+            const earnedCoins = finalScore * coinMultiplier;
             document.getElementById('resultCoinEarned').innerText = `+${earnedCoins} 💰`;
 
             const coinBadge = document.getElementById('resultCoinMultiplier');
