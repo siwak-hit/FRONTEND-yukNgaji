@@ -336,20 +336,6 @@ import Mascot from '../../components/Mascot.astro';
 
     <!-- [DIHAPUS] modalCekSatpam & modalNetwork (fake "Jaringan Lambat") — foto kini diambil di awal -->
 
-    <!-- SATPAM AWAL: foto kehadiran untuk raport (bukan verifikasi nyata) -->
-    <div id="modalSatpamStart" class="fixed inset-0 z-[600] hidden items-center justify-center p-4 backdrop-blur-sm" style="background-color: rgba(0,0,0,0.6);">
-        <div class="modal-sheet text-center" style="max-width: 22rem;">
-            <div class="sheet-grabber"></div>
-            <div class="icon-chip mx-auto mb-4" style="width:3.5rem;height:3.5rem;font-size:1.5rem;background-color: var(--info-soft); color: var(--info);">
-                <i class="fa-solid fa-camera-retro"></i>
-            </div>
-            <h3 class="section-title mb-2">Foto Kehadiran</h3>
-            <p class="body-text mb-5">Ambil foto wajahmu dulu ya untuk absen kehadiran (dipakai di raport). Arahkan wajah ke kamera depan.</p>
-            <button id="btnStartSatpamCapture" class="btn w-full" style="background-color: var(--info); color:#fff; border-radius: var(--r-pill);">
-                <i class="fa-solid fa-camera"></i> Ambil Foto &amp; Masuk
-            </button>
-        </div>
-    </div>
 
     <div id="modalEarlyFinish" class="fixed inset-0 bg-black/60 z-[400] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="modal-sheet text-center" style="max-width: 22rem;">
@@ -1329,17 +1315,6 @@ import Mascot from '../../components/Mascot.astro';
                 currentStudentName = student.data.name?.split(' ')[0] || "Anak Baik";
                 if (consData.data) {
                     completedWeeksForSubject = consData.data.filter(c => c.subject === subject).map(c => parseInt(c.week));
-                    hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
-                }
-
-                // Foto kehadiran (satpam) sudah diambil saat pilih nama di /consultations.
-                // Cek satpam_logs → kalau sudah ada, JANGAN minta foto lagi di sini.
-                if (!isPreview && !hasPriorPhoto) {
-                    try {
-                        const satRes = await fetch(`${API_URL}/api/onboarding/check-satpam?student_id=${studentId}&subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                        const satData = await satRes.json();
-                        if (satData && satData.isScanned) hasPriorPhoto = true;
-                    } catch (e) {}
                 }
 
                 if (!isPreview && completedWeeksForSubject.includes(parsedWeek)) {
@@ -1905,45 +1880,8 @@ import Mascot from '../../components/Mascot.astro';
         }
     };
 
-    // ===== SATPAM AWAL: ambil foto kehadiran utk raport (bukan verifikasi nyata) =====
-    const captureAndUploadSatpam = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 640 } });
-            const video = document.createElement('video'); video.srcObject = stream; video.setAttribute('playsinline', ''); video.muted = true;
-            await video.play();
-            await new Promise(r => setTimeout(r, 1200)); // jeda kamera menyesuaikan cahaya
-            const canvas = document.createElement('canvas'); canvas.width = video.videoWidth || 480; canvas.height = video.videoHeight || 640;
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            stream.getTracks().forEach(t => t.stop());
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
-            selfieFileToUpload = new File([blob], 'satpam-selfie.jpg', { type: 'image/jpeg' });
-            const base64Img = canvas.toDataURL('image/jpeg', 0.8);
-            if (!isPreview) {
-                fetch(`${API_URL}/api/onboarding/upload-satpam`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: studentId, student_name: currentStudentName, subject, week, image: base64Img })
-                }).catch(e => console.error(e));
-            }
-        } catch (err) {
-            console.warn('Kamera gagal diakses (lanjut tanpa foto):', err);
-        }
-    };
-
-    // Gerbang foto di awal, lalu jalankan callback. Skip utk preview guru / sudah punya foto.
-    const runStartSatpam = (onDone) => {
-        if (isPreview || hasPriorPhoto) { onDone(); return; }
-        const modal = document.getElementById('modalSatpamStart');
-        modal.classList.remove('hidden'); modal.classList.add('flex');
-        const btn = document.getElementById('btnStartSatpamCapture');
-        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil Foto & Masuk';
-        btn.onclick = async () => {
-            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memotret, tahan posisi...';
-            await captureAndUploadSatpam();
-            modal.classList.add('hidden'); modal.classList.remove('flex');
-            onDone();
-        };
-    };
+    // Foto kehadiran awal DIHAPUS — fitur satpam (saat pilih nama) sudah mengambil
+    // & mengupload fotonya, jadi tidak perlu minta foto lagi di sini.
 
     // [I] AUTO-BUY GACHA: kalau koin > 200 dan belum beli item apa pun, "dipaksa"
     //     gacha 1 item dulu. Hanya item yang didukung endpoint /api/shop/buy.
@@ -2093,12 +2031,12 @@ import Mascot from '../../components/Mascot.astro';
             await runForcedAutoBuy();
         }
 
-        runStartSatpam(() => {
-            document.getElementById('startOverlay').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('countdownOverlay').classList.remove('hidden');
-            let count = 3; const text = document.getElementById('countdownText');
-            const intv = setInterval(() => { count--; if(count>0) text.innerText = count; else { clearInterval(intv); document.getElementById('countdownOverlay').classList.add('hidden'); startTest(true); } }, 1000);
-        });
+        // Foto kehadiran sudah diambil lewat fitur satpam (saat pilih nama),
+        // jadi klik Mulai langsung ke hitung mundur — tanpa minta foto lagi.
+        document.getElementById('startOverlay').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('countdownOverlay').classList.remove('hidden');
+        let count = 3; const text = document.getElementById('countdownText');
+        const intv = setInterval(() => { count--; if(count>0) text.innerText = count; else { clearInterval(intv); document.getElementById('countdownOverlay').classList.add('hidden'); startTest(true); } }, 1000);
     };
 
     // ==========================================
