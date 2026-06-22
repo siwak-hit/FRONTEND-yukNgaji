@@ -785,6 +785,8 @@ import Mascot from '../../components/Mascot.astro';
     let isEvaluatingExtraLife = false;
     let wrongQuestionsGlobal = [];
     let hasClaimedBonusGlobal = false;
+    // Bersihkan flag bonus lama di localStorage. Sumber kebenaran kini = DB has_claimed_bonus.
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('bonus_claimed_')) localStorage.removeItem(k); }); } catch (e) {}
     let unreadLogIds = [];
     let currentAttackMode = 'serang';
     let isBullyAnimationRunning = false;
@@ -1330,6 +1332,16 @@ import Mascot from '../../components/Mascot.astro';
                     hasPriorPhoto = consData.data.some(c => c.image_url && c.image_url.trim() !== '');
                 }
 
+                // Foto kehadiran (satpam) sudah diambil saat pilih nama di /consultations.
+                // Cek satpam_logs → kalau sudah ada, JANGAN minta foto lagi di sini.
+                if (!isPreview && !hasPriorPhoto) {
+                    try {
+                        const satRes = await fetch(`${API_URL}/api/onboarding/check-satpam?student_id=${studentId}&subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                        const satData = await satRes.json();
+                        if (satData && satData.isScanned) hasPriorPhoto = true;
+                    } catch (e) {}
+                }
+
                 if (!isPreview && completedWeeksForSubject.includes(parsedWeek)) {
                     document.getElementById('startTitleText').innerText = "Sudah Selesai!";
                     document.getElementById('startDescText').innerText = "Kamu sudah pernah menyelesaikan ujian ini. Mengalihkan ke halaman hasil...";
@@ -1370,10 +1382,7 @@ import Mascot from '../../components/Mascot.astro';
                         item_call_friend: student.data.item_call_friend || 0
                     };
                     window.isShieldActive = student.data.is_shield_active || false;
-                    if (student.data.has_claimed_bonus) {
-                        hasClaimedBonusGlobal = true;
-                        localStorage.setItem(`bonus_claimed_${studentId}`, 'true');
-                    }
+                    if (student.data.has_claimed_bonus) hasClaimedBonusGlobal = true;
                 }
             }
 
@@ -2378,27 +2387,28 @@ import Mascot from '../../components/Mascot.astro';
         const inner = document.getElementById('shopDrawerInner'); const icon = document.getElementById('shopDrawerIcon'); const btn = document.getElementById('btnToggleDrawer');
         if (inner.classList.contains('translate-y-[calc(100%-40px)]')) {
             inner.classList.replace('translate-y-[calc(100%-40px)]', 'translate-y-0'); icon.classList.replace('fa-store', 'fa-chevron-down'); btn.classList.replace('h-[40px]', 'h-[48px]'); btn.classList.add('bg-indigo-800');
-            const hasClaimedLocally = localStorage.getItem(`bonus_claimed_${studentId}`);
-            if (!hasClaimedBonusGlobal && !hasClaimedLocally) setTimeout(() => document.getElementById('modalWelcomeBonus').classList.replace('hidden', 'flex'), 300);
+            // Bonus pemula HANYA muncul saat: pertemuan pertama (week 1), belum pernah klaim,
+            // dan toko dibuka untuk pertama kalinya. (Tidak lagi pakai localStorage.)
+            if (parsedWeek === 1 && !hasClaimedBonusGlobal) setTimeout(() => document.getElementById('modalWelcomeBonus').classList.replace('hidden', 'flex'), 300);
         } else {
             inner.classList.replace('translate-y-0', 'translate-y-[calc(100%-40px)]'); icon.classList.replace('fa-chevron-down', 'fa-store'); btn.classList.replace('h-[48px]', 'h-[40px]'); btn.classList.remove('bg-indigo-800');
         }
     };
 
-    window.declineBonus = () => { hasClaimedBonusGlobal = true; localStorage.setItem(`bonus_claimed_${studentId}`, 'true'); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); };
+    window.declineBonus = () => { hasClaimedBonusGlobal = true; document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); };
     window.acceptBonus = async () => {
         const btn = document.getElementById('btnAcceptBonus'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
         try {
             if (isPreview) {
-                await new Promise(r => setTimeout(r, 600)); studentWallet += 100; hasClaimedBonusGlobal = true; localStorage.setItem(`bonus_claimed_${studentId}`, 'true'); updateShopUI(); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); window.showToast?.('success', 'Bonus Cair!', '100 Koin gratis berhasil ditambahkan ke dompetmu.'); return;
+                await new Promise(r => setTimeout(r, 600)); studentWallet += 100; hasClaimedBonusGlobal = true; updateShopUI(); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); window.showToast?.('success', 'Bonus Cair!', '100 Koin gratis berhasil ditambahkan ke dompetmu.'); return;
             }
             const res = await fetch(`${API_URL}/api/shop/claim-bonus`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId }) });
             const data = await res.json();
             if (data.status === 'success') {
-                studentWallet = data.data.poin; hasClaimedBonusGlobal = true; localStorage.setItem(`bonus_claimed_${studentId}`, 'true'); updateShopUI(); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); window.showToast?.('success', 'Bonus Cair!', '100 Koin gratis!');
+                studentWallet = data.data.poin; hasClaimedBonusGlobal = true; updateShopUI(); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); window.showToast?.('success', 'Bonus Cair!', '100 Koin gratis!');
             } else throw new Error(data.message);
         } catch (error) {
-            if (error.message.includes('sudah') || error.message.includes('pernah')) { hasClaimedBonusGlobal = true; localStorage.setItem(`bonus_claimed_${studentId}`, 'true'); document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); }
+            if (error.message.includes('sudah') || error.message.includes('pernah')) { hasClaimedBonusGlobal = true; document.getElementById('modalWelcomeBonus').classList.replace('flex', 'hidden'); }
             else { window.showToast?.('danger', 'Gagal', error.message); btn.innerText = 'Ambil Poinnya!'; btn.disabled = false; }
         }
     };
