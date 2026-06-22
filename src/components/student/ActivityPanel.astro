@@ -1,0 +1,28 @@
+---
+/** Panel aktivitas siswa: tab Tugas AI & riwayat Konsultasi. */
+---
+<section class="mb-8">
+  <div class="seg mb-5">
+    <button id="tabTodo" class="seg-btn is-active"><i class="fa-solid fa-list-check"></i> Tugas AI</button>
+    <button id="tabCons" class="seg-btn"><i class="fa-regular fa-comments"></i> Konsultasi</button>
+  </div>
+
+  <div id="contentTodo" class="block">
+    <div id="todoContainer" class="space-y-3">
+      <p class="text-center text-tertiary caption py-4">Memuat tugas...</p>
+    </div>
+  </div>
+
+  <div id="contentCons" class="hidden">
+    <div class="flex justify-end mb-3">
+      <select id="filterKonsul" onchange="renderConsultations()" class="field !py-2 !px-3 !w-auto text-sm font-medium cursor-pointer">
+        <option value="all">Semua Waktu (Maks 5)</option>
+        <option value="7">7 Hari Terakhir</option>
+        <option value="30">30 Hari Terakhir</option>
+      </select>
+    </div>
+    <div id="consContainer" class="space-y-4">
+      <p class="text-center text-tertiary caption py-4">Memuat riwayat...</p>
+    </div>
+  </div>
+</section>

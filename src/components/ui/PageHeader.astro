@@ -1,0 +1,21 @@
+---
+/**
+ * PageHeader — header standar halaman guru.
+ * Props:
+ *   title    : judul halaman (besar)
+ *   eyebrow  : label kecil uppercase di atas/bawah judul
+ *   sticky   : tempel header di atas saat scroll
+ * Slot "action": tombol aksi di kanan (mis. tombol +).
+ */
+const { title, eyebrow = "", sticky = false } = Astro.props;
+---
+
+<header class:list={["flex justify-between items-start gap-4 mb-6", sticky && "sticky top-0 z-30 pt-2 pb-3 -mx-6 px-6 bg-[var(--canvas)]/85 backdrop-blur"]}>
+  <div class="min-w-0">
+    {eyebrow && <p class="eyebrow mb-1.5">{eyebrow}</p>}
+    <h1 class="page-title truncate">{title}</h1>
+  </div>
+  <div class="flex-shrink-0">
+    <slot name="action" />
+  </div>
+</header>

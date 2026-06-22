@@ -1,0 +1,297 @@
+---
+// src/pages/maintenance.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Sedang Perbaikan - yukNgaji">
+    <!-- [BARU] Audio BGM (Sembunyi) -->
+    <audio id="bgmAudio" src="/bgm.mp3" loop preload="auto"></audio>
+
+    <div class="fixed inset-0 z-[100] bg-slate-50 font-sans text-slate-800 pattern-grid flex flex-col items-center justify-center p-6 overflow-hidden select-none" id="mainContainer">
+        
+        <!-- Ornamen Geometris Statis (Z-index 10) -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden z-10">
+            <div class="absolute top-10 left-10 w-32 h-32 bg-amber-300 rounded-full mix-blend-multiply filter blur-2xl opacity-60 animate-float" style="animation-duration: 4s;"></div>
+            <div class="absolute bottom-10 right-10 w-40 h-40 bg-indigo-300 rounded-full mix-blend-multiply filter blur-2xl opacity-60 animate-float" style="animation-duration: 5s; animation-delay: 1s;"></div>
+        </div>
+
+        <!-- Card Utama (Z-index 20) -->
+        <div class="bg-white/90 backdrop-blur-md border border-gray-100 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl text-center relative z-20 animate-slide-up border-b-4 border-b-amber-400">
+            
+            <!-- Ikon Tengah -->
+            <div class="w-28 h-28 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 shadow-inner border border-amber-100 relative">
+                <i class="fa-solid fa-person-digging animate-bounce"></i>
+                <div class="absolute -bottom-2 -right-2 bg-white w-10 h-10 rounded-full flex items-center justify-center text-xl text-indigo-500 shadow-md">
+                    <i class="fa-solid fa-gear fa-spin"></i>
+                </div>
+            </div>
+            
+            <!-- Teks -->
+            <h1 class="text-2xl font-black text-gray-800 mb-2">Tunggu Sebentar Ya!</h1>
+            <p class="text-[10px] font-bold text-amber-600 mb-6 uppercase tracking-widest bg-amber-50 inline-block px-4 py-1.5 rounded-full border border-amber-200 shadow-sm">Sistem Sedang Diperbarui</p>
+            
+            <!-- Pesan -->
+            <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl text-xs font-medium text-gray-500 leading-relaxed shadow-inner">
+                Kak Aziz lagi nyapu-nyapu dan ngeberesin sistem biar makin ngebut! <br><br>
+                <span class="font-bold text-indigo-500 block mt-2 p-2 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <i class="fa-solid fa-bell mr-1"></i> Silakan tunggu kabar selanjutnya dari Kak Aziz ya!
+                </span>
+            </div>
+            
+        </div>
+
+        <!-- Wadah Bubble Paling Atas (Z-index 200) -->
+        <div id="floatingContainer" class="absolute inset-0 pointer-events-none overflow-hidden z-[200]">
+            <!-- Javascript akan inject elemen bubble di sini -->
+        </div>
+
+    </div>
+
+    <style is:global>
+        .pattern-grid {
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        
+        .animate-float { animation: float 6s ease-in-out infinite alternate; }
+        @keyframes float { 
+            0%, 100% { transform: translateY(0) scale(1); } 
+            50% { transform: translateY(-20px) scale(1.05); } 
+        }
+        
+        .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes slideUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        .bubble-bottom-float {
+            position: absolute;
+            animation: floatBottom ease-in-out infinite alternate;
+            opacity: 0.8;
+            pointer-events: auto; 
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .bubble-bottom-float:hover {
+            transform: scale(1.15) translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            z-index: 50;
+        }
+
+        @keyframes floatBottom {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-25px) scale(1.05); } 
+        }
+
+        .animate-bounce-short { animation: bounceShort 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+        @keyframes bounceShort {
+            0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+            100% { transform: translateX(-50%) scale(1); opacity: 1; }
+        }
+    </style>
+
+    <script>
+        const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
+        // ========================================================
+        // [BARU] LOGIKA PLAY BGM SAAT KLIK PERTAMA KALI
+        // ========================================================
+        document.addEventListener('click', () => {
+            const bgm = document.getElementById('bgmAudio') as HTMLAudioElement;
+            if (bgm && bgm.paused) {
+                bgm.volume = 0.8; // Atur volume biar gak terlalu berisik
+                bgm.play().catch(e => console.log("BGM diblokir oleh browser:", e));
+            }
+        }, { once: true }); // event ini cuma dipanggil 1 kali aja
+
+        // Variabel Fisika & State
+        const dialogs = ["Aduh!", "Aaaaa!", "Pusing @.@", "Awas nabrak!", "Ampun dj!", "Woy!", "Minggir!", "Mamaaah!"];
+        let bubblesPhysics = [];
+        let physicsLoopRunning = false;
+        let lastGlobalClickTime = 0; 
+
+        const showDialog = (b) => {
+            if (b.el.querySelector('.bump-dialog')) return;
+
+            const text = dialogs[Math.floor(Math.random() * dialogs.length)];
+            const dialog = document.createElement('div');
+            dialog.className = 'bump-dialog absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-[10px] font-black text-red-500 px-3 py-1 rounded-xl shadow-lg border border-red-100 pointer-events-none whitespace-nowrap z-50 animate-bounce-short';
+            dialog.innerText = text;
+            
+            const arrow = document.createElement('div');
+            arrow.className = 'absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-b border-r border-red-100 transform rotate-45';
+            dialog.appendChild(arrow);
+
+            b.el.appendChild(dialog);
+
+            setTimeout(() => {
+                if (dialog.parentNode) dialog.remove();
+            }, 1500);
+        };
+
+        const physicsLoop = () => {
+            let activeCount = 0;
+            
+            for (let i = 0; i < bubblesPhysics.length; i++) {
+                const b1 = bubblesPhysics[i];
+                if (!b1.isBouncing) continue;
+                activeCount++;
+
+                b1.x += b1.vx;
+                b1.y += b1.vy;
+
+                let hitWall = false;
+
+                if (b1.x <= 0) { b1.x = 0; b1.vx *= -1; hitWall = true; }
+                if (b1.x + b1.size >= window.innerWidth) { b1.x = window.innerWidth - b1.size; b1.vx *= -1; hitWall = true; }
+                
+                if (b1.y <= 0) { b1.y = 0; b1.vy *= -1; hitWall = true; }
+                if (b1.y + b1.size >= window.innerHeight) { b1.y = window.innerHeight - b1.size; b1.vy *= -1; hitWall = true; }
+
+                if (hitWall && Math.random() < 0.2) showDialog(b1);
+
+                for (let j = i + 1; j < bubblesPhysics.length; j++) {
+                    const b2 = bubblesPhysics[j];
+                    if (!b2.isBouncing) continue;
+
+                    const dx = (b1.x + b1.size/2) - (b2.x + b2.size/2);
+                    const dy = (b1.y + b1.size/2) - (b2.y + b2.size/2);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const minDist = (b1.size/2) + (b2.size/2);
+
+                    if (dist < minDist) {
+                        const tempVx = b1.vx;
+                        const tempVy = b1.vy;
+                        b1.vx = b2.vx;
+                        b1.vy = b2.vy;
+                        b2.vx = tempVx;
+                        b2.vy = tempVy;
+                        
+                        const overlap = minDist - dist;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        b1.x += nx * (overlap / 2);
+                        b1.y += ny * (overlap / 2);
+                        b2.x -= nx * (overlap / 2);
+                        b2.y -= ny * (overlap / 2);
+
+                        if (Math.random() < 0.5) showDialog(b1);
+                        if (Math.random() < 0.5) showDialog(b2);
+                    }
+                }
+
+                b1.el.style.left = b1.x + 'px';
+                b1.el.style.top = b1.y + 'px';
+            }
+
+            if (activeCount > 0) {
+                requestAnimationFrame(physicsLoop);
+            } else {
+                physicsLoopRunning = false;
+            }
+        };
+
+        const renderFloatingProfiles = async () => {
+            try {
+                let token = localStorage.getItem('token') || sessionStorage.getItem('temp_pr_token');
+                if (!token) return;
+
+                const res = await fetch(`${API_URL}/api/students/stats/enriched`, { 
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!res.ok) return;
+
+                const result = await res.json();
+                let students = result.data || [];
+
+                students = students.filter(s => {
+                    const namaLower = s.name.toLowerCase();
+                    return !namaLower.includes('john doe') && !namaLower.includes('xaveria') && !namaLower.includes('xaviera'); 
+                });
+
+                const container = document.getElementById('floatingContainer');
+
+                students.forEach((student, index) => {
+                    const bubble = document.createElement('div');
+                    
+                    const size = Math.floor(Math.random() * 30) + 40; 
+                    const leftPos = Math.floor(Math.random() * 90); 
+                    const bottomPos = Math.floor(Math.random() * 20) + 2; 
+                    const animDuration = Math.floor(Math.random() * 3) + 3; 
+                    const animDelay = Math.random() * 2; 
+                    
+                    bubble.className = `bubble-bottom-float rounded-full bg-white border-4 border-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] flex items-center justify-center font-black text-gray-500 overflow-visible`;
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    bubble.style.left = `${leftPos}%`;
+                    bubble.style.bottom = `${bottomPos}%`;
+                    bubble.style.animationDuration = `${animDuration}s`;
+                    bubble.style.animationDelay = `${animDelay}s`;
+                    bubble.style.fontSize = `${size/2.5}px`;
+
+                    const innerDiv = document.createElement('div');
+                    innerDiv.className = "w-full h-full rounded-full overflow-hidden flex items-center justify-center";
+                    
+                    if (student.photo_url && student.photo_url.trim() !== '') {
+                        innerDiv.innerHTML = `<img src="${student.photo_url}" class="w-full h-full object-cover" draggable="false" />`;
+                    } else {
+                        innerDiv.innerHTML = student.name.substring(0, 2).toUpperCase();
+                        const colors = ['bg-red-50 text-red-500', 'bg-blue-50 text-blue-500', 'bg-green-50 text-green-500', 'bg-yellow-50 text-yellow-600', 'bg-purple-50 text-purple-500', 'bg-pink-50 text-pink-500'];
+                        innerDiv.className += ` ${colors[index % colors.length]}`;
+                    }
+                    bubble.appendChild(innerDiv);
+                    container.appendChild(bubble);
+
+                    const bObj = {
+                        el: bubble,
+                        size: size,
+                        isBouncing: false,
+                        x: 0, y: 0, vx: 0, vy: 0
+                    };
+                    bubblesPhysics.push(bObj);
+
+                    bubble.addEventListener('click', () => {
+                        const now = Date.now();
+                        if (now - lastGlobalClickTime < 200) return; 
+                        lastGlobalClickTime = now;
+
+                        if (bObj.isBouncing) {
+                            showDialog(bObj);
+                            return; 
+                        }
+
+                        const rect = bubble.getBoundingClientRect();
+                        bubble.style.animation = 'none';
+                        bubble.style.bottom = 'auto'; 
+                        bubble.style.left = rect.left + 'px';
+                        bubble.style.top = rect.top + 'px';
+                        bubble.style.opacity = '1'; 
+                        bubble.classList.add('z-[60]');
+                        
+                        bObj.x = rect.left;
+                        bObj.y = rect.top;
+                        
+                        const speed = (Math.random() * 1.5) + 2; 
+                        const angle = Math.random() * Math.PI * 2; 
+                        bObj.vx = Math.cos(angle) * speed;
+                        bObj.vy = Math.sin(angle) * speed;
+                        
+                        bObj.isBouncing = true;
+
+                        showDialog(bObj);
+
+                        if (!physicsLoopRunning) {
+                            physicsLoopRunning = true;
+                            requestAnimationFrame(physicsLoop);
+                        }
+                    });
+                });
+
+            } catch (e) {
+                console.warn("Gagal merender bubble siswa:", e);
+            }
+        };
+
+        renderFloatingProfiles();
+    </script>
+</Layout>

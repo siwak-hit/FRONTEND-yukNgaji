@@ -2,25 +2,25 @@
 const { activeMenu = 'home' } = Astro.props;
 ---
 
-<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-    <a href="/dashboard" class={`flex flex-col items-center gap-1 ${activeMenu === 'home' ? 'text-green-600' : 'text-gray-400'}`}>
-        <i class="fa-solid fa-house-chimney text-xl"></i>
-        <span class="text-[10px] font-medium">Beranda</span>
+<nav class="tabbar fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-stretch z-40">
+    <a href="/dashboard" class={`tabbar-item ${activeMenu === 'home' ? 'is-active' : ''}`}>
+        <i class="fa-solid fa-house-chimney text-lg"></i>
+        <span class="tabbar-label">Beranda</span>
     </a>
-    <a href="/students" class={`flex flex-col items-center gap-1 ${activeMenu === 'students' ? 'text-green-600' : 'text-gray-400'}`}>
-        <i class="fa-solid fa-user-graduate text-xl"></i>
-        <span class="text-[10px] font-medium">Anak</span>
+    <a href="/students" class={`tabbar-item ${activeMenu === 'students' ? 'is-active' : ''}`}>
+        <i class="fa-solid fa-user-graduate text-lg"></i>
+        <span class="tabbar-label">Anak</span>
     </a>
-    <a href="/bank-soal" class={`flex flex-col items-center gap-1 ${activeMenu === 'exam' ? 'text-green-600' : 'text-gray-400'}`}>
-        <i class="fa-solid fa-book-open-reader text-xl"></i>
-        <span class="text-[10px] font-medium">Bank Soal</span>
+    <a href="/bank-soal" class={`tabbar-item ${activeMenu === 'exam' ? 'is-active' : ''}`}>
+        <i class="fa-solid fa-book-open-reader text-lg"></i>
+        <span class="tabbar-label">Bank Soal</span>
     </a>
-    <a href="/consultations" class={`flex flex-col items-center gap-1 ${activeMenu === 'chat' ? 'text-green-600' : 'text-gray-400'}`}>
+    <a href="/consultations" class={`tabbar-item ${activeMenu === 'chat' ? 'is-active' : ''}`}>
         <div class="relative">
-            <i class="fa-solid fa-comment-dots text-xl"></i>
-            <span id="notifDot" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+            <i class="fa-solid fa-comment-dots text-lg"></i>
+            <span id="notifDot" class="absolute -top-1 -right-1 w-2 h-2 rounded-full hidden" style="background-color: var(--danger);"></span>
         </div>
-        <span class="text-[10px] font-medium">Konsul</span>
+        <span class="tabbar-label">Konsul</span>
     </a>
 </nav>
 

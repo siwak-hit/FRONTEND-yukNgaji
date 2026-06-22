@@ -82,6 +82,18 @@
     border-radius: 1.5rem;
   }
 
+  /* Bubble di SAMPING KIRI maskot (mode ujian, kecuali saat close-up). */
+  .mascot-bubble.bubble-side {
+    left: auto;
+    right: calc(100% - 22px);
+    bottom: 58px;
+    transform-origin: bottom right;
+    width: max-content;
+    max-width: 160px;
+    padding: 10px 14px;
+    border-radius: 1rem;
+  }
+
   .mascot-bubble strong { font-size: 10px; display: block; }
   .mascot-bubble span { font-size: 9px; line-height: 1.2; }
 
@@ -265,7 +277,14 @@
 
         const bubble = document.getElementById('mascot-chat');
         let themeClass = theme === 'warning' ? 'bubble-warning' : '';
-        bubble.className = `mascot-bubble ${type === 'small' ? 'bubble-small' : 'bubble-large'} ${themeClass}`;
+
+        // Penempatan bubble. Mode 'side' (dipakai halaman ujian): bubble muncul di
+        // SAMPING KIRI maskot untuk semua state KECUALI close-up (maskot maju menawari bantuan).
+        const isCloseup = (catState === 'CLOSEUP' || catState === 'TOWARD');
+        const sideMode = cfg.bubblePlacement === 'side' && !isCloseup;
+        const posClass = sideMode ? 'bubble-side' : '';
+
+        bubble.className = `mascot-bubble ${type === 'small' ? 'bubble-small' : 'bubble-large'} ${posClass} ${themeClass}`;
 
         let htmlContent = `<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">${text}</span>`;
         if (actionType) {
@@ -273,13 +292,13 @@
         }
         bubble.innerHTML = htmlContent;
         bubble.style.opacity = "1";
-        bubble.style.transform = type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)";
+        bubble.style.transform = sideMode ? "scale(1)" : (type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)");
 
         if (!actionType) {
             setTimeout(() => {
                 if(bubble.innerHTML.includes(text)){
                     bubble.style.opacity = "0";
-                    bubble.style.transform = type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)";
+                    bubble.style.transform = sideMode ? "scale(0)" : (type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)");
                 }
             }, duration);
         }
@@ -422,6 +441,7 @@
             if(customConfig.texts) cfg.texts = { ...cfg.texts, ...customConfig.texts };
             if(customConfig.actions) cfg.actions = { ...cfg.actions, ...customConfig.actions };
             if(customConfig.position) cfg.position = { ...cfg.position, ...customConfig.position };
+            if(customConfig.bubblePlacement) cfg.bubblePlacement = customConfig.bubblePlacement;
             if(customConfig.animations) { Object.assign(CAT_CONFIG, customConfig.animations); }
 
             const btnTog = document.getElementById('btnToggleCat');

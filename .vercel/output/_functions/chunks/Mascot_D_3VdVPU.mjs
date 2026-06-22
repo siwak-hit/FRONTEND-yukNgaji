@@ -1,0 +1,1360 @@
+import { c as createComponent } from './astro-component_Cw92UQC9.mjs';
+import 'piccolore';
+import { r as renderTemplate, m as maybeRenderHead } from './entrypoint_yiMmYQNI.mjs';
+import 'clsx';
+
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(raw || cooked.slice()) }));
+var _a;
+const $$Mascot = createComponent(async ($$result, $$props, $$slots) => {
+  return renderTemplate(_a || (_a = __template(['<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"><\/script> ', `<button id="btnToggleCat" onclick="window.MiawMascot.toggle()" class="fixed bottom-[110px] left-6 w-12 h-12 bg-white/80 backdrop-blur-md border-2 border-indigo-100 text-indigo-400 rounded-2xl shadow-lg z-[90] flex items-center justify-center text-2xl hover:text-indigo-600 hover:border-indigo-400 hover:scale-110 hover:-translate-y-1 transition-all opacity-50 hover:opacity-100" title="Usir / Panggil Miaw"> <i id="toggleCatIcon" class="fa-solid fa-cat"></i> </button> <div id="mascot-container"> <div id="mascot-chat" class="mascot-bubble hidden"> <strong>MIAWW!</strong> <br> <span id="mascot-chat-text" class="italic text-xs text-gray-500"></span> </div> <div id="mascot-lottie-hidden" style="position: absolute; opacity: 0; pointer-events: none; width: 140px; height: 140px;"></div> <div id="mascot-video-container" class="hidden absolute bottom-0 right-0 w-[150px] z-[100] drop-shadow-xl rounded-xl overflow-hidden pointer-events-none transition-all duration-300"> <video id="mascot-video-player" muted playsinline class="w-full h-auto object-cover rounded-xl"></video> </div> <canvas id="mascot-lottie" width="140" height="140" class="cursor-pointer drop-shadow-xl" onclick="window.MiawMascot.handleClick()"></canvas> </div>  <script>
+(function() {
+    let catState = "HIDDEN";
+    let catAnim = null;
+    let chatTimer = null;
+    let isCatTransitioning = false;
+
+    let timers = { idle: null, prank: null, comeback: null, warningResume: null };
+    let catPatience = 60000;
+
+    let mState = {
+        isDismissed: false,
+        isReturnedAuto: false,
+        isPranking: false,
+        isThreatening: false
+    };
+    const CHROMA_KEY = { r: 202, g: 169, b: 0, tolerance: 40 };
+
+    let CAT_CONFIG = {
+        ENTERING: { path: '/CAT LOTTIE/WALK TO SIT.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null },
+        IDLE_EDGE: { path: '/CAT LOTTIE/SIT IDDLE.json', loop: true, speed: 1.0, lottieDuration: 7000, data: null },
+        TOWARD: { path: '/CAT LOTTIE/WALK FORWARD.json', loop: false, speed: 1.0, lottieDuration: 5000, data: null },
+        CLOSEUP: { path: '/CAT LOTTIE/IDDLE CLOSE UP.json', loop: true, speed: 1.0, lottieDuration: 8000, data: null },
+        RETREATING: { path: '/CAT LOTTIE/WALK TO BACK.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null },
+        LEAVING: { path: '/CAT LOTTIE/SIT TO WALK.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null }
+    };
+
+    let cfg = {
+        mode: 'default',
+        texts: {
+            entering: "Miaw... miaw... miaw...", idleArrive: "Miaw miaw... (kelihatannya ada yang lagi serius nih)",
+            idlePhrases: ["Jangan tegang... miaw", "Semangat! Aku perhatiin dari sini ya 👀"], warnings: ["Miaw... kok kamu gak mau main sama aku?"],
+            prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal mainin kamu!", prankRevert: "Apa? Hilang? Yaudah maap aku balikin deh miaw miaw..",
+            threatAsk: "Miaw!! Yakin nih mau ngusir aku lagi?", threatExecute: "Yaudah aku pergi! Coba cek timer kamu sekarang deh!",
+            threatRevert: "Nah gitu dong manggil... Maap deh, Waktu udah aku normalin lagi miaw!", dismissNormal: "Dih ngusir... Yaudah kerjain aja sendiri!",
+            callNormal: "Ciee manggil lagi... Butuh bantuan kan?", callNormalArrive: "Yaudah, aku temenin lagi. Jangan cuekin aku ya!",
+            clickAsk: "Miaw... Apakah kamu mengalami kesusahan?", clickYesOffer: "Miaw miaw... Mau aku bantu berhentiin waktunya sebentar?",
+            clickYesEmpty: "Yah, bantuan aku udah abis hari ini.", clickNo: "Wih sombong... Yaudah kerjain sendiri sana!",
+            helpExecute: "Ok, aku tahan waktunya... Cepetan kerjain!", helpReject: "Cih, ditawarin bantuan malah nolak. Bye!",
+            helpDone: "Maaf ya, aku hanya bisa membantu itu saja... Lanjutkan!"
+        },
+        actions: { onPrank: () => {}, onPrankRevert: () => {}, onThreatExecute: () => {}, onThreatRevert: () => {}, onHelpExecute: (done) => { done(); } },
+        position: { visibleRight: '40px', hiddenRight: '-250px', bottom: '68px' }
+    };
+
+    const setMascotVisiblePosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.visibleRight;
+        mc.style.bottom = cfg.position.bottom;
+    };
+
+    const setMascotHiddenPosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.hiddenRight;
+    };
+
+    let transitionUnlockTimer = null;
+
+    const setCatTransitionLock = (locked, duration = 0) => {
+        const btn = document.getElementById('btnToggleCat');
+        const canvas = document.getElementById('mascot-lottie');
+
+        clearTimeout(transitionUnlockTimer);
+
+        isCatTransitioning = locked;
+
+        if (btn) {
+            btn.disabled = locked;
+            btn.style.pointerEvents = locked ? 'none' : 'auto';
+            btn.style.opacity = locked ? '0.35' : '';
+            btn.classList.toggle('cursor-not-allowed', locked);
+        }
+
+        if (canvas) {
+            canvas.style.pointerEvents = locked ? 'none' : 'auto';
+        }
+
+        if (locked && duration > 0) {
+            transitionUnlockTimer = setTimeout(() => {
+                setCatTransitionLock(false);
+            }, duration);
+        }
+    };
+
+    const isCatBusy = () => {
+        return (
+            isCatTransitioning ||
+            catState === "ENTERING" ||
+            catState === "LEAVING" ||
+            catState === "RETREATING" ||
+            catState === "TOWARD" ||
+            catState === "PEEK_IN" ||
+            catState === "PEEK_OUT"
+        );
+    };
+
+    const applyCatState = (stateName) => {
+        const config = CAT_CONFIG[stateName];
+        if (!config || !config.data) return;
+        if (catAnim) catAnim.destroy();
+        catAnim = lottie.loadAnimation({
+            container: document.getElementById('mascot-lottie-hidden'), renderer: 'canvas', loop: config.loop, autoplay: true, animationData: config.data
+        });
+        catAnim.setSpeed(config.speed);
+        const visibleCanvas = document.getElementById('mascot-lottie');
+        const vCtx = visibleCanvas.getContext('2d', { willReadFrequently: true });
+        catAnim.addEventListener('enterFrame', () => {
+            const hiddenCanvas = document.querySelector('#mascot-lottie-hidden canvas');
+            if (!hiddenCanvas) return;
+
+            // [FIX] Cegah error drawImage kalau Lottie canvas belum punya ukuran
+            if (hiddenCanvas.width === 0 || hiddenCanvas.height === 0) return;
+
+            // [FIX] Pastikan canvas terlihat juga punya ukuran valid
+            if (
+                visibleCanvas.width !== hiddenCanvas.width ||
+                visibleCanvas.height !== hiddenCanvas.height
+            ) {
+                visibleCanvas.width = hiddenCanvas.width;
+                visibleCanvas.height = hiddenCanvas.height;
+            }
+
+            if (visibleCanvas.width === 0 || visibleCanvas.height === 0) return;
+
+            vCtx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+
+            try {
+                vCtx.drawImage(hiddenCanvas, 0, 0);
+            } catch (err) {
+                console.warn('Skip frame Miaw: canvas Lottie belum siap.', err);
+                return;
+            }
+
+            const imgData = vCtx.getImageData(0, 0, visibleCanvas.width, visibleCanvas.height);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const isChroma =
+                    Math.abs(data[i] - CHROMA_KEY.r) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 1] - CHROMA_KEY.g) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 2] - CHROMA_KEY.b) <= CHROMA_KEY.tolerance;
+
+                if (isChroma) {
+                    data[i + 3] = 0;
+                }
+            }
+
+            vCtx.putImageData(imgData, 0, 0);
+        });
+    };
+
+    // [UPDATE]: Fungsi setChat agar bisa memproses fungsi dinamis & menghilangkan tanda kutip literal
+    const setChat = (type, textRaw, actionType = null, theme = 'default', duration = 3500) => {
+        let text = "";
+        try {
+            // Evaluasi jika teks berupa fungsi (agar bisa dinamis membaca waktu/nama)
+            text = typeof textRaw === 'function' ? textRaw() : textRaw;
+        } catch(e) {
+            text = "Miaw miaw...";
+        }
+
+        const bubble = document.getElementById('mascot-chat');
+        let themeClass = theme === 'warning' ? 'bubble-warning' : '';
+
+        // Penempatan bubble. Mode 'side' (dipakai halaman ujian): bubble muncul di
+        // SAMPING KIRI maskot untuk semua state KECUALI close-up (maskot maju menawari bantuan).
+        const isCloseup = (catState === 'CLOSEUP' || catState === 'TOWARD');
+        const sideMode = cfg.bubblePlacement === 'side' && !isCloseup;
+        const posClass = sideMode ? 'bubble-side' : '';
+
+        bubble.className = \`mascot-bubble \${type === 'small' ? 'bubble-small' : 'bubble-large'} \${posClass} \${themeClass}\`;
+
+        let htmlContent = \`<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">\${text}</span>\`;
+        if (actionType) {
+            htmlContent += \`<div class="chat-choices mt-2"><button class="btn-choice btn-yes" onclick="window.MiawMascot.handleChoice('\${actionType}', true)">Ya</button><button class="btn-choice btn-no" onclick="window.MiawMascot.handleChoice('\${actionType}', false)">Tidak</button></div>\`;
+        }
+        bubble.innerHTML = htmlContent;
+        bubble.style.opacity = "1";
+        bubble.style.transform = sideMode ? "scale(1)" : (type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)");
+
+        if (!actionType) {
+            setTimeout(() => {
+                if(bubble.innerHTML.includes(text)){
+                    bubble.style.opacity = "0";
+                    bubble.style.transform = sideMode ? "scale(0)" : (type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)");
+                }
+            }, duration);
+        }
+    };
+
+    const startRandomChats = () => {
+        clearInterval(chatTimer);
+        chatTimer = setInterval(() => {
+            if (catState === "IDLE_EDGE" || catState === "PEEK_IDLE") {
+                setChat('small', cfg.texts.idlePhrases[Math.floor(Math.random() * cfg.texts.idlePhrases.length)], null, 'default', 3500);
+            }
+        }, Math.floor(Math.random() * 5000) + 10000);
+    };
+
+    const resetIdleTimer = () => {
+        clearTimeout(timers.idle);
+        clearTimeout(timers.prank);
+        clearTimeout(timers.warningResume);
+
+        if (mState.isDismissed || mState.isPranking || catState === "HIDDEN" || catState === "RETREATING" || catState === "PEEK_OUT" || mState.isThreatening) return;
+
+        timers.idle = setTimeout(() => {
+            if (catState !== "IDLE_EDGE" && catState !== "PEEK_IDLE") return;
+
+            clearInterval(chatTimer);
+            const warningTxt = cfg.texts.warnings[Math.floor(Math.random() * cfg.texts.warnings.length)];
+            setChat('large', warningTxt, null, 'warning', 6000);
+
+            timers.warningResume = setTimeout(() => {
+                if (!mState.isPranking && !mState.isDismissed) { startRandomChats(); }
+            }, 6000);
+
+            if (cfg.mode === 'peek') {
+                timers.prank = setTimeout(() => {
+                    if (mState.isDismissed) return;
+                    mState.isDismissed = true;
+                    clearInterval(chatTimer); clearTimeout(timers.warningResume);
+
+                    catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
+                    setChat('small', "Huh! Yaudah aku sembunyi aja!", null, 'warning', 3000);
+
+                    timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
+                }, 15000);
+            } else {
+                timers.prank = setTimeout(triggerPrank, 15000);
+            }
+
+        }, catPatience);
+    };
+
+    const triggerPrank = () => {
+        if (mState.isDismissed || isCatTransitioning) return;
+
+        setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+        mState.isPranking = true;
+        mState.isDismissed = true;
+
+        clearInterval(chatTimer);
+        clearTimeout(timers.warningResume);
+        clearTimeout(timers.idle);
+        clearTimeout(timers.prank);
+
+        setChat('large', cfg.texts.prank, null, 'warning', 4000);
+        cfg.actions.onPrank();
+
+        catState = "LEAVING";
+        applyCatState("LEAVING");
+
+        const mc = document.getElementById('mascot-container');
+        const icon = document.getElementById('toggleCatIcon');
+
+        setTimeout(() => {
+            mc.style.transition = 'right 3s linear, transform 3s linear';
+            setMascotHiddenPosition(mc);
+            icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
+        }, 3000);
+
+        setTimeout(() => {
+            catState = "HIDDEN";
+            setCatTransitionLock(false);
+        }, CAT_CONFIG.LEAVING.lottieDuration);
+    };
+
+    const autonomousReturn = () => {
+        if (isCatTransitioning) return;
+        if (!mState.isDismissed || mState.isPranking || mState.isThreatening) return;
+        mState.isDismissed = false; mState.isReturnedAuto = true;
+
+        if (cfg.mode === 'peek') {
+            catState = "PEEK_IN"; applyCatState("PEEK_IN");
+            setChat('small', cfg.texts.callNormalArrive, null, 'default', 4000);
+
+            setTimeout(() => {
+                catState = "PEEK_IDLE"; applyCatState("PEEK_IDLE");
+                catPatience += 20000;
+                resetIdleTimer(); startRandomChats();
+            }, CAT_CONFIG.PEEK_IN.lottieDuration);
+            return;
+        }
+
+        catState = "ENTERING"; applyCatState("ENTERING");
+        const mc = document.getElementById('mascot-container');
+        mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; setMascotVisiblePosition(mc);
+        const icon = document.getElementById('toggleCatIcon');
+        icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+        setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
+        setChat('small', "Bosan ih sendirian di luar... Aku ikut nongkrong sini lagi ya! Miaw~", null, 'default', 4000);
+        setTimeout(() => { catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE"); resetIdleTimer(); startRandomChats(); }, CAT_CONFIG.ENTERING.lottieDuration);
+    };
+
+    const retreatCat = () => {
+        if (catState === "RETREATING") return;
+
+        setCatTransitionLock(true, CAT_CONFIG.RETREATING.lottieDuration + 300);
+
+        catState = "RETREATING";
+        applyCatState("RETREATING");
+
+        const mc = document.getElementById('mascot-container');
+        mc.style.transition = 'right 2s ease-in-out, transform 2s ease-in-out';
+        setMascotVisiblePosition(mc);
+        mc.style.transform = 'translateX(0) translateY(0) scale(1)';
+
+        setTimeout(() => {
+            catState = "IDLE_EDGE";
+            applyCatState("IDLE_EDGE");
+            setCatTransitionLock(false);
+            startRandomChats();
+            resetIdleTimer();
+        }, CAT_CONFIG.RETREATING.lottieDuration);
+    };
+
+    window.MiawMascot = {
+        init: async (customConfig) => {
+            // Bersihkan sisa state halaman sebelumnya
+            cfg.mode = 'default';
+
+            if(customConfig.mode) cfg.mode = customConfig.mode;
+            if(customConfig.texts) cfg.texts = { ...cfg.texts, ...customConfig.texts };
+            if(customConfig.actions) cfg.actions = { ...cfg.actions, ...customConfig.actions };
+            if(customConfig.position) cfg.position = { ...cfg.position, ...customConfig.position };
+            if(customConfig.bubblePlacement) cfg.bubblePlacement = customConfig.bubblePlacement;
+            if(customConfig.animations) { Object.assign(CAT_CONFIG, customConfig.animations); }
+
+            const btnTog = document.getElementById('btnToggleCat');
+            const mc = document.getElementById('mascot-container');
+
+            // UPDATE PENYESUAIAN CSS UNTUK MASING-MASING MODE (Dinamic Max-Width Bubble)
+            if (cfg.mode === 'peek') {
+                if(btnTog) btnTog.style.display = 'none';
+                if(mc) {
+                    mc.classList.add('mascot-peek'); // <--- Tambah class agar max-width 100px berlaku
+                    mc.style.transition = 'none';
+                    mc.style.right = '20px';
+                    mc.style.bottom = '-35px';
+                    mc.style.transform = 'scale(1)';
+                }
+            } else {
+                if(btnTog) btnTog.style.display = 'flex';
+                if(mc) {
+                    mc.classList.remove('mascot-peek'); // <--- Hapus class agar max-width 130px berlaku
+                    mc.style.transition = '';
+                    setMascotHiddenPosition(mc);
+                    mc.style.bottom = cfg.position.bottom;
+                    mc.style.transform = 'scale(1)';
+                }
+            }
+
+            const keys = Object.keys(CAT_CONFIG);
+            const promises = keys.map(async (key) => {
+                try {
+                    if(CAT_CONFIG[key].path) {
+                        const res = await fetch(CAT_CONFIG[key].path); CAT_CONFIG[key].data = await res.json();
+                    }
+                } catch (err) { console.error(\`Gagal muat \${key}\`, err); }
+            });
+            await Promise.all(promises);
+        },
+        getState: () => mState,
+        resetTimer: resetIdleTimer,
+        show: () => {
+            if (mState.isDismissed || isCatBusy()) return;
+
+            if (cfg.mode === 'peek') {
+                if (catState === "HIDDEN") {
+                    setCatTransitionLock(true, (CAT_CONFIG.PEEK_IN?.lottieDuration || 3000) + 300);
+
+                    catState = "PEEK_IN";
+                    applyCatState("PEEK_IN");
+                    setChat('small', cfg.texts.entering, null, 'default', 4000);
+
+                    setTimeout(() => {
+                        catState = "PEEK_IDLE";
+                        applyCatState("PEEK_IDLE");
+                        setCatTransitionLock(false);
+
+                        setChat('small', cfg.texts.idleArrive, null, 'default', 4000);
+                        setTimeout(() => {
+                            startRandomChats();
+                            resetIdleTimer();
+                        }, 4000);
+                    }, CAT_CONFIG.PEEK_IN?.lottieDuration || 3000);
+                }
+                return;
+            }
+
+            if (catState === "HIDDEN") {
+                setCatTransitionLock(true, CAT_CONFIG.ENTERING.lottieDuration + 300);
+
+                catState = "ENTERING";
+                applyCatState("ENTERING");
+
+                const mc = document.getElementById('mascot-container');
+                mc.style.transition = 'right 2s ease-out, transform 2s ease-out';
+                setMascotVisiblePosition(mc);
+
+                const icon = document.getElementById('toggleCatIcon');
+                icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+
+                setTimeout(() => {
+                    icon.classList.remove('animate-bounce');
+                }, 1000);
+
+                setChat('small', "Bosan ih sendirian di luar... Aku ikut nongkrong sini lagi ya! Miaw~", null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+                    resetIdleTimer();
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+            }
+        },
+        toggle: () => {
+            if (isCatBusy()) return;
+
+            resetIdleTimer();
+
+            const mc = document.getElementById('mascot-container');
+            const icon = document.getElementById('toggleCatIcon');
+
+            if (!mc || !icon) return;
+
+            // ===============================
+            // KONDISI: MIAW SEDANG TAMPIL → USIR
+            // ===============================
+            if (!mState.isDismissed) {
+                if (catState !== "IDLE_EDGE" && catState !== "CLOSEUP") return;
+
+                // Kalau Miaw balik otomatis, usir lagi berarti ancaman
+                if (mState.isReturnedAuto) {
+                    setChat('large', cfg.texts.threatAsk, 'ASK_THREAT', 'warning');
+                    return;
+                }
+
+                setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+                mState.isDismissed = true;
+                mState.isReturnedAuto = false;
+
+                clearInterval(chatTimer);
+                clearTimeout(timers.idle);
+                clearTimeout(timers.prank);
+                clearTimeout(timers.comeback);
+                clearTimeout(timers.warningResume);
+
+                catState = "LEAVING";
+                applyCatState("LEAVING");
+
+                setChat('large', cfg.texts.dismissNormal, null, 'warning', 4000);
+                icon.className = "fa-solid fa-cat text-gray-300 opacity-50";
+
+                setTimeout(() => {
+                    mc.style.transition = 'right 3s linear, transform 3s linear';
+                    setMascotHiddenPosition(mc);
+                }, 3000);
+
+                setTimeout(() => {
+                    catState = "HIDDEN";
+                    setCatTransitionLock(false);
+
+                    timers.comeback = setTimeout(
+                        autonomousReturn,
+                        Math.floor(Math.random() * 10000) + 20000
+                    );
+                }, CAT_CONFIG.LEAVING.lottieDuration);
+
+                return;
+            }
+
+            // ===============================
+            // KONDISI: MIAW SEDANG HILANG → PANGGIL
+            // ===============================
+            clearTimeout(timers.comeback);
+
+            setCatTransitionLock(true, CAT_CONFIG.ENTERING.lottieDuration + 300);
+
+            mState.isDismissed = false;
+
+            catState = "ENTERING";
+            applyCatState("ENTERING");
+
+            mc.style.transition = 'right 2s ease-out, transform 2s ease-out';
+            setMascotVisiblePosition(mc);
+            mc.style.transform = 'translateX(0) scale(1)';
+
+            icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+            setTimeout(() => {
+                icon.classList.remove('animate-bounce');
+            }, 1000);
+
+            if (mState.isPranking) {
+                setChat('large', "Giliran sekarang kamu mau ngajak main aku kan miaw miaw...", null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+
+                    setChat('large', cfg.texts.prankRevert, null, 'default', 4000);
+
+                    setTimeout(() => {
+                        cfg.actions.onPrankRevert();
+                        mState.isPranking = false;
+                        catPatience += 20000;
+                        resetIdleTimer();
+                        startRandomChats();
+                    }, 3000);
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+
+                return;
+            }
+
+            if (mState.isThreatening) {
+                mState.isThreatening = false;
+                cfg.actions.onThreatRevert();
+
+                setChat('large', cfg.texts.threatRevert, null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+                    resetIdleTimer();
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+
+                return;
+            }
+
+            setChat('small', cfg.texts.callNormal, null, 'default', 4000);
+
+            setTimeout(() => {
+                catState = "IDLE_EDGE";
+                applyCatState("IDLE_EDGE");
+                setCatTransitionLock(false);
+
+                setChat('small', cfg.texts.callNormalArrive, null, 'default', 4000);
+                resetIdleTimer();
+                startRandomChats();
+            }, CAT_CONFIG.ENTERING.lottieDuration);
+        },
+        handleClick: () => {
+            if (isCatBusy()) return;
+            resetIdleTimer();
+
+            if (cfg.mode === 'peek') {
+                if (catState !== "PEEK_IDLE") return;
+
+                mState.isDismissed = true;
+                clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.warningResume);
+
+                catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
+                setChat('small', cfg.texts.dismissNormal, null, 'default', 3000);
+
+                timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
+                return;
+            }
+
+            if (catState !== "IDLE_EDGE") return;
+            setCatTransitionLock(true, CAT_CONFIG.TOWARD.lottieDuration + 300);
+
+            catState = "TOWARD";
+            clearInterval(chatTimer);
+            applyCatState("TOWARD");
+            const mc = document.getElementById('mascot-container');
+            mc.style.transition = 'right 1.8s ease-in-out, transform 1.8s ease-in-out';
+            mc.style.right = '50%'; mc.style.transform = 'translateX(50%) translateY(-40px) scale(2)';
+            setTimeout(() => {
+                catState = "CLOSEUP";
+                applyCatState("CLOSEUP");
+                setCatTransitionLock(false);
+                setChat('large', cfg.texts.clickAsk, 'ASK_DIFFICULTY');
+            }, CAT_CONFIG.TOWARD.lottieDuration);
+        },
+        handleChoice: (actionType, isYes) => {
+            if (isCatTransitioning) return;
+
+            const bubble = document.getElementById('mascot-chat');
+            if (!bubble) return;
+
+            if (actionType === 'ASK_THREAT') {
+                bubble.style.opacity = "0";
+                if (isYes) {
+                    setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+                    mState.isReturnedAuto = false;
+                    mState.isDismissed = true;
+                    mState.isThreatening = true;
+
+                    clearInterval(chatTimer);
+                    clearTimeout(timers.idle);
+                    clearTimeout(timers.prank);
+                    clearTimeout(timers.comeback);
+                    clearTimeout(timers.warningResume);
+
+                    catState = "LEAVING";
+                    applyCatState("LEAVING");
+
+                    setChat('large', cfg.texts.threatExecute, null, 'warning', 4000);
+                    cfg.actions.onThreatExecute();
+
+                    const mc = document.getElementById('mascot-container');
+                    const icon = document.getElementById('toggleCatIcon');
+
+                    icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
+
+                    setTimeout(() => {
+                        mc.style.transition = 'right 3s linear, transform 3s linear';
+                        setMascotHiddenPosition(mc);
+                    }, 3000);
+
+                    setTimeout(() => {
+                        catState = "HIDDEN";
+                        setCatTransitionLock(false);
+                    }, CAT_CONFIG.LEAVING.lottieDuration);
+                } else {
+                    mState.isReturnedAuto = false;
+                    setChat('small', "Nah gitu dong, aku anteng aja kok di sini...", null, 'default', 4000);
+                }
+                return;
+            }
+
+            if (actionType === 'ASK_DIFFICULTY') {
+                if (isYes) {
+                    const isHelpUsed = localStorage.getItem('cat_help_used') === 'true';
+                    if (!isHelpUsed) { setChat('large', cfg.texts.clickYesOffer, 'FREEZE'); }
+                    else {
+                        setChat('large', cfg.texts.clickYesEmpty, null, 'default', 4000);
+                        setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
+                    }
+                } else {
+                    // [PERBAIKAN]: Eksekusi Kucing Marah saat menolak bantuan sejak awal!
+                    if (typeof window.triggerAngryCat === 'function') {
+                        window.triggerAngryCat();
+                    } else {
+                        setChat('large', cfg.texts.clickNo, null, 'warning', 4000);
+                    }
+                    // Waktu mundur diperlama sedikit (2500ms) agar teks peringatan bisa terbaca
+                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
+                }
+                return;
+            }
+
+            bubble.style.opacity = "0";
+
+            if (actionType === 'FREEZE' && isYes) {
+                localStorage.setItem('cat_help_used', 'true');
+                setChat('large', cfg.texts.helpExecute, null, 'default', 4000);
+                cfg.actions.onHelpExecute(() => { if (catState === "IDLE_EDGE") setChat('small', cfg.texts.helpDone, null, 'default', 4000); });
+            } else if (actionType === 'FREEZE' && !isYes) {
+                // [PERBAIKAN]: Eksekusi juga jika menolak di pertanyaan kedua
+                if (typeof window.triggerAngryCat === 'function') {
+                    window.triggerAngryCat();
+                } else {
+                    setChat('large', cfg.texts.helpReject, null, 'warning', 4000);
+                }
+            }
+            setTimeout(() => { retreatCat(); }, 2500);
+        },
+        say: (type, text, actionType = null, theme = 'default', duration = 4000) => {
+            if (catState === "HIDDEN" || mState.isDismissed || mState.isPranking || mState.isThreatening) return;
+            setChat(type, text, actionType, theme, duration);
+        }
+    };
+})();
+<\/script>`], ['<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"><\/script> ', `<button id="btnToggleCat" onclick="window.MiawMascot.toggle()" class="fixed bottom-[110px] left-6 w-12 h-12 bg-white/80 backdrop-blur-md border-2 border-indigo-100 text-indigo-400 rounded-2xl shadow-lg z-[90] flex items-center justify-center text-2xl hover:text-indigo-600 hover:border-indigo-400 hover:scale-110 hover:-translate-y-1 transition-all opacity-50 hover:opacity-100" title="Usir / Panggil Miaw"> <i id="toggleCatIcon" class="fa-solid fa-cat"></i> </button> <div id="mascot-container"> <div id="mascot-chat" class="mascot-bubble hidden"> <strong>MIAWW!</strong> <br> <span id="mascot-chat-text" class="italic text-xs text-gray-500"></span> </div> <div id="mascot-lottie-hidden" style="position: absolute; opacity: 0; pointer-events: none; width: 140px; height: 140px;"></div> <div id="mascot-video-container" class="hidden absolute bottom-0 right-0 w-[150px] z-[100] drop-shadow-xl rounded-xl overflow-hidden pointer-events-none transition-all duration-300"> <video id="mascot-video-player" muted playsinline class="w-full h-auto object-cover rounded-xl"></video> </div> <canvas id="mascot-lottie" width="140" height="140" class="cursor-pointer drop-shadow-xl" onclick="window.MiawMascot.handleClick()"></canvas> </div>  <script>
+(function() {
+    let catState = "HIDDEN";
+    let catAnim = null;
+    let chatTimer = null;
+    let isCatTransitioning = false;
+
+    let timers = { idle: null, prank: null, comeback: null, warningResume: null };
+    let catPatience = 60000;
+
+    let mState = {
+        isDismissed: false,
+        isReturnedAuto: false,
+        isPranking: false,
+        isThreatening: false
+    };
+    const CHROMA_KEY = { r: 202, g: 169, b: 0, tolerance: 40 };
+
+    let CAT_CONFIG = {
+        ENTERING: { path: '/CAT LOTTIE/WALK TO SIT.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null },
+        IDLE_EDGE: { path: '/CAT LOTTIE/SIT IDDLE.json', loop: true, speed: 1.0, lottieDuration: 7000, data: null },
+        TOWARD: { path: '/CAT LOTTIE/WALK FORWARD.json', loop: false, speed: 1.0, lottieDuration: 5000, data: null },
+        CLOSEUP: { path: '/CAT LOTTIE/IDDLE CLOSE UP.json', loop: true, speed: 1.0, lottieDuration: 8000, data: null },
+        RETREATING: { path: '/CAT LOTTIE/WALK TO BACK.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null },
+        LEAVING: { path: '/CAT LOTTIE/SIT TO WALK.json', loop: false, speed: 1.0, lottieDuration: 8000, data: null }
+    };
+
+    let cfg = {
+        mode: 'default',
+        texts: {
+            entering: "Miaw... miaw... miaw...", idleArrive: "Miaw miaw... (kelihatannya ada yang lagi serius nih)",
+            idlePhrases: ["Jangan tegang... miaw", "Semangat! Aku perhatiin dari sini ya 👀"], warnings: ["Miaw... kok kamu gak mau main sama aku?"],
+            prank: "Ok! Kalo kamu gak mau main sama aku, aku yang bakal mainin kamu!", prankRevert: "Apa? Hilang? Yaudah maap aku balikin deh miaw miaw..",
+            threatAsk: "Miaw!! Yakin nih mau ngusir aku lagi?", threatExecute: "Yaudah aku pergi! Coba cek timer kamu sekarang deh!",
+            threatRevert: "Nah gitu dong manggil... Maap deh, Waktu udah aku normalin lagi miaw!", dismissNormal: "Dih ngusir... Yaudah kerjain aja sendiri!",
+            callNormal: "Ciee manggil lagi... Butuh bantuan kan?", callNormalArrive: "Yaudah, aku temenin lagi. Jangan cuekin aku ya!",
+            clickAsk: "Miaw... Apakah kamu mengalami kesusahan?", clickYesOffer: "Miaw miaw... Mau aku bantu berhentiin waktunya sebentar?",
+            clickYesEmpty: "Yah, bantuan aku udah abis hari ini.", clickNo: "Wih sombong... Yaudah kerjain sendiri sana!",
+            helpExecute: "Ok, aku tahan waktunya... Cepetan kerjain!", helpReject: "Cih, ditawarin bantuan malah nolak. Bye!",
+            helpDone: "Maaf ya, aku hanya bisa membantu itu saja... Lanjutkan!"
+        },
+        actions: { onPrank: () => {}, onPrankRevert: () => {}, onThreatExecute: () => {}, onThreatRevert: () => {}, onHelpExecute: (done) => { done(); } },
+        position: { visibleRight: '40px', hiddenRight: '-250px', bottom: '68px' }
+    };
+
+    const setMascotVisiblePosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.visibleRight;
+        mc.style.bottom = cfg.position.bottom;
+    };
+
+    const setMascotHiddenPosition = (mc) => {
+        if (!mc) return;
+        mc.style.right = cfg.position.hiddenRight;
+    };
+
+    let transitionUnlockTimer = null;
+
+    const setCatTransitionLock = (locked, duration = 0) => {
+        const btn = document.getElementById('btnToggleCat');
+        const canvas = document.getElementById('mascot-lottie');
+
+        clearTimeout(transitionUnlockTimer);
+
+        isCatTransitioning = locked;
+
+        if (btn) {
+            btn.disabled = locked;
+            btn.style.pointerEvents = locked ? 'none' : 'auto';
+            btn.style.opacity = locked ? '0.35' : '';
+            btn.classList.toggle('cursor-not-allowed', locked);
+        }
+
+        if (canvas) {
+            canvas.style.pointerEvents = locked ? 'none' : 'auto';
+        }
+
+        if (locked && duration > 0) {
+            transitionUnlockTimer = setTimeout(() => {
+                setCatTransitionLock(false);
+            }, duration);
+        }
+    };
+
+    const isCatBusy = () => {
+        return (
+            isCatTransitioning ||
+            catState === "ENTERING" ||
+            catState === "LEAVING" ||
+            catState === "RETREATING" ||
+            catState === "TOWARD" ||
+            catState === "PEEK_IN" ||
+            catState === "PEEK_OUT"
+        );
+    };
+
+    const applyCatState = (stateName) => {
+        const config = CAT_CONFIG[stateName];
+        if (!config || !config.data) return;
+        if (catAnim) catAnim.destroy();
+        catAnim = lottie.loadAnimation({
+            container: document.getElementById('mascot-lottie-hidden'), renderer: 'canvas', loop: config.loop, autoplay: true, animationData: config.data
+        });
+        catAnim.setSpeed(config.speed);
+        const visibleCanvas = document.getElementById('mascot-lottie');
+        const vCtx = visibleCanvas.getContext('2d', { willReadFrequently: true });
+        catAnim.addEventListener('enterFrame', () => {
+            const hiddenCanvas = document.querySelector('#mascot-lottie-hidden canvas');
+            if (!hiddenCanvas) return;
+
+            // [FIX] Cegah error drawImage kalau Lottie canvas belum punya ukuran
+            if (hiddenCanvas.width === 0 || hiddenCanvas.height === 0) return;
+
+            // [FIX] Pastikan canvas terlihat juga punya ukuran valid
+            if (
+                visibleCanvas.width !== hiddenCanvas.width ||
+                visibleCanvas.height !== hiddenCanvas.height
+            ) {
+                visibleCanvas.width = hiddenCanvas.width;
+                visibleCanvas.height = hiddenCanvas.height;
+            }
+
+            if (visibleCanvas.width === 0 || visibleCanvas.height === 0) return;
+
+            vCtx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+
+            try {
+                vCtx.drawImage(hiddenCanvas, 0, 0);
+            } catch (err) {
+                console.warn('Skip frame Miaw: canvas Lottie belum siap.', err);
+                return;
+            }
+
+            const imgData = vCtx.getImageData(0, 0, visibleCanvas.width, visibleCanvas.height);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const isChroma =
+                    Math.abs(data[i] - CHROMA_KEY.r) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 1] - CHROMA_KEY.g) <= CHROMA_KEY.tolerance &&
+                    Math.abs(data[i + 2] - CHROMA_KEY.b) <= CHROMA_KEY.tolerance;
+
+                if (isChroma) {
+                    data[i + 3] = 0;
+                }
+            }
+
+            vCtx.putImageData(imgData, 0, 0);
+        });
+    };
+
+    // [UPDATE]: Fungsi setChat agar bisa memproses fungsi dinamis & menghilangkan tanda kutip literal
+    const setChat = (type, textRaw, actionType = null, theme = 'default', duration = 3500) => {
+        let text = "";
+        try {
+            // Evaluasi jika teks berupa fungsi (agar bisa dinamis membaca waktu/nama)
+            text = typeof textRaw === 'function' ? textRaw() : textRaw;
+        } catch(e) {
+            text = "Miaw miaw...";
+        }
+
+        const bubble = document.getElementById('mascot-chat');
+        let themeClass = theme === 'warning' ? 'bubble-warning' : '';
+
+        // Penempatan bubble. Mode 'side' (dipakai halaman ujian): bubble muncul di
+        // SAMPING KIRI maskot untuk semua state KECUALI close-up (maskot maju menawari bantuan).
+        const isCloseup = (catState === 'CLOSEUP' || catState === 'TOWARD');
+        const sideMode = cfg.bubblePlacement === 'side' && !isCloseup;
+        const posClass = sideMode ? 'bubble-side' : '';
+
+        bubble.className = \\\`mascot-bubble \\\${type === 'small' ? 'bubble-small' : 'bubble-large'} \\\${posClass} \\\${themeClass}\\\`;
+
+        let htmlContent = \\\`<strong>MIAWW!</strong><br/><span class="italic text-xs px-2">\\\${text}</span>\\\`;
+        if (actionType) {
+            htmlContent += \\\`<div class="chat-choices mt-2"><button class="btn-choice btn-yes" onclick="window.MiawMascot.handleChoice('\\\${actionType}', true)">Ya</button><button class="btn-choice btn-no" onclick="window.MiawMascot.handleChoice('\\\${actionType}', false)">Tidak</button></div>\\\`;
+        }
+        bubble.innerHTML = htmlContent;
+        bubble.style.opacity = "1";
+        bubble.style.transform = sideMode ? "scale(1)" : (type === 'small' ? "scale(1)" : "translateX(-50%) scale(1)");
+
+        if (!actionType) {
+            setTimeout(() => {
+                if(bubble.innerHTML.includes(text)){
+                    bubble.style.opacity = "0";
+                    bubble.style.transform = sideMode ? "scale(0)" : (type === 'small' ? "scale(0)" : "translateX(-50%) scale(0)");
+                }
+            }, duration);
+        }
+    };
+
+    const startRandomChats = () => {
+        clearInterval(chatTimer);
+        chatTimer = setInterval(() => {
+            if (catState === "IDLE_EDGE" || catState === "PEEK_IDLE") {
+                setChat('small', cfg.texts.idlePhrases[Math.floor(Math.random() * cfg.texts.idlePhrases.length)], null, 'default', 3500);
+            }
+        }, Math.floor(Math.random() * 5000) + 10000);
+    };
+
+    const resetIdleTimer = () => {
+        clearTimeout(timers.idle);
+        clearTimeout(timers.prank);
+        clearTimeout(timers.warningResume);
+
+        if (mState.isDismissed || mState.isPranking || catState === "HIDDEN" || catState === "RETREATING" || catState === "PEEK_OUT" || mState.isThreatening) return;
+
+        timers.idle = setTimeout(() => {
+            if (catState !== "IDLE_EDGE" && catState !== "PEEK_IDLE") return;
+
+            clearInterval(chatTimer);
+            const warningTxt = cfg.texts.warnings[Math.floor(Math.random() * cfg.texts.warnings.length)];
+            setChat('large', warningTxt, null, 'warning', 6000);
+
+            timers.warningResume = setTimeout(() => {
+                if (!mState.isPranking && !mState.isDismissed) { startRandomChats(); }
+            }, 6000);
+
+            if (cfg.mode === 'peek') {
+                timers.prank = setTimeout(() => {
+                    if (mState.isDismissed) return;
+                    mState.isDismissed = true;
+                    clearInterval(chatTimer); clearTimeout(timers.warningResume);
+
+                    catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
+                    setChat('small', "Huh! Yaudah aku sembunyi aja!", null, 'warning', 3000);
+
+                    timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
+                }, 15000);
+            } else {
+                timers.prank = setTimeout(triggerPrank, 15000);
+            }
+
+        }, catPatience);
+    };
+
+    const triggerPrank = () => {
+        if (mState.isDismissed || isCatTransitioning) return;
+
+        setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+        mState.isPranking = true;
+        mState.isDismissed = true;
+
+        clearInterval(chatTimer);
+        clearTimeout(timers.warningResume);
+        clearTimeout(timers.idle);
+        clearTimeout(timers.prank);
+
+        setChat('large', cfg.texts.prank, null, 'warning', 4000);
+        cfg.actions.onPrank();
+
+        catState = "LEAVING";
+        applyCatState("LEAVING");
+
+        const mc = document.getElementById('mascot-container');
+        const icon = document.getElementById('toggleCatIcon');
+
+        setTimeout(() => {
+            mc.style.transition = 'right 3s linear, transform 3s linear';
+            setMascotHiddenPosition(mc);
+            icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
+        }, 3000);
+
+        setTimeout(() => {
+            catState = "HIDDEN";
+            setCatTransitionLock(false);
+        }, CAT_CONFIG.LEAVING.lottieDuration);
+    };
+
+    const autonomousReturn = () => {
+        if (isCatTransitioning) return;
+        if (!mState.isDismissed || mState.isPranking || mState.isThreatening) return;
+        mState.isDismissed = false; mState.isReturnedAuto = true;
+
+        if (cfg.mode === 'peek') {
+            catState = "PEEK_IN"; applyCatState("PEEK_IN");
+            setChat('small', cfg.texts.callNormalArrive, null, 'default', 4000);
+
+            setTimeout(() => {
+                catState = "PEEK_IDLE"; applyCatState("PEEK_IDLE");
+                catPatience += 20000;
+                resetIdleTimer(); startRandomChats();
+            }, CAT_CONFIG.PEEK_IN.lottieDuration);
+            return;
+        }
+
+        catState = "ENTERING"; applyCatState("ENTERING");
+        const mc = document.getElementById('mascot-container');
+        mc.style.transition = 'right 2s ease-out, transform 2s ease-out'; setMascotVisiblePosition(mc);
+        const icon = document.getElementById('toggleCatIcon');
+        icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+        setTimeout(() => { icon.classList.remove('animate-bounce'); }, 1000);
+        setChat('small', "Bosan ih sendirian di luar... Aku ikut nongkrong sini lagi ya! Miaw~", null, 'default', 4000);
+        setTimeout(() => { catState = "IDLE_EDGE"; applyCatState("IDLE_EDGE"); resetIdleTimer(); startRandomChats(); }, CAT_CONFIG.ENTERING.lottieDuration);
+    };
+
+    const retreatCat = () => {
+        if (catState === "RETREATING") return;
+
+        setCatTransitionLock(true, CAT_CONFIG.RETREATING.lottieDuration + 300);
+
+        catState = "RETREATING";
+        applyCatState("RETREATING");
+
+        const mc = document.getElementById('mascot-container');
+        mc.style.transition = 'right 2s ease-in-out, transform 2s ease-in-out';
+        setMascotVisiblePosition(mc);
+        mc.style.transform = 'translateX(0) translateY(0) scale(1)';
+
+        setTimeout(() => {
+            catState = "IDLE_EDGE";
+            applyCatState("IDLE_EDGE");
+            setCatTransitionLock(false);
+            startRandomChats();
+            resetIdleTimer();
+        }, CAT_CONFIG.RETREATING.lottieDuration);
+    };
+
+    window.MiawMascot = {
+        init: async (customConfig) => {
+            // Bersihkan sisa state halaman sebelumnya
+            cfg.mode = 'default';
+
+            if(customConfig.mode) cfg.mode = customConfig.mode;
+            if(customConfig.texts) cfg.texts = { ...cfg.texts, ...customConfig.texts };
+            if(customConfig.actions) cfg.actions = { ...cfg.actions, ...customConfig.actions };
+            if(customConfig.position) cfg.position = { ...cfg.position, ...customConfig.position };
+            if(customConfig.bubblePlacement) cfg.bubblePlacement = customConfig.bubblePlacement;
+            if(customConfig.animations) { Object.assign(CAT_CONFIG, customConfig.animations); }
+
+            const btnTog = document.getElementById('btnToggleCat');
+            const mc = document.getElementById('mascot-container');
+
+            // UPDATE PENYESUAIAN CSS UNTUK MASING-MASING MODE (Dinamic Max-Width Bubble)
+            if (cfg.mode === 'peek') {
+                if(btnTog) btnTog.style.display = 'none';
+                if(mc) {
+                    mc.classList.add('mascot-peek'); // <--- Tambah class agar max-width 100px berlaku
+                    mc.style.transition = 'none';
+                    mc.style.right = '20px';
+                    mc.style.bottom = '-35px';
+                    mc.style.transform = 'scale(1)';
+                }
+            } else {
+                if(btnTog) btnTog.style.display = 'flex';
+                if(mc) {
+                    mc.classList.remove('mascot-peek'); // <--- Hapus class agar max-width 130px berlaku
+                    mc.style.transition = '';
+                    setMascotHiddenPosition(mc);
+                    mc.style.bottom = cfg.position.bottom;
+                    mc.style.transform = 'scale(1)';
+                }
+            }
+
+            const keys = Object.keys(CAT_CONFIG);
+            const promises = keys.map(async (key) => {
+                try {
+                    if(CAT_CONFIG[key].path) {
+                        const res = await fetch(CAT_CONFIG[key].path); CAT_CONFIG[key].data = await res.json();
+                    }
+                } catch (err) { console.error(\\\`Gagal muat \\\${key}\\\`, err); }
+            });
+            await Promise.all(promises);
+        },
+        getState: () => mState,
+        resetTimer: resetIdleTimer,
+        show: () => {
+            if (mState.isDismissed || isCatBusy()) return;
+
+            if (cfg.mode === 'peek') {
+                if (catState === "HIDDEN") {
+                    setCatTransitionLock(true, (CAT_CONFIG.PEEK_IN?.lottieDuration || 3000) + 300);
+
+                    catState = "PEEK_IN";
+                    applyCatState("PEEK_IN");
+                    setChat('small', cfg.texts.entering, null, 'default', 4000);
+
+                    setTimeout(() => {
+                        catState = "PEEK_IDLE";
+                        applyCatState("PEEK_IDLE");
+                        setCatTransitionLock(false);
+
+                        setChat('small', cfg.texts.idleArrive, null, 'default', 4000);
+                        setTimeout(() => {
+                            startRandomChats();
+                            resetIdleTimer();
+                        }, 4000);
+                    }, CAT_CONFIG.PEEK_IN?.lottieDuration || 3000);
+                }
+                return;
+            }
+
+            if (catState === "HIDDEN") {
+                setCatTransitionLock(true, CAT_CONFIG.ENTERING.lottieDuration + 300);
+
+                catState = "ENTERING";
+                applyCatState("ENTERING");
+
+                const mc = document.getElementById('mascot-container');
+                mc.style.transition = 'right 2s ease-out, transform 2s ease-out';
+                setMascotVisiblePosition(mc);
+
+                const icon = document.getElementById('toggleCatIcon');
+                icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+
+                setTimeout(() => {
+                    icon.classList.remove('animate-bounce');
+                }, 1000);
+
+                setChat('small', "Bosan ih sendirian di luar... Aku ikut nongkrong sini lagi ya! Miaw~", null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+                    resetIdleTimer();
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+            }
+        },
+        toggle: () => {
+            if (isCatBusy()) return;
+
+            resetIdleTimer();
+
+            const mc = document.getElementById('mascot-container');
+            const icon = document.getElementById('toggleCatIcon');
+
+            if (!mc || !icon) return;
+
+            // ===============================
+            // KONDISI: MIAW SEDANG TAMPIL → USIR
+            // ===============================
+            if (!mState.isDismissed) {
+                if (catState !== "IDLE_EDGE" && catState !== "CLOSEUP") return;
+
+                // Kalau Miaw balik otomatis, usir lagi berarti ancaman
+                if (mState.isReturnedAuto) {
+                    setChat('large', cfg.texts.threatAsk, 'ASK_THREAT', 'warning');
+                    return;
+                }
+
+                setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+                mState.isDismissed = true;
+                mState.isReturnedAuto = false;
+
+                clearInterval(chatTimer);
+                clearTimeout(timers.idle);
+                clearTimeout(timers.prank);
+                clearTimeout(timers.comeback);
+                clearTimeout(timers.warningResume);
+
+                catState = "LEAVING";
+                applyCatState("LEAVING");
+
+                setChat('large', cfg.texts.dismissNormal, null, 'warning', 4000);
+                icon.className = "fa-solid fa-cat text-gray-300 opacity-50";
+
+                setTimeout(() => {
+                    mc.style.transition = 'right 3s linear, transform 3s linear';
+                    setMascotHiddenPosition(mc);
+                }, 3000);
+
+                setTimeout(() => {
+                    catState = "HIDDEN";
+                    setCatTransitionLock(false);
+
+                    timers.comeback = setTimeout(
+                        autonomousReturn,
+                        Math.floor(Math.random() * 10000) + 20000
+                    );
+                }, CAT_CONFIG.LEAVING.lottieDuration);
+
+                return;
+            }
+
+            // ===============================
+            // KONDISI: MIAW SEDANG HILANG → PANGGIL
+            // ===============================
+            clearTimeout(timers.comeback);
+
+            setCatTransitionLock(true, CAT_CONFIG.ENTERING.lottieDuration + 300);
+
+            mState.isDismissed = false;
+
+            catState = "ENTERING";
+            applyCatState("ENTERING");
+
+            mc.style.transition = 'right 2s ease-out, transform 2s ease-out';
+            setMascotVisiblePosition(mc);
+            mc.style.transform = 'translateX(0) scale(1)';
+
+            icon.className = "fa-solid fa-cat text-indigo-500 animate-bounce";
+            setTimeout(() => {
+                icon.classList.remove('animate-bounce');
+            }, 1000);
+
+            if (mState.isPranking) {
+                setChat('large', "Giliran sekarang kamu mau ngajak main aku kan miaw miaw...", null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+
+                    setChat('large', cfg.texts.prankRevert, null, 'default', 4000);
+
+                    setTimeout(() => {
+                        cfg.actions.onPrankRevert();
+                        mState.isPranking = false;
+                        catPatience += 20000;
+                        resetIdleTimer();
+                        startRandomChats();
+                    }, 3000);
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+
+                return;
+            }
+
+            if (mState.isThreatening) {
+                mState.isThreatening = false;
+                cfg.actions.onThreatRevert();
+
+                setChat('large', cfg.texts.threatRevert, null, 'default', 4000);
+
+                setTimeout(() => {
+                    catState = "IDLE_EDGE";
+                    applyCatState("IDLE_EDGE");
+                    setCatTransitionLock(false);
+                    resetIdleTimer();
+                    startRandomChats();
+                }, CAT_CONFIG.ENTERING.lottieDuration);
+
+                return;
+            }
+
+            setChat('small', cfg.texts.callNormal, null, 'default', 4000);
+
+            setTimeout(() => {
+                catState = "IDLE_EDGE";
+                applyCatState("IDLE_EDGE");
+                setCatTransitionLock(false);
+
+                setChat('small', cfg.texts.callNormalArrive, null, 'default', 4000);
+                resetIdleTimer();
+                startRandomChats();
+            }, CAT_CONFIG.ENTERING.lottieDuration);
+        },
+        handleClick: () => {
+            if (isCatBusy()) return;
+            resetIdleTimer();
+
+            if (cfg.mode === 'peek') {
+                if (catState !== "PEEK_IDLE") return;
+
+                mState.isDismissed = true;
+                clearInterval(chatTimer); clearTimeout(timers.idle); clearTimeout(timers.warningResume);
+
+                catState = "PEEK_OUT"; applyCatState("PEEK_OUT");
+                setChat('small', cfg.texts.dismissNormal, null, 'default', 3000);
+
+                timers.comeback = setTimeout(autonomousReturn, Math.floor(Math.random() * 10000) + 20000);
+                return;
+            }
+
+            if (catState !== "IDLE_EDGE") return;
+            setCatTransitionLock(true, CAT_CONFIG.TOWARD.lottieDuration + 300);
+
+            catState = "TOWARD";
+            clearInterval(chatTimer);
+            applyCatState("TOWARD");
+            const mc = document.getElementById('mascot-container');
+            mc.style.transition = 'right 1.8s ease-in-out, transform 1.8s ease-in-out';
+            mc.style.right = '50%'; mc.style.transform = 'translateX(50%) translateY(-40px) scale(2)';
+            setTimeout(() => {
+                catState = "CLOSEUP";
+                applyCatState("CLOSEUP");
+                setCatTransitionLock(false);
+                setChat('large', cfg.texts.clickAsk, 'ASK_DIFFICULTY');
+            }, CAT_CONFIG.TOWARD.lottieDuration);
+        },
+        handleChoice: (actionType, isYes) => {
+            if (isCatTransitioning) return;
+
+            const bubble = document.getElementById('mascot-chat');
+            if (!bubble) return;
+
+            if (actionType === 'ASK_THREAT') {
+                bubble.style.opacity = "0";
+                if (isYes) {
+                    setCatTransitionLock(true, CAT_CONFIG.LEAVING.lottieDuration + 300);
+
+                    mState.isReturnedAuto = false;
+                    mState.isDismissed = true;
+                    mState.isThreatening = true;
+
+                    clearInterval(chatTimer);
+                    clearTimeout(timers.idle);
+                    clearTimeout(timers.prank);
+                    clearTimeout(timers.comeback);
+                    clearTimeout(timers.warningResume);
+
+                    catState = "LEAVING";
+                    applyCatState("LEAVING");
+
+                    setChat('large', cfg.texts.threatExecute, null, 'warning', 4000);
+                    cfg.actions.onThreatExecute();
+
+                    const mc = document.getElementById('mascot-container');
+                    const icon = document.getElementById('toggleCatIcon');
+
+                    icon.className = "fa-solid fa-cat text-gray-300 opacity-50 animate-pulse text-red-400 border-red-200";
+
+                    setTimeout(() => {
+                        mc.style.transition = 'right 3s linear, transform 3s linear';
+                        setMascotHiddenPosition(mc);
+                    }, 3000);
+
+                    setTimeout(() => {
+                        catState = "HIDDEN";
+                        setCatTransitionLock(false);
+                    }, CAT_CONFIG.LEAVING.lottieDuration);
+                } else {
+                    mState.isReturnedAuto = false;
+                    setChat('small', "Nah gitu dong, aku anteng aja kok di sini...", null, 'default', 4000);
+                }
+                return;
+            }
+
+            if (actionType === 'ASK_DIFFICULTY') {
+                if (isYes) {
+                    const isHelpUsed = localStorage.getItem('cat_help_used') === 'true';
+                    if (!isHelpUsed) { setChat('large', cfg.texts.clickYesOffer, 'FREEZE'); }
+                    else {
+                        setChat('large', cfg.texts.clickYesEmpty, null, 'default', 4000);
+                        setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
+                    }
+                } else {
+                    // [PERBAIKAN]: Eksekusi Kucing Marah saat menolak bantuan sejak awal!
+                    if (typeof window.triggerAngryCat === 'function') {
+                        window.triggerAngryCat();
+                    } else {
+                        setChat('large', cfg.texts.clickNo, null, 'warning', 4000);
+                    }
+                    // Waktu mundur diperlama sedikit (2500ms) agar teks peringatan bisa terbaca
+                    setTimeout(() => { bubble.style.opacity = "0"; retreatCat(); }, 2500);
+                }
+                return;
+            }
+
+            bubble.style.opacity = "0";
+
+            if (actionType === 'FREEZE' && isYes) {
+                localStorage.setItem('cat_help_used', 'true');
+                setChat('large', cfg.texts.helpExecute, null, 'default', 4000);
+                cfg.actions.onHelpExecute(() => { if (catState === "IDLE_EDGE") setChat('small', cfg.texts.helpDone, null, 'default', 4000); });
+            } else if (actionType === 'FREEZE' && !isYes) {
+                // [PERBAIKAN]: Eksekusi juga jika menolak di pertanyaan kedua
+                if (typeof window.triggerAngryCat === 'function') {
+                    window.triggerAngryCat();
+                } else {
+                    setChat('large', cfg.texts.helpReject, null, 'warning', 4000);
+                }
+            }
+            setTimeout(() => { retreatCat(); }, 2500);
+        },
+        say: (type, text, actionType = null, theme = 'default', duration = 4000) => {
+            if (catState === "HIDDEN" || mState.isDismissed || mState.isPranking || mState.isThreatening) return;
+            setChat(type, text, actionType, theme, duration);
+        }
+    };
+})();
+<\/script>`])), maybeRenderHead());
+}, "D:/APK PENGAJIAN/APK PEMBELAJARAN/FRONTEND/src/components/Mascot.astro", void 0);
+
+export { $$Mascot as $ };

@@ -19,7 +19,53 @@
     </div>
 </div>
 
+<!-- CONFIRM (2 tombol + callback) — pengganti confirm() bawaan browser -->
+<div id="confirm-overlay" class="modal-overlay hidden" style="z-index: 10000;">
+    <div class="modal-sheet text-center" style="max-width: 22rem;">
+        <div class="sheet-grabber"></div>
+        <div id="confirm-icon-wrap" class="icon-chip mx-auto mb-4" style="width:3.5rem;height:3.5rem;font-size:1.5rem;">
+            <i id="confirm-icon" class="fa-solid"></i>
+        </div>
+        <h3 id="confirm-title" class="section-title mb-2"></h3>
+        <p id="confirm-msg" class="body-text mb-6"></p>
+        <div class="flex gap-3">
+            <button id="confirm-cancel" class="btn btn-soft flex-1" style="background-color: var(--surface-sunken); color: var(--ink-secondary);">Batal</button>
+            <button id="confirm-ok" class="btn flex-1" style="border-radius: var(--r-pill);">Ya</button>
+        </div>
+    </div>
+</div>
+
 <script is:inline>
+    let _confirmCb = null;
+    window.showConfirm = (title, message, onConfirm, opts = {}) => {
+        const { type = 'danger', confirmText = 'Hapus', cancelText = 'Batal' } = opts;
+        const overlay = document.getElementById('confirm-overlay');
+        const iconWrap = document.getElementById('confirm-icon-wrap');
+        const icon = document.getElementById('confirm-icon');
+        const okBtn = document.getElementById('confirm-ok');
+        const palette = {
+            danger:  { c: 'var(--danger)',  soft: 'var(--danger-soft)',  ic: 'fa-triangle-exclamation' },
+            warning: { c: 'var(--warning)', soft: 'var(--warning-soft)', ic: 'fa-circle-exclamation' },
+            info:    { c: 'var(--info)',    soft: 'var(--info-soft)',    ic: 'fa-circle-info' },
+            primary: { c: 'var(--accent)',  soft: 'var(--accent-soft)',  ic: 'fa-circle-question' }
+        }[type] || {};
+        iconWrap.style.backgroundColor = palette.soft;
+        iconWrap.style.color = palette.c;
+        icon.className = 'fa-solid ' + palette.ic;
+        okBtn.style.backgroundColor = palette.c;
+        okBtn.style.color = '#fff';
+        okBtn.textContent = confirmText;
+        document.getElementById('confirm-cancel').textContent = cancelText;
+        document.getElementById('confirm-title').innerText = title;
+        document.getElementById('confirm-msg').innerText = message;
+        _confirmCb = onConfirm;
+        overlay.classList.remove('hidden');
+    };
+    window.closeConfirm = () => { document.getElementById('confirm-overlay').classList.add('hidden'); _confirmCb = null; };
+    document.getElementById('confirm-cancel').onclick = () => window.closeConfirm();
+    document.getElementById('confirm-ok').onclick = () => { const cb = _confirmCb; window.closeConfirm(); if (cb) cb(); };
+    document.getElementById('confirm-overlay').addEventListener('click', (e) => { if (e.target.id === 'confirm-overlay') window.closeConfirm(); });
+
     window.showModal = (type, title, message) => {
         const overlay = document.getElementById('modal-overlay');
         const container = document.getElementById('modal-container');

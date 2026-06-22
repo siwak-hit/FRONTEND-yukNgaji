@@ -1,0 +1,25 @@
+const c="http://localhost:3000";let u=[],l=[],s=1;const r=10;let p="all",d=!1,o=null;const m=localStorage.getItem("token"),h=document.getElementById("studentContainer"),v=document.getElementById("searchInput");m||window.location.replace("/");const f=()=>{const e=(s-1)*r,t=e+r,n=l.slice(e,t);if(h.innerHTML="",n.length===0){h.innerHTML=`
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fa-solid fa-user-slash text-2xl"></i></div>
+                    <p class="caption font-semibold">Anak tidak ditemukan.</p>
+                </div>
+            `,document.getElementById("pagination").classList.add("hidden");return}n.forEach(a=>{const g=a.name.substring(0,2).toUpperCase();h.innerHTML+=`
+                <div class="card card-pad !p-3.5 flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5 cursor-pointer flex-1 min-w-0" onclick="window.location.href='/student/${a.id}'">
+                        <div class="avatar w-12 h-12 text-base flex-shrink-0">${g}</div>
+                        <div class="min-w-0">
+                            <h4 class="section-title capitalize truncate">${a.name}</h4>
+                            <p class="eyebrow mt-1">${a.grade} ${a.age?`· ${a.age} th`:""}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 flex-shrink-0 pl-2">
+                        <button onclick="openEditModal('${a.id}')" class="btn-icon !w-9 !h-9" style="color: var(--info);" aria-label="Edit">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="confirmDelete('${a.id}')" class="btn-icon !w-9 !h-9" style="color: var(--danger);" aria-label="Hapus">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `});const i=Math.ceil(l.length/r);document.getElementById("pagination").classList.remove("hidden"),document.getElementById("pageInfo").innerText=`Hal ${s} dari ${i||1}`,document.getElementById("prevPage").disabled=s===1,document.getElementById("nextPage").disabled=s===i||i===0},w=()=>{const e=v.value.toLowerCase();l=u.filter(t=>{const n=t.name.toLowerCase().includes(e),i=p==="all"||t.grade===p;return n&&i}),s=1,f()};v.addEventListener("input",w);document.querySelectorAll(".filter-btn").forEach(e=>{e.addEventListener("click",t=>{document.querySelectorAll(".filter-btn").forEach(n=>n.classList.remove("is-active")),e.classList.add("is-active"),p=e.getAttribute("data-grade"),w()})});document.getElementById("prevPage").addEventListener("click",()=>{s>1&&(s--,f())});document.getElementById("nextPage").addEventListener("click",()=>{const e=Math.ceil(l.length/r);s<e&&(s++,f())});const y=async()=>{try{u=(await(await fetch(`${c}/api/students`,{headers:{Authorization:`Bearer ${m}`}})).json()).data,l=[...u],w()}catch(e){console.error(e)}};window.openAddModal=()=>{d=!1,o=null,document.getElementById("modalTitle").innerText="Tambah Anak Baru",document.getElementById("formStudent").reset(),document.getElementById("modalStudent").classList.remove("hidden")};window.openEditModal=e=>{d=!0,o=e,document.getElementById("modalTitle").innerText="Edit Data Anak";const t=u.find(n=>n.id===e);t&&(document.getElementById("inpName").value=t.name,document.getElementById("inpGrade").value=t.grade,document.getElementById("inpAge").value=t.age||""),document.getElementById("modalStudent").classList.remove("hidden")};window.closeStudentModal=()=>{document.getElementById("modalStudent").classList.add("hidden")};document.getElementById("formStudent").onsubmit=async e=>{e.preventDefault();const t={name:document.getElementById("inpName").value,grade:document.getElementById("inpGrade").value,age:document.getElementById("inpAge").value?parseInt(document.getElementById("inpAge").value):null},n=d?`${c}/api/students/${o}`:`${c}/api/students`,i=d?"PUT":"POST",a=document.getElementById("btnSaveStudent");try{a.innerText="Menyimpan...",a.disabled=!0,(await fetch(n,{method:i,headers:{Authorization:`Bearer ${m}`,"Content-Type":"application/json"},body:JSON.stringify(t)})).ok?(window.showToast?.("success","Berhasil",`Anak berhasil ${d?"diperbarui":"ditambahkan"}.`),closeStudentModal(),y()):window.showToast?.("danger","Gagal","Terjadi kesalahan pada server.")}catch{window.showToast?.("danger","Gagal","Koneksi terputus.")}finally{a.innerText="Simpan Data",a.disabled=!1}};window.confirmDelete=e=>{o=e,window.showModalAlert&&window.showModalAlert("Hapus Data Anak?","Data Anak beserta riwayat konsultasi dan ujian akan dihapus permanen. Lanjutkan?","Hapus Permanen","Batal",()=>E())};const E=async()=>{try{(await fetch(`${c}/api/students/${o}`,{method:"DELETE",headers:{Authorization:`Bearer ${m}`}})).ok?(window.showToast?.("success","Dihapus","Data Anak berhasil dihapus dari sistem."),y()):window.showToast?.("danger","Gagal","Gagal menghapus Anak.")}catch(e){console.error(e)}};y();

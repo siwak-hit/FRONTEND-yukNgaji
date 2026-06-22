@@ -1,0 +1,2281 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+---
+
+<Layout title="Toko Kenangan">
+    <div id="loadingScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
+        <div class="loader-ring mb-6"></div>
+        <p class="text-indigo-600 text-xs font-black tracking-widest uppercase animate-pulse">Menyiapkan Toko...</p>
+    </div>
+
+    <div id="lobbyScreen" class="fixed inset-0 z-[140] hidden flex-col bg-slate-50 overflow-y-auto">
+        <div class="bg-indigo-600 px-6 pt-12 pb-24 rounded-b-[3rem] shadow-lg relative shrink-0 text-center">
+            <h2 class="text-3xl font-black text-white mb-2">Toko Kenangan</h2>
+            <p class="text-indigo-200 text-sm font-bold">Siapa yang ingin berbelanja?</p>
+        </div>
+        <div class="px-6 -mt-16 relative z-10 flex-1 pb-12 animate-slide-up">
+            <div class="bg-white p-5 rounded-3xl shadow-xl border border-gray-100 mb-6 relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-9 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" id="lobbySearch" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none" placeholder="Cari namamu di sini...">
+            </div>
+            <div id="lobbyStudentGrid" class="grid grid-cols-2 gap-3"></div>
+        </div>
+    </div>
+
+    <div id="shopScreen" class="fixed inset-0 z-[150] hidden flex-col bg-slate-50 overflow-y-auto pb-20">
+        <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="backToLobby()" class="w-10 h-10 bg-gray-100 text-gray-600 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm active:scale-95">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div>
+                    <h1 class="text-sm font-black text-gray-800 line-clamp-1 capitalize" id="shopStudentName">Nama Siswa</h1>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selamat Berbelanja</p>
+                </div>
+            </div>
+            <div class="bg-amber-100 border-2 border-amber-200 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-coins text-amber-500 animate-bounce"></i>
+                <span id="shopWallet" class="font-black text-amber-600 text-lg">0</span>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <div class="mb-6">
+                <h3 class="text-xl font-black text-gray-800">Koleksi & Ability</h3>
+                <p class="text-xs font-bold text-gray-500">Tukarkan sisa koinmu dengan kenangan atau kemampuan khusus.</p>
+            </div>
+            <div id="mediaGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                </div>
+        </main>
+    </div>
+
+    <div id="modalCustomAlert" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-red-100">
+            <div id="alertIcon" class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="alertTitle" class="font-black text-gray-800 text-lg mb-2">Peringatan</h3>
+            <p id="alertMessage" class="text-xs font-bold text-gray-500 leading-relaxed mb-6">Pesan peringatan di sini.</p>
+            <button onclick="closeCustomAlert()" id="btnAlertClose" class="w-full py-4 bg-red-500 text-white font-black rounded-xl shadow-[0_5px_0_#ef4444] active:translate-y-[5px] active:shadow-none transition-all">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
+    <div id="modalPinInput" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-indigo-100">
+            <button onclick="closePinModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-1">Masukkan PIN</h3>
+            <p class="text-[10px] font-bold text-gray-400 mb-5">Masukkan 3 digit PIN rahasiamu untuk masuk.</p>
+            <input type="password" id="inputPin" maxlength="3" inputmode="numeric" class="w-full text-center text-3xl font-black tracking-[0.5em] p-4 bg-gray-50 border border-gray-200 rounded-xl mb-6 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:tracking-normal placeholder:text-base" placeholder="***">
+            <button onclick="executeVerifyPin()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all" id="btnSubmitPin">
+                Buka Toko
+            </button>
+        </div>
+    </div>
+
+    <div id="modalBuy" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-indigo-100">
+            <button onclick="closeBuyModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-indigo-100 shadow-inner">
+                <i id="buyIcon" class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-1">Buka Item Ini?</h3>
+            <p id="buyFilename" class="text-[10px] font-bold text-gray-400 mb-5 break-all">filename.jpg</p>
+
+            <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex justify-between items-center">
+                <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Harga</span>
+                <span id="buyCost" class="text-lg font-black text-amber-500">💰 0</span>
+            </div>
+
+            <button id="btnConfirmBuy" onclick="executeBuy()" class="w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all">
+                Beli Sekarang
+            </button>
+        </div>
+    </div>
+
+    <div id="modalPreview" class="fixed inset-0 z-[300] hidden items-center justify-center bg-black/95 backdrop-blur-md p-4" onclick="closePreview()">
+        <button onclick="closePreview()" class="absolute top-6 right-6 z-50 text-white text-2xl w-12 h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="previewContainer" class="relative w-full h-full flex items-center justify-center overflow-hidden pointer-events-none" onclick="event.stopPropagation()">
+            </div>
+    </div>
+
+    <div id="modalTransfer" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up border-2 border-blue-200 text-center">
+            <button onclick="closeTransferModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-blue-100 shadow-inner">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-4">Transfer Koin</h3>
+
+            <select id="tfReceiver" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl mb-4 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"></select>
+
+            <div class="flex gap-2 mb-4">
+                <button onclick="document.getElementById('tfAmount').value = 50" class="flex-1 py-3 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-xl font-black active:scale-95 transition-all">50 Koin</button>
+                <button onclick="document.getElementById('tfAmount').value = 100" class="flex-1 py-3 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-xl font-black active:scale-95 transition-all">100 Koin</button>
+            </div>
+
+            <input type="number" id="tfAmount" placeholder="Atau ketik manual (Min 10)" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl mb-6 font-black text-center text-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-sm">
+            <textarea id="tfNote" rows="2" placeholder="Pesan untuk temanmu (Opsional)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl mb-6 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
+
+            <button onclick="executeTransferAction()" id="btnSubmitTransfer" class="w-full py-4 bg-blue-600 text-white font-black rounded-xl shadow-[0_5px_0_#2563eb] active:translate-y-[5px] active:shadow-none transition-all">
+                Kirim Koin Sekarang
+            </button>
+        </div>
+    </div>
+
+    <div id="drawerGacha" class="fixed inset-0 z-[350] hidden flex-col justify-end bg-slate-900/90 backdrop-blur-sm transition-all">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-[2rem] shadow-2xl flex flex-col p-6 animate-slide-up-drawer max-h-[95vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="font-black text-2xl text-purple-600"><i class="fa-solid fa-dharmachakra"></i> Roda Gacha</h3>
+                <button onclick="closeGachaDrawer()" class="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="gachaCooldownUI" class="hidden mb-4 bg-red-50 border border-red-200 p-4 rounded-2xl text-center shadow-inner">
+                <h4 class="text-sm font-black text-red-600 uppercase tracking-widest mb-1"><i class="fa-solid fa-lock"></i> Fitur Dikunci</h4>
+                <p class="text-[10px] font-bold text-red-500 mb-2">Kamu sudah memutar terlalu banyak hari ini. Istirahat dulu ya!</p>
+                <div id="gachaCooldownTimer" class="text-2xl font-black text-red-700 font-mono tracking-wider drop-shadow-sm">24:00:00</div>
+            </div>
+
+            <div id="gachaControlsArea">
+                <div class="flex gap-2 mb-4 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
+                    <button onclick="setGachaMode('solo')" id="btnGachaSolo" class="flex-1 py-2.5 bg-white rounded-lg font-black text-[11px] shadow-sm text-gray-800 transition-all uppercase tracking-widest">Solo Mode</button>
+                    <button onclick="setGachaMode('ramean')" id="btnGachaRamean" class="flex-1 py-2.5 text-gray-500 rounded-lg font-bold text-[11px] hover:bg-gray-50 transition-all uppercase tracking-widest">Bareng Teman</button>
+                </div>
+
+                <div id="gachaSoloUI">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pilih Hadiah Maksimal</label>
+                    <select id="gachaTargetPrize" class="w-full p-3 bg-amber-50 text-amber-700 font-black rounded-xl border border-amber-200 outline-none mb-4" onchange="updateGachaCostAndWheel()">
+                        <option value="100" data-cost="10">Max 100 Koin (Biaya: 10 Koin)</option>
+                        <option value="500" data-cost="50">Max 500 Koin (Biaya: 50 Koin)</option>
+                        <option value="1000" data-cost="100">Max 1000 Koin (Biaya: 100 Koin)</option>
+                    </select>
+                </div>
+
+                <div id="gachaRameanUI" class="hidden flex-col mb-4">
+                    <div class="flex justify-between items-center bg-indigo-50 p-3 rounded-t-xl border border-indigo-100 border-b-0">
+                        <div>
+                            <span id="waveTitle" class="text-xs font-black text-indigo-600 uppercase tracking-widest">Wave 1</span>
+                            <p id="waveDesc" class="text-[9px] font-bold text-indigo-400 mt-0.5">Biaya: 50 | Hadiah: 100 | Zonk/Pemain: 1</p>
+                        </div>
+                        <button onclick="resetWave()" class="text-[9px] bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1.5 rounded-lg font-black uppercase transition-all shadow-sm active:scale-95">Reset Wave</button>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-b-xl border border-gray-200">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Pilih Teman (Max 4)</label>
+                        <div id="gachaFriendsCheckboxes" class="grid grid-cols-2 gap-3 max-h-32 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative w-full flex justify-center mt-2 mb-8">
+                <div class="absolute -top-4 z-10 text-4xl text-rose-500 drop-shadow-md rotate-180"><i class="fa-solid fa-caret-up"></i></div>
+                <canvas id="canvasWinwheel" width="300" height="300" class="pointer-events-none drop-shadow-2xl"></canvas>
+            </div>
+
+            <button id="btnSpinWheel" onclick="startSpin()" class="w-full py-4 bg-purple-600 text-white font-black rounded-xl shadow-[0_5px_0_#9333ea] active:translate-y-[5px] active:shadow-none transition-all uppercase tracking-widest text-sm border-b border-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                Putar Sekarang (10 Koin)
+            </button>
+        </div>
+    </div>
+
+    <div id="modalTransferNotification" class="fixed inset-0 z-[500] hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative animate-slide-up text-center border-2 border-green-200">
+            <div class="w-16 h-16 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-green-100 shadow-inner">
+                <i class="fa-solid fa-gift animate-bounce"></i>
+            </div>
+            <h3 class="font-black text-gray-800 text-lg mb-1">Koin Hadiah Masuk!</h3>
+            <p class="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-widest">Kamu menerima transfer dari temanmu</p>
+
+            <div id="transferNotificationList" class="bg-gray-50 border border-gray-200 rounded-2xl p-4 max-h-40 overflow-y-auto flex flex-col gap-2.5 text-left mb-5 custom-scrollbar">
+                </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center mb-6">
+                <span class="text-xs font-black text-amber-700 uppercase tracking-wider">Total Didapat</span>
+                <span id="transferNotificationTotal" class="text-lg font-black text-amber-600">💰 0 Koin</span>
+            </div>
+
+            <button onclick="closeTransferNotificationModal()" class="w-full py-4 bg-green-600 text-white font-black rounded-xl shadow-[0_5px_0_#16a34a] active:translate-y-[5px] active:shadow-none transition-all uppercase tracking-wider text-xs">
+                Terima Kasih, Teman!
+            </button>
+        </div>
+    </div>
+
+    <div id="modalScratch" class="fixed inset-0 z-[400] hidden items-center justify-center p-3 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[1.75rem] p-5 shadow-2xl relative animate-slide-up flex flex-col items-center border-2 border-teal-100 max-h-[94vh] overflow-y-auto">
+            <button onclick="closeScratchModal()" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3 class="font-black text-xl text-teal-600 mb-1">Tebak & Gosok Hikmah</h3>
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">
+                Beli kartu dulu, lalu jawab dan gosok!
+            </p>
+
+            <div class="w-full flex flex-col gap-2 mb-4">
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-teal-50 border border-teal-100 rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-sm">
+                        <p class="text-[9px] font-black text-teal-600 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                            <i class="fa-solid fa-layer-group"></i> Wave
+                        </p>
+                        <p id="scratchWaveText" class="text-xl font-black text-teal-700 leading-none">1</p>
+                    </div>
+
+                    <div class="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-sm">
+                        <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                            <i class="fa-solid fa-stopwatch"></i> Timer
+                        </p>
+                        <p id="scratchTimerText" class="text-xl font-black text-rose-600 leading-none font-mono tracking-wide">--</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-2 text-center shadow-sm">
+                        <p class="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-coins"></i> Harga
+                        </p>
+                        <p id="scratchCostText" class="text-sm font-black text-emerald-700 leading-none">50</p>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-100 rounded-xl p-2 text-center shadow-sm">
+                        <p class="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-gift"></i> Reward
+                        </p>
+                        <p id="scratchRewardText" class="text-sm font-black text-amber-700 leading-none">50</p>
+                    </div>
+
+                    <div class="bg-sky-50 border border-sky-100 rounded-xl p-2 text-center shadow-sm">
+                        <p class="text-[8px] font-black text-sky-600 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-ticket"></i> Sisa Kartu
+                        </p>
+                        <p id="scratchCardStockText" class="text-sm font-black text-sky-700 leading-none">10</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="scratchPlayArea" class="w-full hidden">
+                <div class="w-full bg-teal-50 p-3 rounded-xl mb-3 text-center border border-teal-100">
+                    <p class="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Hint</p>
+
+                    <ul id="scratchHintList" class="space-y-1 text-sm font-bold text-teal-900 italic"></ul>
+
+                    <button id="btnHint" onclick="addHint()" class="mt-2 text-[9px] font-black text-teal-600 underline disabled:opacity-40">
+                        Tambah Hint
+                    </button>
+                </div>
+
+                <input
+                    type="text"
+                    id="scratchAnswer"
+                    placeholder="Masukkan jawabanmu..."
+                    class="w-full p-3 mb-3 rounded-xl border border-gray-200 text-sm font-bold text-center outline-none focus:ring-2 focus:ring-teal-500"
+                >
+
+                <div id="scratchCardBox" class="relative w-full h-[150px] bg-slate-100 rounded-2xl overflow-hidden border-4 border-teal-100 mb-3 select-none transition-all">
+                    <div id="scratchResultArea" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center transition-all">
+                        <p id="scratchResultLabel" class="text-[10px] font-black uppercase tracking-widest mb-1">
+                            Jawaban Asli
+                        </p>
+                        <h4 id="scratchPrizeText" class="font-black text-2xl">---</h4>
+                    </div>
+
+                    <canvas
+                        id="scratchCanvas"
+                        class="absolute inset-0 z-10 w-full h-full cursor-pointer touch-none"
+                    ></canvas>
+                </div>
+            </div>
+
+            <button
+                id="btnBuyScratch"
+                onclick="buyScratchCard()"
+                class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl shadow-[0_5px_0_#059669] active:translate-y-[5px] active:shadow-none transition-all disabled:bg-gray-300 disabled:shadow-[0_5px_0_#9ca3af] disabled:cursor-not-allowed"
+            >
+                Beli Kartu Baru (50 Koin)
+            </button>
+        </div>
+    </div>
+
+    <Toast />
+</Layout>
+
+<style>
+    .loader-ring { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    .animate-slide-up-drawer { animation: slideUpDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUpDrawer { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" is:inline defer></script>
+<script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel/Winwheel.min.js" is:inline defer></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline defer></script>
+
+<script>
+    // ==============================================================
+    // KONFIGURASI GLOBAL & VARIABEL STATE
+    // ==============================================================
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token') || localStorage.getItem('token');
+    import { SCRATCH_QUESTIONS } from '../../data/scratchQuestions.js';
+
+    // DAFTAR BARANG TOKO (Media & Ability/Game)
+    const shopItems = [
+        { id: 'item1', filename: 'ICA.jpg', type: 'photo', url: '/shop/ICA.jpg', cost: 150 },
+        { id: 'item2', filename: 'LINA.jpg', type: 'photo', url: '/shop/LINA.jpg', cost: 150 },
+        { id: 'item3', filename: 'NABILA.jpg', type: 'photo', url: '/shop/NABILA.jpg', cost: 150 },
+        { id: 'item4', filename: 'NADIFAH 2.jpg', type: 'photo', url: '/shop/NADIFAH 2.jpg', cost: 150 },
+        { id: 'item5', filename: 'NADIFAH.jpg', type: 'photo', url: '/shop/NADIFAH.jpg', cost: 150 },
+        { id: 'item6', filename: 'PUTRI.jpg', type: 'photo', url: '/shop/PUTRI.jpg', cost: 150 },
+        { id: 'item7', filename: 'SABIRA.jpg', type: 'photo', url: '/shop/SABIRA.jpg', cost: 150 },
+        { id: 'item8', filename: 'STIKER.jpg', type: 'photo', url: '/shop/STIKER.png', cost: 150 },
+        { id: 'item9', filename: 'YASMIN.jpg', type: 'photo', url: '/shop/YASMIN.jpg', cost: 150 },
+        { id: 'item10', filename: 'ARA.jpg', type: 'photo', url: '/shop/ARA.jpg', cost: 150 },
+        { id: 'item11', filename: 'NABILA COOL.jpg', type: 'photo', url: '/shop/NABILA COOL.png', cost: 150 },
+        { id: 'item12', filename: 'SALSA.jpg', type: 'photo', url: '/shop/SALSA.jpg', cost: 150 },
+        { id: 'item13', filename: 'AINI.mp4', type: 'video', url: '/shop/AINI.mp4', cost: 700 },
+        { id: 'item14', filename: 'DIRA.mp4', type: 'video', url: '/shop/DIRA.mp4', cost: 700 },
+        { id: 'item15', filename: 'HAIDAR.mp4', type: 'video', url: '/shop/HAIDAR.mp4', cost: 700 },
+        { id: 'item16', filename: 'WAWA.mp4', type: 'video', url: '/shop/WAWA.mp4', cost: 700 },
+        { id: 'item17', filename: 'ability-transfer', type: 'ability', url: 'fa-money-bill-transfer', cost: 500, title: 'Transfer Koin', desc: 'Kirim koin ke temanmu' },
+        { id: 'item18', filename: 'game-gacha', type: 'game', url: 'fa-dharmachakra', cost: 800, title: 'Roda Gacha', desc: 'Uji keberuntunganmu' },
+        { id: 'item19', filename: 'game-scratch', type: 'game', url: 'fa-ticket', cost: 800, title: 'Kartu Gosok Hikmah', desc: 'Gosok untuk koin & ilmu' },
+        { id: 'item20', filename: 'scratch-card', type: 'consumable', url: 'fa-ticket-simple', cost: 200, title: '+1 Kartu Gosok', desc: 'Tambah 1 stok kartu hari ini' }
+    ];
+
+
+    let allStudents = [];
+    let activeStudent = null;
+    let unlockedFilenames = [];
+    let pendingBuyItem = null;
+    let pendingLoginStudentId = null;
+    let alertCallback = null;
+
+
+    // ==============================================================
+    // SISTEM CUSTOM ALERT & TOAST WRAPPER
+    // ==============================================================
+    window.showCustomAlert = (title, message, type = 'danger', callback = null) => {
+        const modal = document.getElementById('modalCustomAlert');
+        document.getElementById('alertTitle').innerText = title;
+        document.getElementById('alertMessage').innerText = message;
+
+        const icon = document.getElementById('alertIcon');
+        const btn = document.getElementById('btnAlertClose');
+
+        if (type === 'danger' || type === 'error') {
+            icon.className = "w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-100 shadow-inner";
+            icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            btn.className = "w-full py-4 bg-red-500 text-white font-black rounded-xl shadow-[0_5px_0_#ef4444] active:translate-y-[5px] active:shadow-none transition-all";
+        } else if (type === 'success') {
+            icon.className = "w-16 h-16 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-green-100 shadow-inner";
+            icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            btn.className = "w-full py-4 bg-green-500 text-white font-black rounded-xl shadow-[0_5px_0_#22c55e] active:translate-y-[5px] active:shadow-none transition-all";
+        } else {
+            icon.className = "w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100 shadow-inner";
+            icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            btn.className = "w-full py-4 bg-amber-500 text-white font-black rounded-xl shadow-[0_5px_0_#f59e0b] active:translate-y-[5px] active:shadow-none transition-all";
+        }
+
+        alertCallback = callback;
+        modal.classList.replace('hidden', 'flex');
+    };
+
+    window.closeCustomAlert = () => {
+        document.getElementById('modalCustomAlert').classList.replace('flex', 'hidden');
+        if (alertCallback) alertCallback();
+        alertCallback = null;
+    };
+
+    window.showToastAlert = (type, title, msg) => {
+        if (typeof window.showToast === 'function') {
+            window.showToast(type, title, msg);
+        } else {
+            window.showCustomAlert(title, msg, type);
+        }
+    };
+
+
+    // ==============================================================
+    // INISIALISASI & LOBBY LOGIN
+    // ==============================================================
+    const init = async () => {
+        if (!token) return window.showCustomAlert("Akses Ditolak", "Token akses tidak ditemukan.");
+        try {
+            const res = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` }});
+            const data = await res.json();
+            allStudents = data.data || [];
+
+            renderLobbyGrid();
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+        } catch (e) {
+            window.showCustomAlert('Error Koneksi', 'Gagal memuat data siswa.', 'error');
+        }
+    };
+
+    const renderLobbyGrid = () => {
+        const grid = document.getElementById('lobbyStudentGrid');
+        const query = document.getElementById('lobbySearch').value.toLowerCase();
+        const lockedStudentId = localStorage.getItem('shop_locked_student_id');
+
+        const filtered = allStudents.filter(s => (s.name || '').toLowerCase().includes(query));
+        if (filtered.length === 0) return grid.innerHTML = '<p class="col-span-2 text-center py-8 text-gray-400 text-xs italic">Siswa tidak ditemukan.</p>';
+
+        grid.innerHTML = filtered.map(s => {
+            const initial = (s.name || '??').substring(0,2).toUpperCase();
+            const isOtherStudentLocked = lockedStudentId && lockedStudentId !== s.id;
+
+            const cardClass = isOtherStudentLocked
+                ? "bg-gray-100 p-4 rounded-3xl border border-gray-200 shadow-sm flex flex-col items-center text-center gap-3 opacity-40 grayscale scale-95 transition-all cursor-not-allowed"
+                : "bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 cursor-pointer hover:border-indigo-300 transition-all";
+
+            const avatarClass = isOtherStudentLocked
+                ? "w-14 h-14 bg-gray-200 text-gray-400 rounded-2xl flex items-center justify-center text-lg font-black relative"
+                : "w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-lg font-black relative shadow-inner border border-indigo-100";
+
+            const lockBadge = isOtherStudentLocked
+                ? `<div class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] rounded-full border-2 border-white flex items-center justify-center shadow-md animate-pulse"><i class="fa-solid fa-lock"></i></div>` : '';
+
+            return `
+                <div class="${cardClass}" onclick="handleStudentClick('${s.id}')">
+                    <div class="${avatarClass}">${initial}${lockBadge}</div>
+                    <h4 class="font-black text-gray-800 text-[11px] line-clamp-1 capitalize">${s.name}</h4>
+                </div>
+            `;
+        }).join('');
+    };
+
+    document.getElementById('lobbySearch')?.addEventListener('input', renderLobbyGrid);
+
+    window.handleStudentClick = (studentId) => {
+        const lockedStudentId = localStorage.getItem('shop_locked_student_id');
+        if (lockedStudentId && lockedStudentId !== studentId) {
+            return window.showCustomAlert('Perangkat Terkunci', 'Perangkat ini sudah digunakan oleh siswa lain.', 'warning');
+        }
+        activeStudent = allStudents.find(s => s.id === studentId);
+        if (!activeStudent) return;
+        if (lockedStudentId === studentId) return selectStudent(studentId);
+
+        pendingLoginStudentId = studentId;
+        document.getElementById('inputPin').value = '';
+        document.getElementById('modalPinInput').classList.replace('hidden', 'flex');
+        document.getElementById('inputPin').focus();
+    };
+
+    window.closePinModal = () => {
+        document.getElementById('modalPinInput').classList.replace('flex', 'hidden');
+        pendingLoginStudentId = null;
+    };
+
+    window.executeVerifyPin = async () => {
+        const pin = document.getElementById('inputPin').value;
+        const btn = document.getElementById('btnSubmitPin');
+
+        if (pin.length !== 3) return window.showCustomAlert('PIN Tidak Valid', 'PIN harus diisi 3 angka.', 'warning');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${pendingLoginStudentId}/verify-pin`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+            const result = await res.json();
+            if (!res.ok || result.status !== 'success') throw new Error(result.message || 'PIN salah!');
+
+            localStorage.setItem('shop_locked_student_id', pendingLoginStudentId);
+            closePinModal();
+            selectStudent(pendingLoginStudentId);
+        } catch (error) {
+            window.showCustomAlert('Akses Ditolak', error.message, 'error');
+        } finally {
+            btn.disabled = false; btn.innerHTML = 'Buka Toko';
+        }
+    };
+
+
+    // ==============================================================
+    // RENDER TOKO & UI SHOP
+    // ==============================================================
+    const selectStudent = async (studentId) => {
+        document.getElementById('lobbyScreen').classList.replace('flex', 'hidden');
+        document.getElementById('loadingScreen').classList.remove('hidden');
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/unlocked/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` }});
+            if (!res.ok) throw new Error('API tidak merespon.');
+            const data = await res.json();
+
+            unlockedFilenames = data.data || [];
+            updateShopUI();
+            await checkTransferNotifications(studentId);
+
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('shopScreen').classList.replace('hidden', 'flex');
+        } catch (e) {
+            window.showCustomAlert('Error Sinkronisasi', 'Gagal mengambil data inventaris.', 'error');
+            window.backToLobby();
+        }
+    };
+
+    window.checkTransferNotifications = async (studentId) => {
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/notifications/${studentId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+
+            // Jika ada data antrean transferan masuk yang belum dibaca
+            if (res.ok && result.data && result.data.length > 0) {
+                const listEl = document.getElementById('transferNotificationList');
+                let totalKoinMasuk = 0;
+
+                // Render daftar teman beserta pesan catatannya
+                listEl.innerHTML = result.data.map(item => {
+                    totalKoinMasuk += item.amount;
+                    const nameSender = item.sender ? item.sender.name : 'Teman Rahasia';
+
+                    if (item.transfer_type === 'gacha') {
+                        // JIKA SUMBERNYA ADALAH MENANG GACHA BARENG TEMAN
+                        return `
+                            <div class="flex flex-col bg-white p-3 rounded-xl border-2 border-purple-200 shadow-sm">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-xs font-black text-purple-700 capitalize flex items-center gap-1.5"><i class="fa-solid fa-dharmachakra text-purple-400 text-[10px]"></i> ${nameSender}</span>
+                                    <span class="text-xs font-black text-purple-600 font-mono">+${item.amount} Koin</span>
+                                </div>
+                                <div class="bg-purple-50/60 border border-purple-100 rounded-lg p-2.5">
+                                    <p class="text-[10px] text-purple-700 font-bold leading-relaxed">Kamu diikut sertakan dalam gacha teman mu dan kamu berhasil mendapatkan total koin dari adu nasib! 🎉</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // JIKA SUMBERNYA ADALAH TRANSFER MANUALL REGULAR
+                        const noteText = item.note || 'ini terima hadiah dari aku';
+                        return `
+                            <div class="flex flex-col bg-white p-3 rounded-xl border border-gray-200/60 shadow-sm">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-xs font-black text-gray-700 capitalize flex items-center gap-1.5"><i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> ${nameSender}</span>
+                                    <span class="text-xs font-black text-green-500 font-mono">+${item.amount} Koin</span>
+                                </div>
+                                <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 relative">
+                                    <i class="fa-solid fa-quote-left absolute top-1.5 left-2 text-gray-200 text-xs"></i>
+                                    <p class="text-[10px] text-gray-500 font-medium italic pl-5 leading-relaxed">"${noteText}"</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+
+                document.getElementById('transferNotificationTotal').innerText = `💰 ${totalKoinMasuk} Koin`;
+
+                // Tampilkan modal kejutan ke layar murid
+                document.getElementById('modalTransferNotification').classList.replace('hidden', 'flex');
+
+                // Luncurkan efek selebrasi confetti kemeriahan
+                if (window.confetti) window.confetti({ particleCount: 120, spread: 70, zIndex: 9999, origin: { y: 0.6 } });
+            }
+        } catch (e) {
+            console.error("Gagal memeriksa notifikasi transfer koin:", e);
+        }
+    };
+
+    window.closeTransferNotificationModal = async () => {
+        if (!activeStudent) return;
+
+        // Tutup modal secara visual
+        document.getElementById('modalTransferNotification').classList.replace('flex', 'hidden');
+
+        // Kirim perintah ke Backend untuk mengubah is_notified menjadi TRUE agar tidak muncul lagi
+        try {
+            await fetch(`${API_URL}/api/digital-rewards/notifications/${activeStudent.id}/clear`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (e) {
+            console.error("Gagal membersihkan log antrean transfer:", e);
+        }
+    };
+
+    window.backToLobby = () => {
+        activeStudent = null;
+        document.getElementById('shopScreen').classList.replace('flex', 'hidden');
+        document.getElementById('lobbyScreen').classList.replace('hidden', 'flex');
+    };
+
+    const updateShopUI = () => {
+        document.getElementById('shopStudentName').innerText = activeStudent.name;
+        document.getElementById('shopWallet').innerText = activeStudent.poin || 0;
+
+        const grid = document.getElementById('mediaGrid');
+
+        grid.innerHTML = shopItems.map(item => {
+            const isUnlocked = unlockedFilenames.includes(item.filename);
+            const isMedia = item.type === 'photo' || item.type === 'video';
+            const isConsumable = item.type === 'consumable';
+            const icon = item.type === 'video'
+                ? '<i class="fa-solid fa-play"></i>'
+                : '<i class="fa-solid fa-image"></i>';
+
+            // ======================================================
+            // CONSUMABLE ITEM
+            // Contoh: +1 Kartu Gosok
+            // Selalu tampil di toko dan bisa dibeli berkali-kali.
+            // Tidak dicek dari unlockedFilenames.
+            // ======================================================
+            if (isConsumable) {
+                const canBuy = (activeStudent.poin || 0) >= item.cost;
+
+                return `
+                    <div onclick="buyConsumableItem('${item.id}')" class="bg-white rounded-2xl border-2 border-sky-200 overflow-hidden shadow-md active:scale-95 transition-all cursor-pointer relative group flex flex-col items-center justify-center p-4">
+                        <div class="w-14 h-14 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center text-2xl mb-3 shadow-inner border border-sky-100">
+                            <i class="fa-solid ${item.url}"></i>
+                        </div>
+
+                        <h4 class="font-black text-gray-800 text-[11px] text-center uppercase tracking-widest">
+                            ${item.title}
+                        </h4>
+
+                        <p class="text-[9px] font-bold text-gray-400 text-center mt-1 leading-tight">
+                            ${item.desc}
+                        </p>
+
+                        <span class="mt-3 text-[10px] font-black ${canBuy ? 'text-sky-600 bg-sky-50 border-sky-100' : 'text-gray-400 bg-gray-100 border-gray-200'} px-3 py-1.5 rounded-lg border shadow-sm">
+                            💰 ${item.cost}
+                        </span>
+                    </div>
+                `;
+            }
+
+            // ======================================================
+            // ITEM YANG SUDAH DIBELI / UNLOCKED
+            // Photo, Video, Ability, Game
+            // ======================================================
+            if (isUnlocked) {
+                if (isMedia) {
+                    return `
+                        <div onclick="openPreview('${item.id}')" class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm active:scale-95 transition-all cursor-pointer group">
+                            <div class="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center">
+                                ${
+                                    item.type === 'video'
+                                        ? `
+                                            <div class="absolute inset-0 bg-black/20 z-10 flex items-center justify-center">
+                                                <div class="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white text-lg">
+                                                    <i class="fa-solid fa-play"></i>
+                                                </div>
+                                            </div>
+                                            <video src="${item.url}#t=0.1" class="w-full h-full object-cover" preload="metadata"></video>
+                                        `
+                                        : `<img src="${item.url}" class="w-full h-full object-cover" loading="lazy">`
+                                }
+                            </div>
+
+                            <div class="p-3 bg-white flex justify-between items-center border-t border-gray-100">
+                                <span class="text-[10px] font-black text-gray-500 line-clamp-1">
+                                    ${item.filename}
+                                </span>
+                                <span class="text-[10px] text-green-500 font-black flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const bgClass = item.type === 'ability'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'bg-purple-50 text-purple-600';
+
+                return `
+                    <div onclick="openInteractiveItem('${item.id}')" class="bg-white rounded-2xl border-2 border-indigo-200 overflow-hidden shadow-md active:scale-95 transition-all cursor-pointer relative group flex flex-col items-center justify-center p-4">
+                        <div class="w-14 h-14 ${bgClass} rounded-2xl flex items-center justify-center text-2xl mb-3 shadow-inner">
+                            <i class="fa-solid ${item.url}"></i>
+                        </div>
+
+                        <h4 class="font-black text-gray-800 text-[11px] text-center uppercase tracking-widest">
+                            ${item.title}
+                        </h4>
+
+                        <p class="text-[9px] font-bold text-gray-400 text-center mt-1 leading-tight">
+                            ${item.desc}
+                        </p>
+
+                        <span class="absolute top-3 right-3 text-green-500 bg-green-50 rounded-full p-1">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </span>
+                    </div>
+                `;
+            }
+
+            // ======================================================
+            // ITEM BELUM DIBELI / LOCKED
+            // Photo, Video, Ability, Game
+            // ======================================================
+            if (isMedia) {
+                return `
+                    <div onclick="openBuyModal('${item.id}')" class="media-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm active:scale-95 transition-all cursor-pointer relative group">
+                        <div class="aspect-square bg-gray-200 relative overflow-hidden flex items-center justify-center">
+                            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-xl gap-2 transition-all duration-300 group-hover:backdrop-blur-md">
+                                <div class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-white text-lg border border-white/30">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <span class="text-[9px] font-black text-white/80 uppercase tracking-widest mt-1">
+                                    Terkunci
+                                </span>
+                            </div>
+
+                            ${
+                                item.type === 'video'
+                                    ? `<video src="${item.url}#t=0.1" class="w-full h-full object-cover" preload="metadata"></video>`
+                                    : `<img src="${item.url}" class="w-full h-full object-cover" loading="lazy">`
+                            }
+                        </div>
+
+                        <div class="p-3 bg-white flex justify-between items-center border-t border-gray-100 relative z-20">
+                            <span class="text-[10px] font-black text-gray-800 flex gap-1.5 items-center">
+                                ${icon} ${item.type.toUpperCase()}
+                            </span>
+                            <span class="text-[10px] font-black text-amber-500 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
+                                💰 ${item.cost}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div onclick="openBuyModal('${item.id}')" class="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden shadow-sm active:scale-95 transition-all cursor-pointer relative group flex flex-col items-center justify-center p-4">
+                    <div class="w-14 h-14 bg-gray-200 text-gray-400 rounded-2xl flex items-center justify-center text-2xl mb-3 shadow-inner">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+
+                    <h4 class="font-black text-gray-500 text-[11px] text-center uppercase tracking-widest opacity-60">
+                        ${item.title}
+                    </h4>
+
+                    <span class="mt-3 text-[10px] font-black text-amber-500 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 shadow-sm">
+                        💰 ${item.cost}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    };
+
+
+    // ==============================================================
+    // PEMBELIAN ITEM
+    // ==============================================================
+    window.openBuyModal = (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        pendingBuyItem = item;
+        document.getElementById('buyFilename').innerText = item.title || item.filename;
+        document.getElementById('buyCost').innerText = `💰 ${item.cost}`;
+
+        let iconClass = 'fa-solid fa-image';
+        if (item.type === 'video') iconClass = 'fa-solid fa-film';
+        else if (item.type === 'ability' || item.type === 'game') iconClass = `fa-solid ${item.url}`;
+
+        document.getElementById('buyIcon').className = iconClass;
+
+        const btn = document.getElementById('btnConfirmBuy');
+        if (activeStudent.poin < item.cost) {
+            btn.disabled = true;
+            btn.innerHTML = 'Koin Tidak Cukup';
+            btn.className = 'w-full py-4 bg-gray-200 text-gray-500 font-black rounded-xl cursor-not-allowed';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = 'Beli Sekarang';
+            btn.className = 'w-full py-4 bg-indigo-600 text-white font-black rounded-xl shadow-[0_5px_0_#4f46e5] active:translate-y-[5px] active:shadow-none transition-all';
+        }
+
+        document.getElementById('modalBuy').classList.replace('hidden', 'flex');
+    };
+
+    window.closeBuyModal = () => {
+        pendingBuyItem = null;
+        document.getElementById('modalBuy').classList.replace('flex', 'hidden');
+    };
+
+    window.executeBuy = async () => {
+        if (!pendingBuyItem || !activeStudent) return;
+        const btn = document.getElementById('btnConfirmBuy');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/buy`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: activeStudent.id, filename: pendingBuyItem.filename, type: pendingBuyItem.type, cost: pendingBuyItem.cost })
+            });
+            const result = await res.json();
+            if (!res.ok || result.status !== 'success') throw new Error(result.message || 'Gagal membeli item');
+
+            activeStudent.poin = result.data.new_poin;
+            unlockedFilenames.push(pendingBuyItem.filename);
+            window.showToastAlert('success', 'Berhasil Dibeli!', 'Koleksimu telah bertambah.');
+            updateShopUI();
+
+            const purchasedItemId = pendingBuyItem.id;
+            const purchasedType = pendingBuyItem.type;
+            closeBuyModal();
+
+            setTimeout(() => {
+                if (purchasedType === 'photo' || purchasedType === 'video') window.openPreview(purchasedItemId);
+                else window.openInteractiveItem(purchasedItemId);
+            }, 500);
+
+        } catch (error) {
+            window.showCustomAlert('Gagal Membeli', error.message, 'error');
+            btn.disabled = false; btn.innerHTML = 'Coba Lagi';
+        }
+    };
+
+
+    // ==============================================================
+    // INTERAKTIF ITEM HANDLERS (PREVIEW, ABILITY, GACHA)
+    // ==============================================================
+    window.openPreview = (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item) return;
+        const container = document.getElementById('previewContainer');
+        if (item.type === 'video') container.innerHTML = `<video src="${item.url}" controls autoplay class="max-w-full max-h-full rounded-xl shadow-2xl pointer-events-auto outline-none"></video>`;
+        else container.innerHTML = `<img src="${item.url}" class="max-w-full max-h-full rounded-xl shadow-2xl pointer-events-auto object-contain">`;
+        document.getElementById('modalPreview').classList.replace('hidden', 'flex');
+    };
+
+    window.closePreview = () => {
+        const container = document.getElementById('previewContainer');
+        const video = container.querySelector('video');
+        if (video) video.pause();
+        container.innerHTML = '';
+        document.getElementById('modalPreview').classList.replace('flex', 'hidden');
+    };
+
+    window.buyConsumableItem = async (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item || item.type !== 'consumable') return;
+
+        if (!activeStudent?.id) {
+            return window.showCustomAlert?.('Data Tidak Ada', 'Pilih siswa terlebih dahulu.', 'warning');
+        }
+
+        if ((activeStudent.poin || 0) < item.cost) {
+            return window.showCustomAlert?.(
+                'Koin Kurang',
+                `Butuh ${item.cost} koin untuk membeli ${item.title}.`,
+                'warning'
+            );
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/game-win`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: activeStudent.id,
+                    reward_amount: -item.cost
+                })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status !== 'success') {
+                throw new Error(result.message || 'Gagal membeli kartu.');
+            }
+
+            activeStudent.poin = result.data.new_poin;
+
+            addScratchExtraCardStock();
+            updateShopUI();
+
+            window.showCustomAlert?.(
+                'Kartu Berhasil Dibeli!',
+                'Stok Kartu Gosok kamu bertambah 1 untuk hari ini.',
+                'success'
+            );
+        } catch (error) {
+            console.error(error);
+
+            window.showCustomAlert?.(
+                'Gagal Membeli',
+                error.message || 'Gagal membeli kartu tambahan.',
+                'error'
+            );
+        }
+    };
+
+    window.openInteractiveItem = (itemId) => {
+        const item = shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        if (item.filename === 'ability-transfer') {
+            openTransferModal();
+        } else if (item.filename === 'game-gacha') {
+            openGachaDrawer();
+        } else if (item.filename === 'game-scratch') {
+            // 👇 GANTI BAGIAN INI 👇
+            openScratchModal();
+        }
+    };
+
+    // ==============================================================
+    // TRANSFER KOIN
+    // ==============================================================
+    window.openTransferModal = () => {
+        const select = document.getElementById('tfReceiver');
+        const friends = allStudents.filter(s => s.id !== activeStudent.id);
+
+        select.innerHTML = '<option value="">-- Pilih Teman Penerima --</option>' +
+            friends.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+        document.getElementById('tfAmount').value = '';
+        document.getElementById('tfNote').value = ''; // Kosongkan input pesan saat modal dibuka
+        document.getElementById('modalTransfer').classList.replace('hidden', 'flex');
+    };
+
+    window.closeTransferModal = () => document.getElementById('modalTransfer').classList.replace('flex', 'hidden');
+
+    window.executeTransferAction = async () => {
+        const receiverId = document.getElementById('tfReceiver').value;
+        const amount = parseInt(document.getElementById('tfAmount').value);
+        const note = document.getElementById('tfNote').value; // Ambil nilai pesan
+        const btn = document.getElementById('btnSubmitTransfer');
+
+        if(!receiverId) return window.showCustomAlert('Gagal', 'Pilih teman dulu!', 'warning');
+        if(!amount || amount < 10) return window.showCustomAlert('Gagal', 'Minimal transfer 10 koin!', 'warning');
+        if(activeStudent.poin < amount) return window.showCustomAlert('Gagal', 'Koin kamu tidak cukup untuk ditransfer!', 'warning');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses Transfer...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/transfer`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                // Tambahkan 'note' ke dalam body payload
+                body: JSON.stringify({ sender_id: activeStudent.id, receiver_id: receiverId, amount, note })
+            });
+            const data = await res.json();
+            if(!res.ok) throw new Error(data.message || 'Gagal transfer');
+
+            activeStudent.poin = data.data.new_poin;
+            updateShopUI();
+            closeTransferModal();
+            window.showCustomAlert('Transfer Berhasil!', `Kamu telah mengirimkan ${amount} Koin ke temanmu.`, 'success');
+        } catch(e) {
+            window.showCustomAlert('Error', e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Kirim Koin Sekarang';
+        }
+    };
+
+
+// ==============================================================
+    // KONFIGURASI GACHA, WAVE, & COOLDOWN
+    // ==============================================================
+    let theWheel = null;
+    let currentGachaMode = 'solo';
+    let currentWave = 1;
+    let cooldownInterval = null;
+    const MAX_SPINS_PER_DAY = 15; // Maksimal muter 15 kali sehari
+
+    // Konfigurasi Wave untuk Mode Ramean
+    const waveConfig = [
+        { wave: 1, cost: 50, prize: 100, zonks: 1 },
+        { wave: 2, cost: 100, prize: 250, zonks: 3 },
+        { wave: 3, cost: 200, prize: 500, zonks: 6 },
+        { wave: 4, cost: 400, prize: 1000, zonks: 10 },
+        { wave: 5, cost: 800, prize: 2500, zonks: 15 } // Semakin mahal, semakin mematikan
+    ];
+
+    // Fungsi Cek Kelelahan/Kecanduan
+    window.checkSpinCooldown = () => {
+        const lockKey = `gacha_lock_${activeStudent.id}`;
+        const lockUntil = parseInt(localStorage.getItem(lockKey)) || 0;
+        const btnSpin = document.getElementById('btnSpinWheel');
+        const controlsArea = document.getElementById('gachaControlsArea');
+        const cooldownUI = document.getElementById('gachaCooldownUI');
+        const timerText = document.getElementById('gachaCooldownTimer');
+
+        if (Date.now() < lockUntil) {
+            controlsArea.classList.add('hidden');
+            cooldownUI.classList.remove('hidden');
+            btnSpin.disabled = true;
+            btnSpin.innerText = 'FITUR TERKUNCI';
+
+            if (cooldownInterval) clearInterval(cooldownInterval);
+            cooldownInterval = setInterval(() => {
+                const diff = lockUntil - Date.now();
+                if (diff <= 0) {
+                    clearInterval(cooldownInterval);
+                    localStorage.removeItem(lockKey);
+                    localStorage.setItem(`gacha_count_${activeStudent.id}`, 0);
+                    controlsArea.classList.remove('hidden');
+                    cooldownUI.classList.add('hidden');
+                    updateGachaCostAndWheel();
+                } else {
+                    const h = Math.floor(diff / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+                    if (timerText) timerText.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                }
+            }, 1000);
+            return true;
+        } else {
+            controlsArea.classList.remove('hidden');
+            cooldownUI.classList.add('hidden');
+            if (cooldownInterval) clearInterval(cooldownInterval);
+            return false;
+        }
+    };
+
+    window.incrementSpinCount = () => {
+        const lockKey = `gacha_lock_${activeStudent.id}`;
+        const countKey = `gacha_count_${activeStudent.id}`;
+        let count = parseInt(localStorage.getItem(countKey)) || 0;
+        count++;
+        localStorage.setItem(countKey, count);
+
+        // Jika sudah melebihi batas, kunci selama 24 jam!
+        if (count >= MAX_SPINS_PER_DAY) {
+            localStorage.setItem(lockKey, Date.now() + 24 * 60 * 60 * 1000);
+        }
+    };
+
+    window.openGachaDrawer = () => {
+        document.getElementById('drawerGacha').classList.replace('hidden', 'flex');
+        checkSpinCooldown();
+        setGachaMode('solo');
+    };
+
+    window.closeGachaDrawer = () => {
+        document.getElementById('drawerGacha').classList.replace('flex', 'hidden');
+        if (theWheel) theWheel.stopAnimation(false);
+    };
+
+    window.setGachaMode = (mode) => {
+        currentGachaMode = mode;
+        const btnSolo = document.getElementById('btnGachaSolo');
+        const btnRamean = document.getElementById('btnGachaRamean');
+        const uiSolo = document.getElementById('gachaSoloUI');
+        const uiRamean = document.getElementById('gachaRameanUI');
+
+        if (mode === 'solo') {
+            btnSolo.classList.replace('text-gray-500', 'text-gray-800');
+            btnSolo.classList.replace('hover:bg-gray-50', 'bg-white');
+            btnSolo.classList.add('shadow-sm');
+
+            btnRamean.classList.replace('text-gray-800', 'text-gray-500');
+            btnRamean.classList.replace('bg-white', 'hover:bg-gray-50');
+            btnRamean.classList.remove('shadow-sm');
+
+            uiSolo.classList.remove('hidden');
+            uiRamean.classList.replace('flex', 'hidden');
+        } else {
+            btnRamean.classList.replace('text-gray-500', 'text-gray-800');
+            btnRamean.classList.replace('hover:bg-gray-50', 'bg-white');
+            btnRamean.classList.add('shadow-sm');
+
+            btnSolo.classList.replace('text-gray-800', 'text-gray-500');
+            btnSolo.classList.replace('bg-white', 'hover:bg-gray-50');
+            btnSolo.classList.remove('shadow-sm');
+
+            uiSolo.classList.add('hidden');
+            uiRamean.classList.replace('hidden', 'flex');
+
+            const friends = allStudents.filter(s => s.id !== activeStudent.id);
+            document.getElementById('gachaFriendsCheckboxes').innerHTML = friends.map(s => `
+                <label class="flex items-center gap-2 text-[10px] font-bold cursor-pointer bg-white p-2 rounded-lg border border-gray-100 shadow-sm transition-all duration-300">
+                    <input type="checkbox" value="${s.name}" class="chk-friend w-3.5 h-3.5 accent-purple-600" onchange="handleFriendCheckbox()">
+                    <span class="truncate line-clamp-1">${s.name}</span>
+                </label>
+            `).join('');
+        }
+        updateGachaCostAndWheel();
+    };
+
+    window.resetWave = () => {
+        currentWave = 1;
+        updateGachaCostAndWheel();
+    };
+
+    // BUG FIX: Limit Checkbox (Disable jika sudah 4)
+    window.handleFriendCheckbox = () => {
+        const checkboxes = document.querySelectorAll('.chk-friend');
+        const checkedCount = document.querySelectorAll('.chk-friend:checked').length;
+
+        checkboxes.forEach(chk => {
+            if (!chk.checked) {
+                chk.disabled = checkedCount >= 4;
+                chk.parentElement.style.opacity = (checkedCount >= 4) ? '0.4' : '1';
+                chk.parentElement.style.cursor = (checkedCount >= 4) ? 'not-allowed' : 'pointer';
+            } else {
+                chk.parentElement.style.opacity = '1';
+            }
+        });
+        updateGachaCostAndWheel();
+    };
+
+    window.updateGachaCostAndWheel = () => {
+        if (checkSpinCooldown()) return renderWheel();
+
+        if (currentGachaMode === 'solo') {
+            const select = document.getElementById('gachaTargetPrize');
+            const cost = select.options[select.selectedIndex].dataset.cost;
+            document.getElementById('btnSpinWheel').innerText = `Putar Sekarang (${cost} Koin)`;
+            document.getElementById('btnSpinWheel').disabled = false;
+        } else {
+            const config = waveConfig[Math.min(currentWave - 1, waveConfig.length - 1)];
+            document.getElementById('waveTitle').innerText = `Wave ${config.wave}`;
+            document.getElementById('waveDesc').innerText = `Biaya: ${config.cost} | Hadiah: ${config.prize} | Zonk/Pemain: ${config.zonks}`;
+            document.getElementById('btnSpinWheel').innerText = `Putar Sekarang (${config.cost} Koin)`;
+            document.getElementById('btnSpinWheel').disabled = false;
+        }
+        renderWheel();
+    };
+
+    window.renderWheel = () => {
+        let segments = [];
+
+        if (currentGachaMode === 'solo') {
+            const select = document.getElementById('gachaTargetPrize');
+            const targetPrize = parseInt(select.value);
+
+            if (targetPrize === 100) {
+                segments = [
+                    { fillStyle: '#facc15', text: '10', value: 10, textFillStyle: '#854d0e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#f87171', text: '25', value: 25, textFillStyle: '#7f1d1d' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#38bdf8', text: '50', value: 50, textFillStyle: '#0c4a6e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#a855f7', text: '100!', value: 100, size: window.innerWidth < 400 ? 5 : 10, textFillStyle: '#ffffff' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' }
+                ];
+            } else if (targetPrize === 500) {
+                segments = [
+                    { fillStyle: '#facc15', text: '25', value: 25, textFillStyle: '#854d0e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#f87171', text: '50', value: 50, textFillStyle: '#7f1d1d' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#38bdf8', text: '100', value: 100, textFillStyle: '#0c4a6e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#a855f7', text: '250', value: 250, textFillStyle: '#ffffff' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#ef4444', text: '500!', value: 500, size: window.innerWidth < 400 ? 5 : 8, textFillStyle: '#ffffff' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' }
+                ];
+            } else {
+                segments = [
+                    { fillStyle: '#facc15', text: '50', value: 50, textFillStyle: '#854d0e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#f87171', text: '100', value: 100, textFillStyle: '#7f1d1d' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#38bdf8', text: '250', value: 250, textFillStyle: '#0c4a6e' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#a855f7', text: '500', value: 500, textFillStyle: '#ffffff' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' },
+                    { fillStyle: '#ef4444', text: '1000!', value: 1000, size: window.innerWidth < 400 ? 4 : 6, textFillStyle: '#ffffff' },
+                    { fillStyle: '#e2e8f0', text: 'ZONK', value: 0, textFillStyle: '#64748b' }
+                ];
+            }
+        } else {
+            const config = waveConfig[Math.min(currentWave - 1, waveConfig.length - 1)];
+            const checkboxes = document.querySelectorAll('.chk-friend:checked');
+
+            let players = [activeStudent.name];
+            checkboxes.forEach(c => players.push(c.value));
+
+            const playerColors = ['#34d399', '#60a5fa', '#fbbf24', '#f87171', '#c084fc'];
+
+            players.forEach((p, index) => {
+                segments.push({ fillStyle: playerColors[index], text: p.substring(0,8), value: config.prize, isWinner: true, name: p, textFillStyle: '#ffffff' });
+                for(let i = 0; i < config.zonks; i++) {
+                    segments.push({ fillStyle: '#e2e8f0', text: 'ZONK', value: 0, isWinner: false, textFillStyle: '#64748b' });
+                }
+            });
+            segments.sort(() => Math.random() - 0.5);
+        }
+
+        if (theWheel) {
+            theWheel.stopAnimation(false);
+            theWheel.clearCanvas();
+        }
+
+        theWheel = new Winwheel({
+            canvasId: 'canvasWinwheel',
+            numSegments: segments.length,
+            segments: segments,
+            outerRadius: 140,
+            innerRadius: 30,
+            textFontSize: 11,
+            textMargin: 0,
+            lineWidth: 2,
+            strokeStyle: '#ffffff',
+            animation: { type: 'spinToStop', duration: 4, spins: 8, callbackFinished: 'onWheelFinish()' }
+        });
+        theWheel.draw();
+    };
+
+    window.startSpin = async () => {
+        if (checkSpinCooldown()) return;
+
+        let cost = 0;
+        if (currentGachaMode === 'solo') {
+            const select = document.getElementById('gachaTargetPrize');
+            cost = parseInt(select.options[select.selectedIndex].dataset.cost);
+        } else {
+            const config = waveConfig[Math.min(currentWave - 1, waveConfig.length - 1)];
+            cost = config.cost;
+        }
+
+        if (activeStudent.poin < cost) return window.showCustomAlert('Koin Kurang', `Butuh ${cost} Koin untuk memutar di tingkat ini.`, 'warning');
+
+        const btn = document.getElementById('btnSpinWheel');
+        btn.disabled = true;
+        btn.innerText = 'Memutar Roda...';
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/game-win`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: activeStudent.id, reward_amount: -cost })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error('Koneksi terputus');
+
+            activeStudent.poin = data.data.new_poin;
+            updateShopUI();
+            incrementSpinCount(); // Tambahkan riwayat spin untuk cooldown!
+
+            theWheel.stopAnimation(false);
+            theWheel.rotationAngle = 0;
+            theWheel.draw();
+            theWheel.startAnimation();
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerText = `Putar Sekarang (${cost} Koin)`;
+            window.showCustomAlert('Error', 'Gagal memproses pembayaran putaran roda.', 'error');
+        }
+    };
+
+    window.onWheelFinish = async () => {
+        const winningSegment = theWheel.getIndicatedSegment();
+        const select = document.getElementById('gachaTargetPrize');
+        const cost = parseInt(select.options[select.selectedIndex].dataset.cost);
+        const btn = document.getElementById('btnSpinWheel');
+
+        if (winningSegment.value > 0) {
+            if (window.confetti) window.confetti({ particleCount: 150, spread: 80, zIndex: 9999, origin: { y: 0.5 } });
+
+            if (currentGachaMode === 'ramean') {
+                const oldWave = currentWave;
+                currentWave = Math.min(currentWave + 1, waveConfig.length);
+
+                // Cari ID teman berdasarkan nama lengkap yang tersimpan di properti juring wheel
+                const winnerStudent = allStudents.find(s => s.name === winningSegment.name);
+                const winnerId = winnerStudent ? winnerStudent.id : activeStudent.id;
+
+                try {
+                    const res = await fetch(`${API_URL}/api/digital-rewards/gacha-ramean-win`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            spinner_id: activeStudent.id,
+                            winner_id: winnerId,
+                            reward_amount: winningSegment.value
+                        })
+                    });
+                    const result = await res.json();
+
+                    if (winningSegment.name === activeStudent.name) {
+                        activeStudent.poin = result.data.new_poin;
+                        updateShopUI();
+                        const msg = `WAVE ${oldWave} SELESAI! Kamu memenangkan taruhan ini! +${winningSegment.value} Koin ditambahkan. Lanjut ke Wave ${currentWave}!`;
+                        window.showCustomAlert('🎉 SELAMAT!', msg, 'success');
+                    } else {
+                        // Jika teman yang menang, koin dikirim ke backend teman, wave kelompok tetap naik!
+                        const msg = `WAVE ${oldWave} SELESAI! Pemenangnya adalah ${winningSegment.name}. Koin hadiah langsung dikirim ke akunnya! Perjalanan kelompok berlanjut ke Wave ${currentWave}!`;
+                        window.showCustomAlert('Hasil Ramean', msg, 'info');
+                    }
+                } catch (e) {
+                    console.error("Gagal memproses hadiah gacha ramean:", e);
+                }
+            } else {
+                // SOLO MODE
+                const msg = `Wow! Kamu mendapatkan ${winningSegment.value} Koin!`;
+                window.showCustomAlert('🎉 SELAMAT!', msg, 'success');
+
+                try {
+                    const res = await fetch(`${API_URL}/api/digital-rewards/game-win`, {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ student_id: activeStudent.id, reward_amount: winningSegment.value })
+                    });
+                    const data = await res.json();
+                    activeStudent.poin = data.data.new_poin;
+                    updateShopUI();
+                } catch (e) { console.error(e); }
+            }
+
+        } else {
+            if (currentGachaMode === 'ramean') {
+                currentWave = Math.max(1, currentWave - 1);
+                window.showCustomAlert('Yahh Zonk!', `Semuanya sial! Roda berhenti di ZONK. Kamu diturunkan ke Wave ${currentWave}.`, 'danger');
+            } else {
+                window.showCustomAlert('Yahh Zonk!', 'Sayang sekali kali ini kamu belum beruntung. Ayo coba lagi!', 'danger');
+            }
+        }
+
+        updateGachaCostAndWheel();
+    };
+
+    // ==============================================================
+    // GAME: KARTU GOSOK HIKMAH
+    // ==============================================================
+
+    const SCRATCH_BASE_REWARD = 50;
+    const SCRATCH_CLEAR_TARGET = 55;
+
+    const SCRATCH_DAILY_FREE_CARDS = 10;
+    const SCRATCH_EXTRA_CARD_COST = 200;
+
+    const SCRATCH_TIME_LIMIT = 30;
+
+    let scratchTimerInterval = null;
+    let scratchTimeLeft = SCRATCH_TIME_LIMIT;
+    let scratchCardActive = false;
+    let scratchFailedByLeaving = false;
+
+    const SCRATCH_COST_TABLE = {
+        default: [50, 60, 75, 90],
+        silver: [100, 150, 200, 275],
+        gold: [350, 500, 700, 950, 1250]
+    };
+
+
+    let currentScratchQuestion = null;
+    let currentScratchReward = SCRATCH_BASE_REWARD;
+    let currentScratchHintIndex = 0;
+
+    let scratchWave = Number(localStorage.getItem('scratch_wave') || 1);
+
+    let scratchCanvas = null;
+    let scratchCtx = null;
+    let scratchDrawing = false;
+    let scratchCardPaid = false;
+    let scratchClaimed = false;
+    let scratchListenersReady = false;
+
+    const getTodayKey = () => {
+        const now = new Date();
+
+        return [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0')
+        ].join('-');
+    };
+
+    const getScratchStoragePrefix = () => {
+        const studentId = activeStudent?.id || 'guest';
+
+        return `scratch_${studentId}_${getTodayKey()}`;
+    };
+
+    const getScratchCardsUsed = () => {
+        return Number(localStorage.getItem(`${getScratchStoragePrefix()}_used`) || 0);
+    };
+
+    const setScratchCardsUsed = (value) => {
+        localStorage.setItem(`${getScratchStoragePrefix()}_used`, String(Math.max(0, value)));
+    };
+
+    const getScratchExtraCards = () => {
+        return Number(localStorage.getItem(`${getScratchStoragePrefix()}_extra`) || 0);
+    };
+
+    const setScratchExtraCards = (value) => {
+        localStorage.setItem(`${getScratchStoragePrefix()}_extra`, String(Math.max(0, value)));
+    };
+
+    const getScratchTotalCardsToday = () => {
+        return SCRATCH_DAILY_FREE_CARDS + getScratchExtraCards();
+    };
+
+    const getScratchCardsLeftToday = () => {
+        return Math.max(0, getScratchTotalCardsToday() - getScratchCardsUsed());
+    };
+
+    const consumeScratchCardStock = () => {
+        setScratchCardsUsed(getScratchCardsUsed() + 1);
+        updateScratchWaveUI();
+    };
+
+    const addScratchExtraCardStock = () => {
+        setScratchExtraCards(getScratchExtraCards() + 1);
+        updateScratchWaveUI();
+    };
+
+    const getScratchTierByReward = (reward = getScratchRewardByWave()) => {
+        if (reward > 2000) return 'gold';
+        if (reward >= 500) return 'silver';
+        return 'default';
+    };
+
+    const getScratchTierStartWave = (tier) => {
+        for (let wave = 1; wave <= Math.max(100, scratchWave + 10); wave++) {
+            const reward = SCRATCH_BASE_REWARD * Math.pow(2, wave - 1);
+            if (getScratchTierByReward(reward) === tier) {
+                return wave;
+            }
+        }
+
+        return 1;
+    };
+
+    const getScratchTierIndex = () => {
+        const tier = getScratchTierByReward();
+        const startWave = getScratchTierStartWave(tier);
+
+        return Math.max(0, scratchWave - startWave);
+    };
+
+    const getScratchCostByWave = () => {
+        const tier = getScratchTierByReward();
+        const tierIndex = getScratchTierIndex();
+        const table = SCRATCH_COST_TABLE[tier];
+
+        if (tierIndex < table.length) {
+            return table[tierIndex];
+        }
+
+        // Kalau sudah melebihi tabel, harga lanjut naik otomatis.
+        const lastCost = table[table.length - 1];
+        const extraIndex = tierIndex - table.length + 1;
+
+        if (tier === 'gold') {
+            return lastCost + extraIndex * 350;
+        }
+
+        if (tier === 'silver') {
+            return lastCost + extraIndex * 100;
+        }
+
+        return lastCost + extraIndex * 25;
+    };
+
+    const getQuestionPoolByWave = () => {
+        const tier = getScratchTierByReward();
+
+        return SCRATCH_QUESTIONS[tier] || SCRATCH_QUESTIONS.easy;
+    };
+
+    const getScratchEl = (id) => document.getElementById(id);
+
+    const normalizeScratchAnswer = (value = '') => {
+        return value
+            .toLowerCase()
+            .trim()
+            .replace(/['’`]/g, '')
+            .replace(/-/g, ' ')
+            .replace(/\s+/g, ' ');
+    };
+
+    const isScratchAnswerCorrect = (userValue = '', correctValue = '') => {
+        const userAnswer = normalizeScratchAnswer(userValue);
+        const correctAnswer = normalizeScratchAnswer(correctValue);
+
+        if (!userAnswer || !correctAnswer) return false;
+
+        // Contoh:
+        // correctAnswer = "haji"
+        // userAnswer = "rukun islam ke 5 pergi haji"
+        // hasilnya tetap benar karena mengandung kata "haji"
+        if (userAnswer.includes(correctAnswer)) return true;
+
+        // Biar jawaban pendek seperti "muhammad" tetap bisa benar untuk "nabi muhammad"
+        if (correctAnswer.includes(userAnswer) && userAnswer.length >= 4) return true;
+
+        return false;
+    };
+
+    const getScratchRewardByWave = () => {
+        return SCRATCH_BASE_REWARD * Math.pow(2, Math.max(1, scratchWave) - 1);
+    };
+
+    const updateScratchCardTheme = () => {
+        const cardBox = getScratchEl('scratchCardBox');
+        const resultArea = getScratchEl('scratchResultArea');
+        const resultLabel = getScratchEl('scratchResultLabel');
+        const prizeText = getScratchEl('scratchPrizeText');
+
+        if (!cardBox || !resultArea || !resultLabel || !prizeText) return;
+
+        const reward = getScratchRewardByWave();
+
+        cardBox.className = 'relative w-full h-[150px] rounded-2xl overflow-hidden border-4 mb-3 select-none transition-all';
+        resultArea.className = 'absolute inset-0 flex flex-col items-center justify-center p-4 text-center transition-all';
+        resultLabel.className = 'text-[10px] font-black uppercase tracking-widest mb-1';
+        prizeText.className = 'font-black text-2xl';
+
+        if (reward > 1000) {
+            // Layer asli kontras untuk kartu gold
+            cardBox.classList.add(
+                'bg-slate-900',
+                'border-yellow-300',
+                'shadow-[0_0_25px_rgba(251,191,36,0.45)]'
+            );
+
+            resultArea.classList.add(
+                'bg-slate-900'
+            );
+
+            resultLabel.classList.add(
+                'text-yellow-200'
+            );
+
+            prizeText.classList.add(
+                'text-yellow-300'
+            );
+        } else if (reward >= 500) {
+            // Layer asli kontras untuk kartu silver
+            cardBox.classList.add(
+                'bg-slate-900',
+                'border-slate-300',
+                'shadow-[0_0_20px_rgba(148,163,184,0.45)]'
+            );
+
+            resultArea.classList.add(
+                'bg-slate-900'
+            );
+
+            resultLabel.classList.add(
+                'text-slate-300'
+            );
+
+            prizeText.classList.add(
+                'text-white'
+            );
+        } else {
+            // Layer asli kontras untuk kartu default abu gelap
+            cardBox.classList.add(
+                'bg-teal-50',
+                'border-teal-100'
+            );
+
+            resultArea.classList.add(
+                'bg-teal-50'
+            );
+
+            resultLabel.classList.add(
+                'text-teal-600'
+            );
+
+            prizeText.classList.add(
+                'text-teal-700'
+            );
+        }
+    };
+
+    const updateScratchWaveUI = () => {
+        const reward = getScratchRewardByWave();
+        const cost = getScratchCostByWave();
+        const cardsLeft = getScratchCardsLeftToday();
+
+        const waveText = getScratchEl('scratchWaveText');
+        const rewardText = getScratchEl('scratchRewardText');
+        const costText = getScratchEl('scratchCostText');
+        const stockText = getScratchEl('scratchCardStockText');
+
+        if (waveText) waveText.innerText = `Wave ${scratchWave}`;
+        if (rewardText) rewardText.innerText = `${reward}`;
+        if (costText) costText.innerText = `${cost}`;
+        if (stockText) stockText.innerText = `${cardsLeft}`;
+
+        updateScratchCardTheme();
+
+        const buyBtn = getScratchEl('btnBuyScratch');
+
+        if (buyBtn && !scratchCardPaid) {
+            const hasCard = cardsLeft > 0;
+
+            buyBtn.disabled = !hasCard;
+            buyBtn.innerText = hasCard
+                ? `Pakai Kartu (${cardsLeft} tersisa)`
+                : 'Kartu Habis - Beli di Toko';
+        }
+    };
+
+    const resetScratchWave = () => {
+        scratchWave = 1;
+        localStorage.setItem('scratch_wave', String(scratchWave));
+        updateScratchWaveUI();
+    };
+
+    const increaseScratchWave = () => {
+        scratchWave += 1;
+        localStorage.setItem('scratch_wave', String(scratchWave));
+        updateScratchWaveUI();
+    };
+
+    const getRandomScratchQuestion = () => {
+        const pool = getQuestionPoolByWave();
+
+        return pool[Math.floor(Math.random() * pool.length)];
+    };
+
+    const setScratchButton = (text, disabled = false) => {
+        const btn = getScratchEl('btnBuyScratch');
+        if (!btn) return;
+
+        btn.innerText = text;
+        btn.disabled = disabled;
+    };
+
+    const updateScratchTimerUI = () => {
+        const timerText = getScratchEl('scratchTimerText');
+        if (!timerText) return;
+
+        timerText.innerText = scratchCardActive ? `${scratchTimeLeft}s` : '--';
+
+        if (scratchTimeLeft <= 10 && scratchCardActive) {
+            timerText.classList.remove('text-rose-600');
+            timerText.classList.add('text-red-600', 'animate-pulse');
+        } else {
+            timerText.classList.remove('text-red-600', 'animate-pulse');
+            timerText.classList.add('text-rose-600');
+        }
+    };
+
+    const stopScratchTimer = () => {
+        if (scratchTimerInterval) {
+            clearInterval(scratchTimerInterval);
+            scratchTimerInterval = null;
+        }
+
+        scratchCardActive = false;
+        updateScratchTimerUI();
+    };
+
+    const startScratchTimer = () => {
+        stopScratchTimer();
+
+        scratchTimeLeft = SCRATCH_TIME_LIMIT;
+        scratchCardActive = true;
+        scratchFailedByLeaving = false;
+
+        updateScratchTimerUI();
+
+        scratchTimerInterval = setInterval(() => {
+            scratchTimeLeft -= 1;
+            updateScratchTimerUI();
+
+            if (scratchTimeLeft <= 0) {
+                handleScratchTimeout();
+            }
+        }, 1000);
+    };
+
+    const handleScratchTimeout = () => {
+        if (scratchClaimed || !scratchCardActive) return;
+
+        stopScratchTimer();
+
+        scratchClaimed = true;
+        scratchCardPaid = false;
+        scratchDrawing = false;
+
+        const input = getScratchEl('scratchAnswer');
+        const prizeText = getScratchEl('scratchPrizeText');
+        const resultLabel = getScratchEl('scratchResultLabel');
+
+        if (input) input.disabled = true;
+
+        if (prizeText) prizeText.innerText = currentScratchQuestion?.answer?.toUpperCase() || '---';
+        if (resultLabel) resultLabel.innerText = 'Waktu Habis';
+
+        if (scratchCanvas) {
+            scratchCanvas.style.transition = 'opacity 0.45s ease-out';
+            scratchCanvas.style.opacity = '0';
+            scratchCanvas.style.pointerEvents = 'none';
+        }
+
+        resetScratchWave();
+
+        window.showCustomAlert?.(
+            'Waktu Habis',
+            `Jawaban yang benar adalah "${currentScratchQuestion?.answer || '-'}". Kartu hangus dan wave kembali ke Wave 1.`,
+            'danger'
+        );
+
+        setTimeout(() => {
+            prepareNewScratchQuestion();
+        }, 1400);
+    };
+
+    const failScratchBecauseUserLeft = () => {
+        if (!scratchCardActive || scratchClaimed || !scratchCardPaid) return;
+
+        scratchFailedByLeaving = true;
+
+        stopScratchTimer();
+
+        scratchClaimed = true;
+        scratchCardPaid = false;
+        scratchDrawing = false;
+
+        const input = getScratchEl('scratchAnswer');
+        const prizeText = getScratchEl('scratchPrizeText');
+        const resultLabel = getScratchEl('scratchResultLabel');
+
+        if (input) input.disabled = true;
+
+        if (prizeText) prizeText.innerText = currentScratchQuestion?.answer?.toUpperCase() || '---';
+        if (resultLabel) resultLabel.innerText = 'Kartu Hangus';
+
+        if (scratchCanvas) {
+            scratchCanvas.style.transition = 'opacity 0.45s ease-out';
+            scratchCanvas.style.opacity = '0';
+            scratchCanvas.style.pointerEvents = 'none';
+        }
+
+        resetScratchWave();
+
+        window.showCustomAlert?.(
+            'Kartu Hangus',
+            'Kamu keluar dari halaman saat kartu aktif. Untuk mencegah cari jawaban di luar, kartu dianggap gagal dan wave direset.',
+            'danger'
+        );
+
+        setTimeout(() => {
+            prepareNewScratchQuestion();
+        }, 1400);
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            failScratchBecauseUserLeft();
+        }
+    });
+
+    window.addEventListener('blur', () => {
+        failScratchBecauseUserLeft();
+    });
+
+    const renderScratchHints = () => {
+        const hintList = getScratchEl('scratchHintList');
+        const btnHint = getScratchEl('btnHint');
+
+        if (!hintList || !currentScratchQuestion) return;
+
+        hintList.innerHTML = '';
+
+        for (let i = 0; i <= currentScratchHintIndex; i++) {
+            const li = document.createElement('li');
+            li.innerText = `"${currentScratchQuestion.hint[i]}"`;
+            hintList.appendChild(li);
+        }
+
+        if (btnHint) {
+            btnHint.disabled = currentScratchHintIndex >= currentScratchQuestion.hint.length - 1;
+        }
+    };
+
+    const prepareNewScratchQuestion = () => {
+        stopScratchTimer();
+        scratchFailedByLeaving = false;
+
+        currentScratchQuestion = getRandomScratchQuestion();
+        currentScratchReward = getScratchRewardByWave();
+        currentScratchHintIndex = 0;
+
+        scratchCardPaid = false;
+        scratchClaimed = false;
+        scratchDrawing = false;
+
+        const playArea = getScratchEl('scratchPlayArea');
+        const input = getScratchEl('scratchAnswer');
+        const prizeText = getScratchEl('scratchPrizeText');
+        const resultLabel = getScratchEl('scratchResultLabel');
+
+        // Awal modal: area soal, input, dan kartu disembunyikan dulu
+        if (playArea) {
+            playArea.classList.add('hidden');
+        }
+
+        if (input) {
+            input.value = '';
+            input.disabled = false;
+        }
+
+        if (prizeText) prizeText.innerText = currentScratchQuestion.answer.toUpperCase();
+        if (resultLabel) resultLabel.innerText = 'Jawaban Asli';
+
+        renderScratchHints();
+        updateScratchWaveUI();
+
+        const cardsLeft = getScratchCardsLeftToday();
+
+        setScratchButton(
+            cardsLeft > 0 ? `Pakai Kartu (${cardsLeft} tersisa)` : 'Kartu Habis - Beli di Toko',
+            cardsLeft <= 0
+        );
+    };
+
+    window.openScratchModal = () => {
+        const modal = getScratchEl('modalScratch');
+
+        if (!modal) {
+            console.error('Elemen #modalScratch tidak ditemukan.');
+            return window.showCustomAlert?.(
+                'Modal Tidak Ditemukan',
+                'Elemen modalScratch belum ada di HTML.',
+                'error'
+            );
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        setTimeout(() => {
+            prepareNewScratchQuestion();
+        }, 50);
+    };
+
+    window.closeScratchModal = () => {
+        if (scratchCardActive && !scratchClaimed && scratchCardPaid) {
+            failScratchBecauseUserLeft();
+        }
+
+        const modal = getScratchEl('modalScratch');
+        if (!modal) return;
+
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    };
+
+    window.addHint = () => {
+        if (!currentScratchQuestion) return;
+
+        if (currentScratchHintIndex >= currentScratchQuestion.hint.length - 1) {
+            return window.showToastAlert?.('warning', 'Hint Habis', 'Semua hint sudah dibuka.');
+        }
+
+        currentScratchHintIndex += 1;
+        renderScratchHints();
+    };
+
+    const initScratchCanvas = (isPaid) => {
+        scratchCanvas = getScratchEl('scratchCanvas');
+        if (!scratchCanvas) return;
+
+        scratchCtx = scratchCanvas.getContext('2d', { willReadFrequently: true });
+
+        const rect = scratchCanvas.getBoundingClientRect();
+
+        scratchCanvas.width = Math.max(1, Math.floor(rect.width));
+        scratchCanvas.height = Math.max(1, Math.floor(rect.height));
+
+        scratchCtx.globalCompositeOperation = 'source-over';
+        scratchCtx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+
+        const reward = getScratchRewardByWave();
+
+        if (reward > 1000) {
+            // Gold: atas bawah agak gelap, tengah cerah
+            const goldGradient = scratchCtx.createLinearGradient(0, 0, 0, scratchCanvas.height);
+            goldGradient.addColorStop(0, '#b7791f');
+            goldGradient.addColorStop(0.25, '#f6d365');
+            goldGradient.addColorStop(0.5, '#fff7ad');
+            goldGradient.addColorStop(0.75, '#d69e2e');
+            goldGradient.addColorStop(1, '#9c6b16');
+
+            scratchCtx.fillStyle = goldGradient;
+        } else if (reward >= 500) {
+            // Silver: atas bawah agak gelap, tengah silver cerah
+            const silverGradient = scratchCtx.createLinearGradient(0, 0, 0, scratchCanvas.height);
+            silverGradient.addColorStop(0, '#9ca3af');
+            silverGradient.addColorStop(0.28, '#d1d5db');
+            silverGradient.addColorStop(0.5, '#f8fafc');
+            silverGradient.addColorStop(0.72, '#cbd5e1');
+            silverGradient.addColorStop(1, '#8b939e');
+
+            scratchCtx.fillStyle = silverGradient;
+        } else {
+            // Default: bukan gradient, abu gelap polos
+            scratchCtx.fillStyle = '#64748b';
+        }
+
+        scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+
+        scratchCtx.fillStyle = reward >= 500 ? '#1f2937' : '#e2e8f0';
+        scratchCtx.font = 'bold 18px Arial';
+        scratchCtx.textAlign = 'center';
+        scratchCtx.textBaseline = 'middle';
+
+        scratchCtx.fillText(
+            isPaid ? 'GOSOK DI SINI' : 'BELI KARTU DULU',
+            scratchCanvas.width / 2,
+            scratchCanvas.height / 2
+        );
+
+        scratchCanvas.style.opacity = '1';
+        scratchCanvas.style.pointerEvents = 'auto';
+
+        if (!scratchListenersReady) {
+            scratchCanvas.addEventListener('pointerdown', startScratch);
+            scratchCanvas.addEventListener('pointermove', scratchMove);
+            scratchCanvas.addEventListener('pointerup', stopScratch);
+            scratchCanvas.addEventListener('pointerleave', stopScratch);
+            scratchCanvas.addEventListener('pointercancel', stopScratch);
+
+            scratchListenersReady = true;
+        }
+    };
+
+    const getScratchPointerPosition = (event) => {
+        const rect = scratchCanvas.getBoundingClientRect();
+
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        };
+    };
+
+    const startScratch = (event) => {
+        if (!scratchCardPaid || scratchClaimed || !scratchCanvas || !scratchCtx) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const input = getScratchEl('scratchAnswer');
+        if (input) {
+            input.disabled = true;
+        }
+
+        scratchDrawing = true;
+        scratchCanvas.setPointerCapture?.(event.pointerId);
+
+        scratchAt(event);
+    };
+
+    const scratchMove = (event) => {
+        if (!scratchDrawing || !scratchCardPaid || scratchClaimed) {
+            return;
+        }
+
+        event.preventDefault();
+        scratchAt(event);
+    };
+
+    const stopScratch = (event) => {
+        if (!scratchDrawing) return;
+
+        scratchDrawing = false;
+        scratchCanvas?.releasePointerCapture?.(event.pointerId);
+
+        checkScratchPercentage();
+    };
+
+    const scratchAt = (event) => {
+        if (!scratchCtx || !scratchCanvas) return;
+
+        const pos = getScratchPointerPosition(event);
+
+        scratchCtx.globalCompositeOperation = 'destination-out';
+        scratchCtx.beginPath();
+        scratchCtx.arc(pos.x, pos.y, 18, 0, Math.PI * 2);
+        scratchCtx.fill();
+
+        checkScratchPercentage();
+    };
+
+    const checkScratchPercentage = () => {
+        if (!scratchCanvas || !scratchCtx || scratchClaimed || !scratchCardPaid) return;
+
+        const imageData = scratchCtx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height);
+        const pixels = imageData.data;
+
+        let transparentPixels = 0;
+
+        for (let i = 3; i < pixels.length; i += 4) {
+            if (pixels[i] === 0) {
+                transparentPixels++;
+            }
+        }
+
+        const totalPixels = scratchCanvas.width * scratchCanvas.height;
+        const clearPercentage = (transparentPixels / totalPixels) * 100;
+
+        if (clearPercentage >= SCRATCH_CLEAR_TARGET) {
+            finishScratchCard();
+        }
+    };
+
+    window.buyExtraScratchCard = async () => {
+        if (!activeStudent?.id) {
+            return window.showCustomAlert?.('Data Tidak Ada', 'Pilih siswa terlebih dahulu.', 'warning');
+        }
+
+        if ((activeStudent.poin || 0) < SCRATCH_EXTRA_CARD_COST) {
+            return window.showCustomAlert?.(
+                'Koin Kurang',
+                `Butuh ${SCRATCH_EXTRA_CARD_COST} koin untuk membeli 1 kartu tambahan.`,
+                'warning'
+            );
+        }
+
+        const btn = getScratchEl('btnBuyExtraScratchCard');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Membeli kartu tambahan...';
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/digital-rewards/game-win`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: activeStudent.id,
+                    reward_amount: -SCRATCH_EXTRA_CARD_COST
+                })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status !== 'success') {
+                throw new Error(result.message || 'Gagal membeli kartu tambahan.');
+            }
+
+            activeStudent.poin = result.data.new_poin;
+            updateShopUI?.();
+
+            addScratchExtraCardStock();
+
+            window.showToastAlert?.(
+                'success',
+                'Kartu Bertambah',
+                'Kamu berhasil membeli 1 kartu tambahan untuk hari ini.'
+            );
+        } catch (error) {
+            console.error(error);
+
+            window.showCustomAlert?.(
+                'Gagal',
+                error.message || 'Gagal membeli kartu tambahan.',
+                'error'
+            );
+        } finally {
+            updateScratchWaveUI();
+        }
+    };
+
+    const claimScratchReward = async (rewardAmount) => {
+        if (!activeStudent?.id) {
+            throw new Error('Data siswa tidak ditemukan.');
+        }
+
+        const res = await fetch(`${API_URL}/api/digital-rewards/game-win`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                student_id: activeStudent.id,
+                reward_amount: rewardAmount
+            })
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || result.status !== 'success') {
+            throw new Error(result.message || 'Gagal klaim reward scratch.');
+        }
+
+        activeStudent.poin = result.data.new_poin;
+        updateShopUI?.();
+
+        return result.data.new_poin;
+    };
+
+    window.buyScratchCard = async () => {
+        if (!activeStudent) {
+            return window.showCustomAlert?.('Data Tidak Ada', 'Pilih siswa terlebih dahulu.', 'warning');
+        }
+
+        if (getScratchCardsLeftToday() <= 0) {
+            return window.showCustomAlert?.(
+                'Kartu Habis',
+                `Kartu hari ini sudah habis. Silakan beli item "+1 Kartu Gosok" di toko seharga ${SCRATCH_EXTRA_CARD_COST} koin.`,
+                'warning'
+            );
+        }
+
+        setScratchButton('Memasukkan kartu...', true);
+
+        try {
+            consumeScratchCardStock();
+
+            scratchCardPaid = true;
+            scratchClaimed = false;
+            currentScratchReward = getScratchRewardByWave();
+
+            const playArea = getScratchEl('scratchPlayArea');
+            const input = getScratchEl('scratchAnswer');
+            const prizeText = getScratchEl('scratchPrizeText');
+            const resultLabel = getScratchEl('scratchResultLabel');
+
+            if (prizeText) prizeText.innerText = '---';
+            if (resultLabel) resultLabel.innerText = 'Jawaban Asli';
+
+            if (input) {
+                input.value = '';
+                input.disabled = false;
+            }
+
+            renderScratchHints();
+            updateScratchCardTheme();
+
+            if (playArea) {
+                playArea.classList.remove('hidden');
+            }
+
+            requestAnimationFrame(() => {
+                initScratchCanvas(true);
+
+                const answerInput = getScratchEl('scratchAnswer');
+                if (answerInput) answerInput.focus();
+            });
+
+            setScratchButton('Kartu sedang aktif...', true);
+            startScratchTimer();
+
+            window.showToastAlert?.(
+                'success',
+                'Kartu Dipakai',
+                'Isi jawaban dulu, lalu gosok kartunya.'
+            );
+        } catch (error) {
+            console.error(error);
+
+            setScratchButton(
+                getScratchCardsLeftToday() > 0
+                    ? `Pakai Kartu (${getScratchCardsLeftToday()} tersisa)`
+                    : 'Kartu Habis - Beli di Toko',
+                getScratchCardsLeftToday() <= 0
+            );
+
+            window.showCustomAlert?.(
+                'Gagal',
+                error.message || 'Gagal memakai kartu scratch.',
+                'error'
+            );
+        }
+    };
+
+    const finishScratchCard = async () => {
+        if (scratchClaimed) return;
+
+        stopScratchTimer();
+
+        scratchClaimed = true;
+        scratchCardPaid = false;
+        scratchDrawing = false;
+
+        const input = getScratchEl('scratchAnswer');
+        const rawUserAnswer = input?.value || '';
+        const rawCorrectAnswer = currentScratchQuestion?.answer || '';
+
+        const isCorrect = isScratchAnswerCorrect(rawUserAnswer, rawCorrectAnswer);
+        const rewardAmount = isCorrect ? currentScratchReward : 0;
+
+        const prizeText = getScratchEl('scratchPrizeText');
+        const resultLabel = getScratchEl('scratchResultLabel');
+
+        // Jawaban asli baru muncul setelah scratch mencapai target
+        if (prizeText) prizeText.innerText = rawCorrectAnswer.toUpperCase();
+        if (resultLabel) {
+            resultLabel.innerText = isCorrect ? 'Jawaban Benar!' : 'Jawaban Asli';
+        }
+
+        if (scratchCanvas) {
+            scratchCanvas.style.transition = 'opacity 0.45s ease-out';
+            scratchCanvas.style.opacity = '0';
+            scratchCanvas.style.pointerEvents = 'none';
+        }
+
+        try {
+            if (rewardAmount > 0) {
+                await claimScratchReward(rewardAmount);
+
+                if (window.confetti) {
+                    window.confetti({
+                        particleCount: 140,
+                        spread: 80,
+                        origin: { y: 0.65 },
+                        zIndex: 9999
+                    });
+                }
+
+                window.showCustomAlert?.(
+                    'Jawaban Benar!',
+                    `Jawaban aslinya adalah "${rawCorrectAnswer}". Kamu mendapatkan ${rewardAmount} koin. Wave naik ke ${scratchWave + 1}.`,
+                    'success'
+                );
+
+                increaseScratchWave();
+            } else {
+                resetScratchWave();
+
+                window.showCustomAlert?.(
+                    'Yah, Belum Berhasil',
+                    `Jawaban yang benar adalah "${rawCorrectAnswer}". Karena jawaban kosong atau salah, reward 0 dan wave kembali ke Wave 1.`,
+                    'danger'
+                );
+            }
+        } catch (error) {
+            console.error(error);
+
+            window.showCustomAlert?.(
+                'Gagal Klaim',
+                error.message || 'Reward gagal diproses.',
+                'error'
+            );
+        } finally {
+            setTimeout(() => {
+                prepareNewScratchQuestion();
+            }, 1400);
+        }
+    };
+
+    updateScratchWaveUI();
+    init();
+</script>
+
+

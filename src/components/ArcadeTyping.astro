@@ -1,34 +1,52 @@
 ---
 // src/components/ArcadeTyping.astro
 ---
-<div id="arcadeTypingContainer" class="flex flex-col items-center w-full max-w-2xl mx-auto gap-6 py-6 relative h-full">
+<div id="arcadeTypingContainer" class="arcade-wrap">
 
-    <div class="bg-indigo-50/50 border-2 border-indigo-100 p-6 rounded-3xl w-full text-center shadow-inner z-30 shrink-0">
-        <h2 id="arcadeQuestionText" class="text-xl md:text-2xl font-black text-indigo-900 leading-relaxed"></h2>
+    <div class="arcade-question">
+        <h2 id="arcadeQuestionText"></h2>
     </div>
 
-    <div id="arcadeTargetBlocks" class="flex flex-wrap justify-center gap-3 w-full min-h-[60px] z-30 shrink-0">
+    <div class="arcade-blocks-head">
+        <span class="arcade-label"><i class="fa-solid fa-arrow-down-long"></i> Isi kotak ini</span>
+        <button type="button" class="arcade-help" onclick="window.openTypingIntro && window.openTypingIntro()">
+            <i class="fa-solid fa-circle-question"></i> Cara mengisi
+        </button>
     </div>
+    <div id="arcadeTargetBlocks" class="arcade-blocks"></div>
 
-    <div class="relative flex flex-col items-center justify-center mt-8 w-full flex-1 min-h-[200px] z-10 bg-slate-50/40 rounded-[2rem] border-2 border-dashed border-indigo-200 cursor-text hover:bg-slate-50/80 transition-colors" onclick="document.getElementById('arcadeInput').focus()">
-
-        <div id="arcadeVisualText" class="text-4xl md:text-5xl font-black text-indigo-600 uppercase tracking-widest pointer-events-none select-none w-full text-center transition-all px-4 break-words">
-            <span class="text-gray-400 text-xl md:text-2xl lowercase tracking-normal font-bold">Ketik di sini...</span>
+    <div class="arcade-input-box" onclick="document.getElementById('arcadeInput').focus()">
+        <div id="arcadeVisualText" class="text-3xl md:text-4xl font-black text-indigo-600 uppercase tracking-wide pointer-events-none select-none w-full text-center transition-all px-4 break-words">
+            <span class="text-gray-400 text-base md:text-lg lowercase tracking-normal font-bold">Ketik jawabanmu di sini…</span>
         </div>
 
         <textarea id="arcadeInput"
-            class="absolute inset-0 w-full h-full opacity-0 z-20 resize-none outline-none text-transparent bg-transparent cursor-text"
+            class="arcade-textarea"
             autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none"></textarea>
 
         <div id="waterLeak" class="hidden"></div>
     </div>
-
-    <p class="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest text-center z-30 shrink-0">
-        Ketik jawaban lalu tekan <strong class="text-indigo-500">SPASI</strong> atau <strong class="text-indigo-500">ENTER</strong>
-    </p>
 </div>
 
 <style is:global>
+    /* Layout mode mengetik */
+    .arcade-wrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+
+    .arcade-question { background: #eef2ff; border: 1px solid #e0e7ff; border-radius: 1rem; padding: 16px; text-align: center; }
+    .arcade-question h2 { font-size: clamp(1rem, 2.6vw, 1.25rem); font-weight: 800; color: #312e81; line-height: 1.5; }
+
+    /* Satu baris label: penunjuk kotak + tombol "Cara mengisi" */
+    .arcade-blocks-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .arcade-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px; }
+    .arcade-help { display: inline-flex; align-items: center; gap: 5px; font-size: 0.66rem; font-weight: 800; color: #4f46e5; background: #eef2ff; border: 1px solid #e0e7ff; padding: 5px 10px; border-radius: 99px; cursor: pointer; transition: background 0.15s; }
+    .arcade-help:hover { background: #e0e7ff; }
+
+    .arcade-blocks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 48px; }
+
+    .arcade-input-box { position: relative; display: flex; align-items: center; justify-content: center; min-height: 116px; background: #f8fafc; border: 2px dashed #c7d2fe; border-radius: 1.25rem; cursor: text; transition: all 0.2s; padding: 14px; }
+    .arcade-input-box:focus-within { border-color: #6366f1; border-style: solid; background: #fff; box-shadow: 0 0 0 4px rgba(99,102,241,0.12); }
+    .arcade-textarea { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; resize: none; outline: none; color: transparent; background: transparent; cursor: text; }
+
     /* Animasi Error ketika jawaban salah */
     .animate-shake-error { animation: shakeError 0.4s ease-in-out; color: #ef4444 !important; }
     @keyframes shakeError { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
@@ -37,28 +55,29 @@
     .animate-pop-text { animation: popText 0.15s ease-out; }
     @keyframes popText { 0% { transform: scale(0.9); } 100% { transform: scale(1); } }
 
-    /* Style Target Blocks */
+    /* Style Target Blocks (kotak isian) */
     .target-block {
         background: #ffffff;
-        border: 3px dashed #cbd5e1;
-        border-radius: 1rem;
-        font-weight: 900;
-        font-size: 1.25rem;
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.75rem;
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: #94a3b8;
         transition: all 0.3s;
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        min-width: 80px;
-        min-height: 56px;
+        min-width: 64px;
+        min-height: 46px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 8px 20px;
+        padding: 6px 14px;
     }
+    .target-block:empty::before { content: '?'; opacity: 0.45; }
 
     .target-block.filled {
         background: #6366f1;
-        border: 3px solid #4f46e5;
+        border: 2px solid #4f46e5;
         color: white;
-        transform: scale(1.05);
-        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+        box-shadow: 0 8px 12px -3px rgba(99, 102, 241, 0.4);
     }
 </style>

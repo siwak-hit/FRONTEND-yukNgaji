@@ -1,0 +1,69 @@
+---
+/** Panel statistik siswa: tab Akademik (grafik + rata-rata + nilai lisan) & Kehadiran (donut + ringkas). */
+---
+<section class="card card-pad mb-6">
+  <div class="seg mb-4">
+    <button id="tabDashAkademik" class="seg-btn is-active">Akademik</button>
+    <button id="tabDashAbsensi" class="seg-btn">Kehadiran</button>
+  </div>
+
+  <div id="contentDashAkademik" class="block">
+    <div class="h-48 w-full mb-6">
+      <canvas id="progressChart"></canvas>
+    </div>
+
+    <p class="eyebrow mb-2">Rata-rata Tugas &amp; Ujian</p>
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <div onclick="openSubjectDetailDrawer('tajwid')" class="card card-interactive text-center p-2.5">
+        <p class="eyebrow" style="color: var(--accent-strong);">Tajwid</p>
+        <p id="avgTajwid" class="text-lg font-bold text-ink mt-0.5">-</p>
+      </div>
+      <div onclick="openSubjectDetailDrawer('fiqih')" class="card card-interactive text-center p-2.5">
+        <p class="eyebrow" style="color: var(--info);">Fiqih</p>
+        <p id="avgFiqih" class="text-lg font-bold text-ink mt-0.5">-</p>
+      </div>
+      <div onclick="openSubjectDetailDrawer('tauhid')" class="card card-interactive text-center p-2.5">
+        <p class="eyebrow" style="color: #8b5cf6;">Tauhid</p>
+        <p id="avgTauhid" class="text-lg font-bold text-ink mt-0.5">-</p>
+      </div>
+    </div>
+
+    <div class="rounded-[var(--r-lg)] p-3" style="background-color: var(--surface-sunken);">
+      <div class="flex items-center justify-between mb-2">
+        <p class="eyebrow">Nilai Hafalan / Lisan</p>
+        <i class="fa-solid fa-microphone-lines text-tertiary"></i>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="card p-2">
+          <p class="text-[9px] font-semibold text-tertiary uppercase">Tajwid</p>
+          <p id="oralTajwidScore" class="text-sm font-bold text-ink">-</p>
+        </div>
+        <div class="card p-2">
+          <p class="text-[9px] font-semibold text-tertiary uppercase">Fiqih</p>
+          <p id="oralFiqihScore" class="text-sm font-bold text-ink">-</p>
+        </div>
+        <div class="card p-2">
+          <p class="text-[9px] font-semibold text-tertiary uppercase">Tauhid</p>
+          <p id="oralTauhidScore" class="text-sm font-bold text-ink">-</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="contentDashAbsensi" class="hidden">
+    <div class="flex items-center gap-4 mb-5">
+      <div class="h-32 w-32 relative flex-shrink-0">
+        <canvas id="attendanceChart"></canvas>
+      </div>
+      <div class="flex-1 space-y-2">
+        <div class="flex justify-between items-center rounded-[var(--r-md)] px-3 py-2" style="background-color: var(--surface-sunken);"><span class="text-[10px] font-semibold text-secondary uppercase">Hadir</span><span id="statHadir" class="caption font-bold" style="color: var(--accent-strong);">0</span></div>
+        <div class="flex justify-between items-center rounded-[var(--r-md)] px-3 py-2" style="background-color: var(--surface-sunken);"><span class="text-[10px] font-semibold text-secondary uppercase">Izin/Sakit</span><span id="statIzin" class="caption font-bold" style="color: var(--warning);">0</span></div>
+        <div class="flex justify-between items-center rounded-[var(--r-md)] px-3 py-2" style="background-color: var(--surface-sunken);"><span class="text-[10px] font-semibold text-secondary uppercase">Alpa</span><span id="statAlpa" class="caption font-bold" style="color: var(--danger);">0</span></div>
+      </div>
+    </div>
+    <div class="rounded-[var(--r-lg)] p-3 text-center" style="background-color: var(--info-soft);">
+      <p class="eyebrow mb-1" style="color: var(--info);">Performa Kedisiplinan</p>
+      <p id="statPerformance" class="caption font-bold" style="color: var(--info);">Memuat...</p>
+    </div>
+  </div>
+</section>

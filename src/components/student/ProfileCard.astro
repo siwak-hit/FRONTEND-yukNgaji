@@ -1,0 +1,81 @@
+---
+/**
+ * Kartu profil siswa: avatar, nama, kelas, + satu menu aksi tergabung
+ * (Dompet Poin, Status Kaleng, Cetak Raport, Edit Hafalan, Murojaah, Reset).
+ * Dua chip info di bawah: status Hari Ini & Hafalan.
+ */
+---
+<section class="card card-pad mb-6">
+  <div class="flex items-center gap-3 mb-5 relative">
+    <div id="studentInitial" class="avatar w-14 h-14 text-xl flex-shrink-0">--</div>
+    <div class="flex-1 min-w-0">
+      <h2 id="studentName" class="text-lg font-bold text-ink truncate" style="letter-spacing: var(--tracking-snug);">Memuat...</h2>
+      <p id="studentGrade" class="eyebrow mt-0.5">--</p>
+    </div>
+
+    <div class="relative flex-shrink-0">
+      <button onclick="toggleQuickActions()" id="btnQuickActions" class="btn-icon relative" aria-label="Aksi lainnya">
+        <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+        <span id="studentTotalPointsBadge" class="absolute -top-1.5 -right-1.5 badge badge-warning !px-1.5 !py-0 text-[9px] font-bold">0</span>
+      </button>
+
+      <div id="dropdownQuickActions" class="hidden absolute right-0 top-full mt-2 card w-60 z-[60] overflow-hidden" style="box-shadow: var(--shadow-pop);">
+        <div class="p-2 space-y-0.5">
+          <button onclick="openPointHistory(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--warning-soft); color: var(--warning);"><i class="fa-solid fa-wallet"></i></div>
+            <div class="flex-1 min-w-0">
+              <p class="caption font-semibold text-ink">Dompet Poin</p>
+              <p class="text-[10px] font-semibold" style="color: var(--warning);"><span id="studentTotalPointsText">0</span> Poin</p>
+            </div>
+          </button>
+          <button onclick="toggleInfaqCan(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--surface-sunken); color: var(--ink-secondary);"><i class="fa-solid fa-jar"></i></div>
+            <div class="flex-1 min-w-0">
+              <p class="caption font-semibold text-ink">Status Kaleng</p>
+              <p id="kalengStatusText" class="text-[10px] font-semibold text-tertiary uppercase tracking-tighter">Memuat...</p>
+            </div>
+          </button>
+          <button onclick="openRaportModal(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--accent-soft); color: var(--accent-strong);"><i class="fa-solid fa-file-pdf"></i></div>
+            <div class="flex-1 min-w-0">
+              <p class="caption font-semibold text-ink">Cetak Raport</p>
+              <p class="text-[10px] text-tertiary">PDF Document</p>
+            </div>
+          </button>
+
+          <div class="h-px my-1 mx-2" style="background-color: var(--divider);"></div>
+
+          <button onclick="openEditCheckpointModal(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--info-soft); color: var(--info);"><i class="fa-solid fa-pen"></i></div>
+            <p class="caption font-semibold text-ink flex-1">Edit Hafalan</p>
+          </button>
+          <button onclick="openMurojaahDrawer(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--info-soft); color: var(--info);"><i class="fa-solid fa-rotate-left"></i></div>
+            <p class="caption font-semibold text-ink flex-1">Mode Murojaah</p>
+          </button>
+          <button onclick="confirmResetHafalan(); toggleQuickActions();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--danger-soft)] transition-colors">
+            <div class="icon-chip-sm" style="background-color: var(--danger-soft); color: var(--danger);"><i class="fa-solid fa-trash-can"></i></div>
+            <p class="caption font-semibold flex-1" style="color: var(--danger);">Reset Hafalan</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dua chip info ringkas -->
+  <div class="grid grid-cols-2 gap-3">
+    <a href="/absensi" id="badgeTodayStatus" class="card card-interactive flex flex-col items-center justify-center p-3 gap-1.5" style="background-color: var(--pearl);">
+      <span class="eyebrow">Hari Ini</span>
+      <div id="todayStatusUI" class="flex items-center gap-1.5 caption font-semibold text-secondary text-center">
+        <i class="fa-solid fa-spinner fa-spin"></i> Cek...
+      </div>
+    </a>
+
+    <button onclick="openHafalanModal()" id="badgeHafalan" class="card card-interactive flex flex-col items-center justify-center p-3 gap-1.5" style="background-color: var(--accent-soft); border-color: transparent;">
+      <span class="eyebrow" style="color: var(--accent-strong);">Setor Hafalan</span>
+      <div id="hafalanBadgeUI" class="caption font-bold text-center" style="color: var(--accent-strong);">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+      </div>
+    </button>
+  </div>
+</section>

@@ -1,0 +1,44 @@
+---
+/** Top bar halaman detail siswa: tombol kembali, judul, & navigator pindah-siswa. */
+---
+<header class="mb-6">
+  <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="/students" class="btn-icon flex-shrink-0" aria-label="Kembali">
+        <i class="fa-solid fa-chevron-left"></i>
+      </a>
+      <div class="min-w-0">
+        <p class="eyebrow">Detail Anak</p>
+        <h1 class="page-title truncate">Perkembangan</h1>
+      </div>
+    </div>
+    <button id="btnToggleNav" onclick="toggleStudentNav()" class="btn-icon flex-shrink-0" title="Ganti siswa" aria-label="Ganti siswa">
+      <i class="fa-solid fa-users-between-lines text-sm"></i>
+    </button>
+  </div>
+
+  <!-- Navigator pindah siswa (collapsible) -->
+  <div id="studentNavPanel" class="overflow-hidden transition-all duration-300 ease-in-out" style="max-height: 0; opacity: 0; margin-top: 0;">
+    <div class="pt-4 pb-1">
+      <div class="flex items-center justify-between mb-2.5 px-0.5">
+        <span class="eyebrow"><i class="fa-solid fa-users mr-1"></i> Pindah Siswa</span>
+        <span id="studentNavCounter" class="badge badge-neutral tabular-nums">- / -</span>
+      </div>
+
+      <div class="relative mb-2.5">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-tertiary text-sm pointer-events-none"></i>
+        <input type="text" id="studentSearchInput" placeholder="Cari nama siswa..." autocomplete="off" class="field field-search font-medium" />
+        <div id="studentSearchDropdown" class="hidden absolute top-[110%] left-0 right-0 card z-50 overflow-hidden max-h-52 overflow-y-auto no-scrollbar" style="box-shadow: var(--shadow-pop);"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button id="btnPrevStudent" onclick="navigateStudent(-1)" class="btn btn-secondary !py-2.5 text-sm disabled:opacity-40">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i> Sebelumnya
+        </button>
+        <button id="btnNextStudent" onclick="navigateStudent(1)" class="btn btn-secondary !py-2.5 text-sm disabled:opacity-40">
+          Selanjutnya <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
