@@ -140,6 +140,20 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <!-- [2.2] MODAL: kirim link lanjutan ke murid setelah dispensasi diberikan -->
+    <div id="modalSendLink" class="fixed inset-0 bg-black/70 z-[230] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[var(--r-xl)] p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center text-3xl" style="background-color: var(--accent-soft); color: var(--accent-strong);">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <h3 class="section-title mb-1">Kirim Link ke Murid</h3>
+            <p class="caption mb-3">Dispensasi untuk <b id="sendLinkName" class="text-ink capitalize">murid</b> berhasil diberikan. Sekarang <b>kirim link lanjutan ini</b> ke murid tersebut (lewat WA/chat). Murid akan lanjut dari soal terakhirnya, bukan mengulang.</p>
+            <div class="rounded-[var(--r-md)] p-3 mb-3 text-left break-all text-[11px] font-mono" style="background-color: var(--surface-sunken); color: var(--ink);" id="sendLinkUrl">—</div>
+            <button onclick="copySendLink()" class="btn btn-primary w-full mb-2"><i class="fa-solid fa-copy"></i> Salin Link Lagi</button>
+            <button onclick="document.getElementById('modalSendLink').classList.replace('flex','hidden')" class="btn w-full text-secondary">Selesai</button>
+        </div>
+    </div>
+
     <!-- [BARU] MODAL PR TERLAMBAT (DEADLINE HABIS) + FORM MINTA PERPANJANGAN -->
     <div id="modalPRLate" class="fixed inset-0 bg-black/80 z-[200] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl transform scale-95 transition-transform duration-300 relative overflow-hidden p-6 border-4 border-amber-400" id="modalPRLateBox">
@@ -374,10 +388,10 @@ import Toast from '../../components/Toast.astro';
                         <p class="caption text-ink">${reason}</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="openGrantExt('${r.id}', true, '${(r.student_name||'').replace(/'/g,"\\'")}')" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
+                        <button onclick="openGrantExt('${r.id}', true, '${(r.student_name||'').replace(/'/g,"\\'")}', '${r.student_id}', '${r.subject}', ${r.week})" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
                             <i class="fa-solid fa-scissors"></i> Perpanjang + Potong
                         </button>
-                        <button onclick="openGrantExt('${r.id}', false, '${(r.student_name||'').replace(/'/g,"\\'")}')" class="btn btn-primary w-full text-xs !py-2.5">
+                        <button onclick="openGrantExt('${r.id}', false, '${(r.student_name||'').replace(/'/g,"\\'")}', '${r.student_id}', '${r.subject}', ${r.week})" class="btn btn-primary w-full text-xs !py-2.5">
                             <i class="fa-solid fa-check"></i> Perpanjang Saja
                         </button>
                     </div>
@@ -392,10 +406,10 @@ import Toast from '../../components/Toast.astro';
         panel.classList.remove('hidden');
     };
 
-    let grantTarget = { id: null, penalty: false };
+    let grantTarget = { id: null, penalty: false, student_id: null, subject: null, week: null, name: null };
 
-    window.openGrantExt = (requestId, withPenalty, studentName) => {
-        grantTarget = { id: requestId, penalty: withPenalty };
+    window.openGrantExt = (requestId, withPenalty, studentName, studentId, subject, week) => {
+        grantTarget = { id: requestId, penalty: withPenalty, student_id: studentId, subject, week, name: studentName };
         document.getElementById('grantExtSub').innerHTML = `untuk <b class="text-ink capitalize">${studentName || 'siswa'}</b>`;
         const note = document.getElementById('grantExtPenaltyNote');
         if (withPenalty) {
@@ -411,6 +425,13 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.closeGrantExt = () => document.getElementById('modalGrantExt').classList.replace('flex', 'hidden');
+
+    window.copySendLink = async () => {
+        const url = window.lastResumeLink || '';
+        if (!url) return;
+        try { await navigator.clipboard.writeText(url); window.showToast?.('success', 'Disalin', 'Link lanjutan disalin lagi.'); }
+        catch (e) { prompt('Salin link lanjutan:', url); }
+    };
 
     const buildUntil = (dur) => {
         const d = new Date();
@@ -433,10 +454,29 @@ import Toast from '../../components/Toast.astro';
                     body: JSON.stringify({ request_id: grantTarget.id, extension_until: until, with_penalty: grantTarget.penalty })
                 });
                 if (!res.ok) throw new Error('Gagal');
-                window.showToast?.('success', 'Dispensasi Diberikan', grantTarget.penalty ? 'Waktu diperpanjang (nilai dipotong 10%).' : 'Waktu diperpanjang tanpa potongan nilai.');
+
+                // [2.2] Buatkan link lanjutan untuk si murid (reset waktu, lanjut dari checkpoint
+                // terakhir, soal tidak diacak ulang) lalu salin ke clipboard guru biar tinggal kirim.
+                let resumeUrl = '';
+                if (grantTarget.student_id && grantTarget.subject && grantTarget.week != null) {
+                    const baseUrl = window.location.origin;
+                    resumeUrl = `${baseUrl}/consultations/fill?id=${grantTarget.student_id}&subject=${grantTarget.subject}&week=${grantTarget.week}&pr=true&pr_token=${token}&reset_waktu=true`;
+                    try { await navigator.clipboard.writeText(resumeUrl); } catch (err) {}
+                }
+                window.lastResumeLink = resumeUrl;
+
+                window.showToast?.('success', 'Dispensasi Diberikan',
+                    grantTarget.penalty ? 'Waktu diperpanjang (nilai dipotong 10%).' : 'Waktu diperpanjang tanpa potongan.');
                 extRequests = extRequests.filter(r => r.id !== grantTarget.id);
                 renderExtensionRequests();
                 closeGrantExt();
+
+                // [2.2] Ingatkan guru untuk MENGIRIM link lanjutan ke murid yang minta.
+                if (resumeUrl) {
+                    document.getElementById('sendLinkName').textContent = grantTarget.name || 'murid';
+                    document.getElementById('sendLinkUrl').textContent = resumeUrl;
+                    document.getElementById('modalSendLink').classList.replace('hidden', 'flex');
+                }
             } catch (e) {
                 window.showToast?.('danger', 'Error', 'Gagal memberi dispensasi. Coba lagi.');
             } finally {
@@ -714,8 +754,16 @@ import Toast from '../../components/Toast.astro';
             try {
                 // Fetch detail PR lock dari backend
                 const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${STATE.subject}&week=${STATE.week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+
+                // [FIX] Cek dulu apakah responnya sehat sebelum di-parse JSON.
+                // Kalau server balikin 500/HTML, res.json() bakal throw dan bikin
+                // murid kena fail-closed terus padahal cuma error sesaat.
+                if (!res.ok) {
+                    throw new Error(`Server membalas status ${res.status}`);
+                }
+
                 const prDetail = await res.json();
-                
+
                 const prData = Array.isArray(prDetail.data) ? prDetail.data[0] : prDetail.data;
 
                 if (prData) {

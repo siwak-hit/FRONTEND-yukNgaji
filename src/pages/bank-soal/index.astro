@@ -999,10 +999,16 @@ import ModalAlert from '../../components/ModalAlert.astro';
             // [BARU] 2. Ambil detail deadline_at dari DB untuk pre-fill Dropdown
             let deadlineDays = 1; // Default: Besok
             let deadlineTime = "23:59"; // Default: Tengah malam
+            let durationMinutes = ""; // [2.1] kosong = pakai default (1:45 / 3:00)
             try {
                 const resDetail = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const detailData = await resDetail.json();
-                
+
+                // [2.1] Pre-fill durasi manual (detik -> menit) kalau guru pernah set
+                if (detailData.data && detailData.data.duration_seconds) {
+                    durationMinutes = (detailData.data.duration_seconds / 60).toString();
+                }
+
                 if (detailData.data && detailData.data.deadline_at) {
                     // 'new Date' akan otomatis mengonversi UTC dari DB ke waktu lokal browser (WIB)
                     const dbDeadline = new Date(detailData.data.deadline_at);
@@ -1076,8 +1082,19 @@ import ModalAlert from '../../components/ModalAlert.astro';
                                     </select>
                                 </div>
                                 <button onclick="savePRDeadline('${subject}', ${week})" class="w-full py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold rounded-lg transition-all text-[10px]">
-                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Deadline
+                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Deadline & Durasi
                                 </button>
+                            </div>
+
+                            <!-- [2.1] Durasi pengerjaan manual per tugas -->
+                            <div class="bg-white p-2 rounded-lg border border-indigo-100">
+                                <label class="text-[10px] font-black text-indigo-800 uppercase tracking-widest block mb-2 px-1">
+                                    <i class="fa-solid fa-stopwatch mr-1"></i> Durasi Pengerjaan (menit)
+                                </label>
+                                <input id="prDuration-${week}-${subject}" type="number" min="0.5" step="0.25" value="${durationMinutes}"
+                                    placeholder="Kosongkan = otomatis (1:45 / 3:00)"
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-[11px] font-bold text-gray-700 outline-none focus:border-indigo-400">
+                                <p class="text-[9px] text-gray-400 mt-1 px-1 leading-tight">Contoh: 2 = 2 menit. Kosong = default sistem.</p>
                             </div>
                             <button onclick="openExtensionModal('${subject}', ${week})" class="w-full py-2.5 bg-white border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 font-bold rounded-lg active:scale-95 transition-all text-[10px] flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-user-clock"></i> Beri Dispensasi (Telat)
@@ -1094,6 +1111,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.savePRDeadline = async (subject, week) => {
         const daysToAdd = parseInt(document.getElementById(`deadlineDays-${week}-${subject}`).value);
         const timeString = document.getElementById(`deadlineTime-${week}-${subject}`).value;
+
+        // [2.1] Baca durasi manual (menit). Kosong = kirim null biar pakai default.
+        const durEl = document.getElementById(`prDuration-${week}-${subject}`);
+        const durRaw = durEl ? durEl.value.trim() : '';
+        const durationMinutes = durRaw === '' ? null : parseFloat(durRaw);
 
         const [hours, minutes] = timeString.split(':');
         const deadlineDate = new Date();
@@ -1114,12 +1136,14 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     subject: subject,
                     week: week,
                     is_locked: true,
-                    deadline_at: formattedDeadline // Kirim string dengan timezone +07
+                    deadline_at: formattedDeadline, // Kirim string dengan timezone +07
+                    duration_minutes: durationMinutes // [2.1] null = pakai default sistem
                 })
             });
 
             if (res.ok) {
-                window.showToast?.('success', 'Deadline Disimpan!', `Batas pengerjaan: ${hours}:${minutes} WIB`);
+                const durMsg = durationMinutes ? ` • Durasi: ${durationMinutes} mnt` : ' • Durasi: otomatis';
+                window.showToast?.('success', 'Tersimpan!', `Batas: ${hours}:${minutes} WIB${durMsg}`);
             }
         } catch (error) {
             window.showToast?.('danger', 'Error', 'Gagal menyimpan deadline.');

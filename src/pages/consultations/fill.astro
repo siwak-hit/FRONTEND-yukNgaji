@@ -382,7 +382,7 @@ import Mascot from '../../components/Mascot.astro';
             <div class="space-y-2 mb-6">
                 <div id="buyTimeContainer" class="space-y-2"></div>
             </div>
-            <button onclick="document.getElementById('modalBuyTime').classList.replace('flex', 'hidden')" class="w-full py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
+            <button onclick="cancelBuyTime()" class="w-full py-3.5 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-sm">Batal</button>
         </div>
     </div>
 
@@ -535,6 +535,22 @@ import Mascot from '../../components/Mascot.astro';
                     </div>
                 </div>
 
+                <!-- [2.6] Kartu Pengurangan Nilai (Telat) + Nasihat -->
+                <div class="bg-red-50 rounded-3xl p-4 border border-red-200 shadow-sm relative z-10 hidden text-left" id="resultPenaltyContainer">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm">⚠️</span>
+                        <p class="text-[9px] font-black text-red-500 uppercase tracking-widest">Pengurangan Nilai (Telat)</p>
+                    </div>
+                    <p class="text-xs font-bold text-red-800 leading-relaxed">
+                        Karena kamu telat, nilaimu dipotong <span id="penaltyPercent" class="text-red-600">10</span>%.
+                        Nilai asli <b id="penaltyRaw">0</b> → jadi <b id="penaltyFinal">0</b>
+                        <span class="block mt-0.5 text-[11px] text-red-500">(berkurang <b id="penaltyDeducted">0</b> poin)</span>
+                    </p>
+                    <p class="text-[11px] font-semibold text-gray-500 mt-2 pt-2 border-t border-red-100 leading-relaxed">
+                        💡 <span id="penaltyAdvice">Lain kali kerjakan lebih awal ya. Mengatur waktu adalah bagian dari tanggung jawab. Semangat!</span>
+                    </p>
+                </div>
+
                 <!-- Kartu Koin -->
                 <div class="bg-amber-50 rounded-3xl p-4 border border-amber-200 shadow-sm relative z-10 hidden" id="resultCoinContainer">
                     <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Koin Reward Didapat</p>
@@ -601,6 +617,49 @@ import Mascot from '../../components/Mascot.astro';
                     Nanti Saja
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- [2.3] Modal Konfirmasi Waktu Habis: beli waktu (koin) atau minta gratis ke guru -->
+    <div id="modalTimeUp" class="fixed inset-0 bg-black/80 z-[320] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
+        <div id="modalTimeUpBox" class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-6 transform scale-95 transition-transform duration-300 border-4 border-rose-400 text-center">
+            <div class="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg">
+                <i class="fa-solid fa-hourglass-end"></i>
+            </div>
+            <h2 class="text-xl font-black text-gray-800 mb-1">Waktu Kamu Sudah Habis!</h2>
+            <p class="text-xs text-gray-500 font-bold leading-relaxed mb-2">
+                Tenang, kamu masih punya kesempatan untuk <b>menambah waktu</b> dan melanjutkan dari soal terakhir.
+            </p>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-5">
+                <p class="text-[11px] font-bold text-amber-700">💰 Koinmu: <span id="timeUpWallet">0</span></p>
+            </div>
+
+            <div class="space-y-2.5">
+                <button onclick="timeUpBuy()" class="w-full py-4 bg-teal-500 hover:bg-teal-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Beli Waktu (Instan, pakai Koin)
+                </button>
+                <button id="btnTimeUpAsk" onclick="timeUpAskTeacher()" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-hand-holding-heart"></i> Minta Gratis ke Guru
+                </button>
+                <p class="text-[10px] text-gray-400 font-bold leading-snug px-2">Catatan: permohonan gratis ke guru hanya bisa dilakukan <b>satu kali</b>. Pilih dengan bijak ya.</p>
+                <button onclick="timeUpSkip()" class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-xs">
+                    Tidak, Kumpulkan Apa Adanya
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [2.7] Modal Info Terkunci: kesempatan sudah dipakai / sedang menunggu guru -->
+    <div id="modalInfoLocked" class="fixed inset-0 bg-black/85 z-[330] hidden items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300 opacity-0">
+        <div id="modalInfoLockedBox" class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-7 transform scale-95 transition-transform duration-300 text-center border-4 border-gray-300">
+            <div id="infoLockedIcon" class="w-20 h-20 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 id="infoLockedTitle" class="text-xl font-black text-gray-800 mb-2">Kesempatan Sudah Habis</h2>
+            <p id="infoLockedMsg" class="text-xs text-gray-500 font-bold leading-relaxed mb-6">
+                Kamu sudah pernah diberi perpanjangan waktu tapi belum sempat mengerjakannya. Maaf, kesempatan tidak bisa dipakai lagi. Hubungi Kak Aziz langsung ya.
+            </p>
+            <button onclick="closeInfoLocked()" class="w-full py-4 bg-gray-800 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest">Oke, Mengerti</button>
         </div>
     </div>
 
@@ -715,10 +774,11 @@ import Mascot from '../../components/Mascot.astro';
     const ansKey = `ans_${studentId}_${subject}_${week}`;
     const qKey = `qs_${studentId}_${subject}_${week}`;
     const psychKey = `psych_${studentId}_${subject}_${week}`;
+    const idxKey = `idx_${studentId}_${subject}_${week}`; // [checkpoint] posisi soal terakhir
 
     // Reset Full (Bawaan Lama)
     if (urlParams.get('reset') === 'true') {
-        localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
+        localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey); localStorage.removeItem(idxKey);
         window.location.replace(window.location.pathname + `?id=${studentId}&subject=${subject}&week=${week}${isPRMode ? '&pr=true' : ''}`);
     }
 
@@ -736,7 +796,10 @@ import Mascot from '../../components/Mascot.astro';
     let secretTapCount = 0;
     let secretTapTimer = null;
     let questions = [];
-    let timeLeft = parsedWeek === 1 ? 105 : 180;
+    // [2.1] Durasi default sistem. Bisa ditimpa durasi manual dari guru (pr_locks.duration_seconds).
+    const DEFAULT_DURATION = parsedWeek === 1 ? 105 : 180;
+    let totalDurationSeconds = DEFAULT_DURATION; // sumber tunggal durasi untuk ring & reset
+    let timeLeft = totalDurationSeconds;
     let finalTimeTaken = 0;
     let timerInterval = null;
     let selfieFileToUpload = null;
@@ -995,11 +1058,35 @@ import Mascot from '../../components/Mascot.astro';
         bullyFadedEls = [];
     };
 
+    // =======================================================
+    // [2.4] PAUSE/RESUME TIMER (dipakai saat anak lagi dibully)
+    // Timer dihitung dari end-timestamp di localStorage. Saat di-pause,
+    // hitungan mundur dibekukan; saat resume, end-time digeser maju sebanyak
+    // durasi pause supaya sisa waktu tidak berkurang selama dibully.
+    // =======================================================
+    let isTimerPaused = false;
+    let pauseStartedAt = 0;
+    window.pauseTimerForBully = () => {
+        if (isTimerPaused) return;
+        isTimerPaused = true;
+        pauseStartedAt = Date.now();
+    };
+    window.resumeTimerForBully = () => {
+        if (!isTimerPaused) return;
+        const pausedMs = Date.now() - pauseStartedAt;
+        const end = parseInt(localStorage.getItem(timeKey));
+        if (!isNaN(end)) localStorage.setItem(timeKey, end + pausedMs);
+        isTimerPaused = false;
+    };
+
     window.playBullyAnimation = async (attackerName) => {
         if (window.isBullyAnimationRunning) return;
         window.isBullyAnimationRunning = true;
         isBullyAnimationRunning = true;
         bullyAttackerName = attackerName || 'Seseorang';
+
+        // [2.4] Bekukan timer selama anak dibully biar gak rugi waktu.
+        window.pauseTimerForBully();
 
         const overlay = document.getElementById('bullyOverlay');
         const char = document.getElementById('bullyChar');
@@ -1163,6 +1250,9 @@ import Mascot from '../../components/Mascot.astro';
         char.style.opacity = '1';
         isBullyAnimationRunning = false;
         window.isBullyAnimationRunning = false;
+
+        // [2.4] Bully selesai → lanjutkan timer (sisa waktu tetap utuh).
+        window.resumeTimerForBully();
     };
 
     window.triggerCallFriend = async () => {
@@ -1365,6 +1455,28 @@ import Mascot from '../../components/Mascot.astro';
                     };
                     window.isShieldActive = student.data.is_shield_active || false;
                     if (student.data.has_claimed_bonus) hasClaimedBonusGlobal = true;
+                }
+            }
+
+            // [Gap 1: ganti device] Kalau di HP/browser ini belum ada checkpoint lokal,
+            // ambil dari server lalu tanam ke localStorage. Setelah ini alur normal di bawah
+            // (baca qKey/ansKey/idxKey/timeKey) otomatis melanjutkan dari checkpoint terakhir.
+            if (!isPreview) {
+                const hasLocal = localStorage.getItem(qKey) || localStorage.getItem(ansKey) || localStorage.getItem(timeKey);
+                if (!hasLocal) {
+                    try {
+                        const dRes = await fetchWithTimeout(`${API_URL}/api/onboarding/pr-draft?student_id=${studentId}&subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                        if (dRes.ok) {
+                            const draft = (await dRes.json()).data;
+                            if (draft && Array.isArray(draft.question_ids) && draft.question_ids.length) {
+                                localStorage.setItem(qKey, JSON.stringify(draft.question_ids));
+                                if (draft.answers) localStorage.setItem(ansKey, JSON.stringify(draft.answers));
+                                if (draft.current_index != null) localStorage.setItem(idxKey, String(draft.current_index));
+                                if (draft.session_end) localStorage.setItem(timeKey, String(new Date(draft.session_end).getTime()));
+                                window.showToast?.('info', 'Melanjutkan Tugas', 'Progres dari perangkat sebelumnya berhasil dimuat. Lanjut ya!');
+                            }
+                        }
+                    } catch(e) { console.log('Gagal ambil checkpoint server', e); }
                 }
             }
 
@@ -1577,9 +1689,14 @@ import Mascot from '../../components/Mascot.astro';
     const setupAcademicPagination = () => {
         const slides = _acadSlides();
         slides.forEach(b => b.classList.add('q-slide'));
-        acadIndex = 0;
+        // [checkpoint] Lanjut dari soal terakhir (mis. nomor 5), bukan ulang dari awal.
+        const savedIdx = parseInt(localStorage.getItem(idxKey));
+        acadIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < slides.length) ? savedIdx : 0;
         renderAcadView();
     };
+
+    // [checkpoint] Simpan posisi soal terakhir tiap pindah soal.
+    const persistAcadIndex = () => { try { localStorage.setItem(idxKey, String(acadIndex)); } catch (e) {} window.syncDraftToServer?.(); };
 
     const renderAcadView = () => {
         const slides = _acadSlides();
@@ -1597,9 +1714,9 @@ import Mascot from '../../components/Mascot.astro';
             <button onclick="acadNext()" class="btn-icon" ${acadIndex === slides.length - 1 ? 'disabled' : ''} aria-label="Berikutnya"><i class="fa-solid fa-chevron-right"></i></button>`;
     };
 
-    window.acadGoto = (i) => { if (academicLocked) return; acadIndex = parseInt(i) || 0; renderAcadView(); };
-    window.acadPrev = () => { if (acadIndex > 0) { acadIndex--; renderAcadView(); } };
-    window.acadNext = () => { const n = _acadSlides().length; if (acadIndex < n - 1) { acadIndex++; renderAcadView(); } };
+    window.acadGoto = (i) => { if (academicLocked) return; acadIndex = parseInt(i) || 0; renderAcadView(); persistAcadIndex(); };
+    window.acadPrev = () => { if (acadIndex > 0) { acadIndex--; renderAcadView(); persistAcadIndex(); } };
+    window.acadNext = () => { const n = _acadSlides().length; if (acadIndex < n - 1) { acadIndex++; renderAcadView(); persistAcadIndex(); } };
 
     window.toggleAcademicAccordion = () => {
         const body = document.getElementById('academicBody');
@@ -1781,8 +1898,30 @@ import Mascot from '../../components/Mascot.astro';
         };
         localStorage.setItem(ansKey, JSON.stringify({ answers, psych }));
         validate();
+        syncDraftToServer(); // [Gap 1] dorong checkpoint ke server (debounced)
     };
     const executeAutoSave = debounce(_saveDraftAnswers, 500);
+
+    // [Gap 1: ganti device] Kirim checkpoint terakhir ke server (debounce) supaya bisa
+    // dilanjutkan dari perangkat lain. Hanya mode PR asli (bukan preview).
+    const _syncDraftToServer = () => {
+        if (isPreview || !isPRMode) return;
+        let qids = [];
+        try { qids = JSON.parse(localStorage.getItem(qKey)) || []; } catch (e) {}
+        if (!qids.length) return; // belum mulai ngerjain, tidak ada yang disimpan
+        let answers = null;
+        try { answers = JSON.parse(localStorage.getItem(ansKey)); } catch (e) {}
+        const idx = parseInt(localStorage.getItem(idxKey)) || 0;
+        const endMs = parseInt(localStorage.getItem(timeKey));
+        const session_end = !isNaN(endMs) ? new Date(endMs).toISOString() : null;
+        fetch(`${API_URL}/api/onboarding/pr-draft`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, subject, week, question_ids: qids, answers: answers || {}, current_index: idx, session_end })
+        }).catch(() => {});
+    };
+    const syncDraftToServer = debounce(_syncDraftToServer, 1500);
+    window.syncDraftToServer = syncDraftToServer;
 
     const restoreDraftAnswers = () => {
         const saved = JSON.parse(localStorage.getItem(ansKey));
@@ -1845,8 +1984,96 @@ import Mascot from '../../components/Mascot.astro';
         validate();
     };
 
+    // [2.3] Buka kembali bagian akademik setelah dapat tambahan waktu (kebalikan disableAcademicSection).
+    const reopenAcademicSection = () => {
+        academicLocked = false;
+        const ql = document.getElementById('questionsList');
+        if (ql) ql.classList.remove('pointer-events-none', 'opacity-60');
+        document.getElementById('academicHeaderLive')?.classList.remove('hidden');
+        document.getElementById('academicNav')?.classList.remove('hidden');
+        document.getElementById('btnEarlyFinish')?.classList.remove('hidden');
+        document.getElementById('academicBody')?.classList.remove('hidden');
+        document.getElementById('academicAccordionHeader')?.classList.add('hidden');
+    };
+
+    // [2.3] Saat waktu habis: tawarkan modal (beli/minta) dulu di mode PR; kalau preview
+    // atau bukan PR, langsung kunci seperti biasa.
+    window.timeUpModalOpen = false;
+    const handleTimeUp = () => {
+        if (academicLocked || window.timeUpModalOpen) return;
+        if (isPreview || !isPRMode) { disableAcademicSection('timeup'); return; }
+        showTimeUpModal();
+    };
+
+    const showTimeUpModal = () => {
+        const modal = document.getElementById('modalTimeUp');
+        const box = document.getElementById('modalTimeUpBox');
+        if (!modal) { disableAcademicSection('timeup'); return; }
+        window.timeUpModalOpen = true;
+        document.getElementById('timeUpWallet').innerText = studentWallet;
+        // Kalau permohonan gratis sudah pernah dipakai, matikan tombolnya.
+        const askBtn = document.getElementById('btnTimeUpAsk');
+        if (askBtn && window.extRequestAlreadyMade) {
+            askBtn.disabled = true;
+            askBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            askBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Permohonan Sudah Dipakai';
+        }
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); box.classList.replace('scale-95', 'scale-100'); }, 10);
+    };
+
+    const hideTimeUpModal = () => {
+        const modal = document.getElementById('modalTimeUp');
+        const box = document.getElementById('modalTimeUpBox');
+        window.timeUpModalOpen = false;
+        if (!modal) return;
+        modal.classList.replace('opacity-100', 'opacity-0');
+        box.classList.replace('scale-100', 'scale-95');
+        setTimeout(() => modal.classList.replace('flex', 'hidden'), 200);
+    };
+
+    // Beli waktu instan pakai koin → buka modal pilihan menit yang sudah ada.
+    window.timeUpBuy = () => {
+        hideTimeUpModal();
+        if (typeof handleShopClick === 'function') handleShopClick('item_tambah_waktu');
+    };
+
+    // Minta gratis ke guru (kind = extra_time). Hanya sekali (dijaga server + cek client).
+    window.timeUpAskTeacher = () => {
+        if (window.extRequestAlreadyMade) {
+            window.showToast?.('warning', 'Sudah Dipakai', 'Kamu sudah pernah mengajukan permohonan untuk tugas ini.');
+            return;
+        }
+        hideTimeUpModal();
+        window.extReqKind = 'extra_time';
+        openExtReq('Waktumu habis. Tulis alasanmu untuk minta tambahan waktu ke Kak Aziz. Ingat, permohonan hanya bisa sekali ya!');
+    };
+
+    window.timeUpSkip = () => {
+        hideTimeUpModal();
+        disableAcademicSection('timeup');
+    };
+
+    // [2.3] Tutup modal beli waktu. Kalau waktu sudah habis & belum beli, tawarkan lagi
+    // modal "waktu habis" supaya murid tidak terjebak tanpa timer/tanpa keputusan.
+    window.cancelBuyTime = () => {
+        document.getElementById('modalBuyTime')?.classList.replace('flex', 'hidden');
+        if (timeLeft <= 0 && !academicLocked && isPRMode && !isPreview) {
+            showTimeUpModal();
+        }
+    };
+
+    // [2.3] Dipanggil setelah tambahan waktu berhasil masuk: lanjutkan pengerjaan.
+    window.afterTimeAdded = () => {
+        hideTimeUpModal();
+        if (academicLocked) reopenAcademicSection();
+        if (timeLeft > 0) startCountdown();
+        updateTimerUI();
+        window.syncDraftToServer?.(); // [Gap 1] simpan waktu baru ke server
+    };
+
     const updateTimerUI = () => {
-        if (timeLeft <= 0 && isQuizStarted && !isEvaluatingExtraLife) disableAcademicSection();
+        if (timeLeft <= 0 && isQuizStarted && !isEvaluatingExtraLife) handleTimeUp();
 
         const m = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
@@ -1854,7 +2081,7 @@ import Mascot from '../../components/Mascot.astro';
         if (elHeaderTimerText) elHeaderTimerText.innerText = `${m}:${s}`;
         if (elFloatText) elFloatText.innerText = `${m}:${s}`;
 
-        const percentage = Math.max(0, (timeLeft / (parsedWeek === 1 ? 105 : 180)) * 100);
+        const percentage = Math.max(0, (timeLeft / (totalDurationSeconds || DEFAULT_DURATION)) * 100);
         if (timeLeft <= 30 && timeLeft > 0) {
             if(elTimerRing) elTimerRing.style.background = `conic-gradient(#ef4444 ${percentage}%, #fee2e2 ${percentage}%)`;
             if(elFloatTimerIcon) elFloatTimerIcon.className = 'fa-solid fa-stopwatch text-red-600 animate-ping';
@@ -1882,8 +2109,9 @@ import Mascot from '../../components/Mascot.astro';
         if (savedEndTime) {
             document.getElementById('startOverlay').classList.add('hidden');
             timeLeft = Math.floor((savedEndTime - Date.now()) / 1000);
-            if (timeLeft > 0) startTest(false);
-            else { timeLeft = 0; startTest(false); disableAcademicSection(); }
+            // startTest(false) yang memutuskan: lanjut normal, reset waktu (kalau ada dispensasi
+            // aktif yang belum dipakai), atau munculkan modal "waktu habis" (beli/minta).
+            startTest(false);
         }
     };
 
@@ -2050,11 +2278,51 @@ import Mascot from '../../components/Mascot.astro';
     // PERMINTAAN PERPANJANGAN WAKTU (DISPENSASI)
     // ==========================================
     window.openExtReq = (msg) => {
+        // [2.7] Kalau kesempatan sudah dipakai, jangan buka form permohonan — tampilkan info.
+        if (window.extRequestAlreadyMade) {
+            window.openInfoLocked('used');
+            return;
+        }
         const modal = document.getElementById('modalExtReq');
         const box = document.getElementById('modalExtReqBox');
         if (msg) document.getElementById('extReqMsg').innerText = msg;
         modal.classList.replace('hidden', 'flex');
         setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); box.classList.replace('scale-95', 'scale-100'); }, 10);
+    };
+
+    // [2.7] Modal info: kesempatan habis (mode 'used') atau menunggu guru (mode 'pending').
+    window.openInfoLocked = (mode = 'used') => {
+        const modal = document.getElementById('modalInfoLocked');
+        const box = document.getElementById('modalInfoLockedBox');
+        const icon = document.getElementById('infoLockedIcon');
+        const title = document.getElementById('infoLockedTitle');
+        const msg = document.getElementById('infoLockedMsg');
+        if (!modal) return;
+
+        if (mode === 'pending') {
+            box.className = 'bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-7 transform scale-95 transition-transform duration-300 text-center border-4 border-amber-300';
+            icon.className = 'w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg';
+            icon.innerHTML = '<i class="fa-solid fa-hourglass-half"></i>';
+            title.innerText = 'Menunggu Persetujuan';
+            msg.innerText = 'Permohonanmu sudah dikirim dan sedang ditunggu Kak Aziz. Coba buka lagi link ini setelah disetujui ya.';
+        } else {
+            box.className = 'bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-7 transform scale-95 transition-transform duration-300 text-center border-4 border-gray-300';
+            icon.className = 'w-20 h-20 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg';
+            icon.innerHTML = '<i class="fa-solid fa-lock"></i>';
+            title.innerText = 'Kesempatan Sudah Habis';
+            msg.innerText = 'Kamu sudah pernah diberi perpanjangan waktu tapi belum sempat mengerjakannya. Maaf, kesempatan tidak bisa dipakai lagi. Hubungi Kak Aziz langsung ya.';
+        }
+
+        modal.classList.replace('hidden', 'flex');
+        setTimeout(() => { modal.classList.replace('opacity-0', 'opacity-100'); box.classList.replace('scale-95', 'scale-100'); }, 10);
+    };
+
+    window.closeInfoLocked = () => {
+        const modal = document.getElementById('modalInfoLocked');
+        const box = document.getElementById('modalInfoLockedBox');
+        modal.classList.replace('opacity-100', 'opacity-0');
+        box.classList.replace('scale-100', 'scale-95');
+        setTimeout(() => { modal.classList.replace('flex', 'hidden'); try { window.close(); } catch (e) {} }, 250);
     };
 
     window.closeExtReq = () => {
@@ -2078,9 +2346,24 @@ import Mascot from '../../components/Mascot.astro';
             const res = await fetch(`${API_URL}/api/onboarding/pr-extension-request`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: studentId, subject, week, reason })
+                body: JSON.stringify({ student_id: studentId, subject, week, reason, kind: window.extReqKind || 'late' })
             });
+
+            // [2.7] Server menolak kalau sudah pernah dapat izin (kesempatan habis).
+            if (res.status === 409) {
+                const d = await res.json().catch(() => ({}));
+                window.extRequestAlreadyMade = true;
+                window.showToast?.('warning', 'Tidak Bisa Lagi', d.message || 'Permohonan hanya bisa sekali.');
+                btn.disabled = true;
+                btn.classList.add('opacity-40', 'cursor-not-allowed');
+                btn.innerHTML = '<i class="fa-solid fa-ban mr-1"></i> Sudah Dipakai';
+                return;
+            }
+
             if (!res.ok) throw new Error('Gagal');
+
+            // [2.7] Tandai sudah mengajukan supaya tombol "minta gratis" lain ikut terkunci.
+            window.extRequestAlreadyMade = true;
 
             const modal = document.getElementById('modalExtReq');
             const box = document.getElementById('modalExtReqBox');
@@ -2089,7 +2372,7 @@ import Mascot from '../../components/Mascot.astro';
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <h2 class="text-xl font-black text-gray-800 text-center mb-1">Permintaan Terkirim!</h2>
-                <p class="text-xs text-gray-500 font-bold text-center mb-5">Tunggu Kak Aziz menyetujui perpanjangan waktumu. Coba buka lagi link ini nanti ya.</p>
+                <p class="text-xs text-gray-500 font-bold text-center mb-5">Tunggu Kak Aziz menyetujui perpanjanganmu. Nanti kamu akan dikasih link khusus untuk lanjut dari soal terakhir. Permohonan hanya bisa sekali ya!</p>
                 <button onclick="closeExtReq()" class="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest">Oke, Mengerti</button>`;
         } catch (e) {
             window.showToast?.('danger', 'Gagal', 'Permintaan tidak terkirim. Coba lagi ya.');
@@ -2101,48 +2384,83 @@ import Mascot from '../../components/Mascot.astro';
     const startTest = async (isNewSession = true) => {
 
         // [FIX BUG] Logika Pengecekan Deadline & Dispensasi disamakan dengan index.astro
-        if (isPRMode && isNewSession) {
+        // Catatan: fetch dijalankan utk SEMUA sesi PR (baru/lanjut) supaya durasi manual (2.1)
+        // selalu terbaca; tapi penghentian karena deadline hanya berlaku untuk sesi BARU.
+        if (isPRMode) {
             try {
                 const res = await fetch(`${API_URL}/api/onboarding/pr-locks-detail?subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
                 const prDetail = await res.json();
 
                 const prData = Array.isArray(prDetail.data) ? prDetail.data[0] : prDetail.data;
 
+                // [2.1] Pakai durasi manual dari guru kalau ada (detik). Kalau tidak, default sistem.
+                if (prData && prData.duration_seconds && prData.duration_seconds > 0) {
+                    totalDurationSeconds = prData.duration_seconds;
+                    if (isNewSession) timeLeft = totalDurationSeconds;
+                }
+
+                // [2.7] Cek status permohonan murid (sekali pakai). Dipakai utk:
+                // - kunci tombol "minta gratis" di modal waktu habis
+                // - bedakan "menunggu guru" vs "kesempatan habis"
+                let myReq = null;
+                try {
+                    const rq = await fetch(`${API_URL}/api/onboarding/pr-extension-mine?student_id=${studentId}&subject=${subject}&week=${week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                    if (rq.ok) myReq = (await rq.json()).data;
+                } catch(e) {}
+                window.extRequestAlreadyMade = !!myReq;
+
+                // Parse data dispensasi (dipakai utk sesi BARU & LANJUT)
+                const now = new Date();
+                let extRecord = null;
                 if (prData) {
-                    const now = new Date();
-
-                    // Parse data dispensasi biar aman
                     let extendedList = prData.extended_students;
-                    try {
-                        while (typeof extendedList === 'string') {
-                            extendedList = JSON.parse(extendedList);
-                        }
-                    } catch(e) {}
+                    try { while (typeof extendedList === 'string') extendedList = JSON.parse(extendedList); } catch(e) {}
                     if (!Array.isArray(extendedList)) extendedList = [];
+                    extRecord = extendedList.find(ext => ext.student_id === studentId) || null;
+                }
+                const dispActive = !!(extRecord && new Date(extRecord.until) > now);
+                // Kunci sekali-pakai per pemberian dispensasi (cegah reset waktu berkali-kali).
+                const consumeKey = extRecord ? `extused_${studentId}_${subject}_${week}_${extRecord.until}` : null;
 
-                    // Cari record dispensasi anak ini (karena bentuknya array of objects)
-                    const extRecord = extendedList.find(ext => ext.student_id === studentId);
-
+                if (isNewSession) {
                     if (extRecord) {
-                        // KASUS 1: PUNYA DISPENSASI (Cek batas waktu dispensasinya)
-                        const extDeadline = new Date(extRecord.until);
-                        if (now > extDeadline) {
-                            openExtReq('Waktu dispensasimu sudah habis juga. Kamu bisa minta perpanjangan lagi ke Kak Aziz.');
-                            return; // STOP! Gak boleh masuk
+                        // KASUS 1: PUNYA DISPENSASI
+                        if (!dispActive) {
+                            // [2.7] Sudah dapat izin tapi dibiarkan lewat → kesempatan hangus.
+                            window.openInfoLocked('used');
+                            return; // STOP!
                         }
-                        if (extRecord.penalty) {
-                            window.showToast?.('info', 'Dispensasi Aktif', 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!');
+                        // Dispensasi masih aktif → tandai sudah dipakai (sesi baru pakai timer fresh).
+                        if (consumeKey) localStorage.setItem(consumeKey, '1');
+                        window.showToast?.('info', 'Dispensasi Aktif', extRecord.penalty
+                            ? 'Kamu telat, tapi dapet akses. Ingat, nilaimu akan dipotong 10%!'
+                            : 'Kamu dapat perpanjangan waktu. Semangat ngerjainnya!');
+                    } else if (prData && prData.deadline_at && now > new Date(prData.deadline_at)) {
+                        // KASUS 2: GAK PUNYA DISPENSASI & lewat deadline
+                        if (myReq && myReq.status === 'pending') {
+                            window.openInfoLocked('pending');
+                        } else if (myReq && myReq.status === 'granted') {
+                            window.openInfoLocked('used');
                         } else {
-                            window.showToast?.('info', 'Dispensasi Aktif', 'Kamu dapat perpanjangan waktu. Semangat ngerjainnya!');
+                            window.extReqKind = 'late';
+                            openExtReq('Batas waktu PR ini sudah lewat. Tulis alasanmu untuk minta perpanjangan ke Kak Aziz ya. Ingat, permohonan hanya bisa sekali!');
                         }
-                    } else if (prData.deadline_at) {
-                        // KASUS 2: GAK PUNYA DISPENSASI (Cek batas waktu normal)
-                        const originalDeadline = new Date(prData.deadline_at);
-                        if (now > originalDeadline) {
-                            openExtReq('Batas waktu PR ini sudah lewat. Tulis alasanmu untuk minta perpanjangan ke Kak Aziz ya.');
-                            return; // STOP! Gak boleh masuk
-                        }
+                        return; // STOP!
                     }
+                } else {
+                    // SESI LANJUT (resume). Kalau timer sudah habis tapi ADA dispensasi aktif
+                    // yang belum dipakai → kasih waktu fresh SEKALI, lanjut dari checkpoint terakhir.
+                    // [2.2] Ini bikin link lama pun otomatis "hidup lagi" setelah guru memberi izin.
+                    const savedEnd = parseInt(localStorage.getItem(timeKey));
+                    const expired = !savedEnd || (savedEnd - Date.now()) <= 0;
+                    if (expired && dispActive && consumeKey && !localStorage.getItem(consumeKey)) {
+                        timeLeft = totalDurationSeconds;
+                        localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
+                        localStorage.setItem(consumeKey, '1');
+                        window.showToast?.('info', 'Waktu Tambahan Aktif', 'Kamu dapat waktu baru. Lanjutkan dari soal terakhirmu ya!');
+                    }
+                    // Kalau tetap habis (tanpa dispensasi aktif), modal "waktu habis" akan muncul
+                    // otomatis lewat updateTimerUI() → handleTimeUp() di bawah.
                 }
             } catch(e) { console.log("Gagal cek deadline", e); }
         }
@@ -2243,10 +2561,25 @@ import Mascot from '../../components/Mascot.astro';
         }
 
         if (isNewSession) localStorage.setItem(timeKey, Date.now() + (timeLeft * 1000));
+        startCountdown();
+        // [Gap 1] Buat/dorong checkpoint ke server begitu sesi mulai (qids + waktu + posisi).
+        if (isPRMode && !isPreview) window.syncDraftToServer?.();
+    };
+
+    // [2.3] Countdown diekstrak jadi fungsi sendiri supaya bisa di-restart
+    // setelah murid membeli/mendapat tambahan waktu saat waktu sudah habis.
+    let bullyCheckCounter = 0;
+    const startCountdown = () => {
+        if (timerInterval) clearInterval(timerInterval);
         if (timeLeft <= 0) return;
-        let bullyCheckCounter = 0;
+        bullyCheckCounter = 0;
 
         timerInterval = setInterval(() => {
+            // [2.4] Saat dibully timer dibekukan: jangan kurangi waktu & jangan trigger habis.
+            if (isTimerPaused) {
+                updateTimerUI();
+                return;
+            }
             timeLeft = Math.floor((localStorage.getItem(timeKey) - Date.now()) / 1000);
             updateTimerUI();
             updateQuickTimeOffer();
@@ -2292,9 +2625,9 @@ import Mascot from '../../components/Mascot.astro';
 
             if (timeLeft <= 0) {
                 timeLeft = 0;
-                finalTimeTaken = parsedWeek === 1 ? 90 : 180;
+                finalTimeTaken = totalDurationSeconds || DEFAULT_DURATION;
                 clearInterval(timerInterval);
-                if (!isEvaluatingExtraLife) disableAcademicSection();
+                if (!isEvaluatingExtraLife) handleTimeUp();
             }
         }, 1000);
     };
@@ -2409,7 +2742,7 @@ import Mascot from '../../components/Mascot.astro';
 
     window.handleShopClick = async (itemKey) => {
         const btn = document.getElementById(`btn-shop-${itemKey}`);
-        if (btn.disabled) return;
+        if (btn && btn.disabled) return;
 
         if (itemKey === 'item_tambah_waktu') {
             const timeContainer = document.getElementById('buyTimeContainer');
@@ -2681,13 +3014,16 @@ import Mascot from '../../components/Mascot.astro';
                 studentWallet = data.data.new_poin;
             }
 
-            timeLeft += 30;
-            const savedEndTime = localStorage.getItem(timeKey);
-            if (savedEndTime) localStorage.setItem(timeKey, parseInt(savedEndTime) + 30 * 1000);
+            // [FIX] Basis dari "sekarang" kalau timer sudah lewat (lihat catatan di executeBuyTime).
+            const prevEnd = parseInt(localStorage.getItem(timeKey));
+            const base = (!isNaN(prevEnd) && prevEnd > Date.now()) ? prevEnd : Date.now();
+            localStorage.setItem(timeKey, base + 30 * 1000);
+            timeLeft = Math.floor((base + 30 * 1000 - Date.now()) / 1000);
 
             updateTimerUI();
             updateShopUI();
             window.showToast?.('success', 'Waktu +30 Detik!', 'Gas, kebut lagi!');
+            window.afterTimeAdded?.(); // [2.3] lanjutkan kalau tadi waktu sudah habis
 
             if (wrap) wrap.classList.add('hidden');
             quickOfferVisible = false;
@@ -2723,15 +3059,18 @@ import Mascot from '../../components/Mascot.astro';
                 studentWallet = data.data.new_poin;
             }
 
-            timeLeft += (minutes * 60);
-            const savedEndTime = localStorage.getItem(timeKey);
-            if (savedEndTime) {
-                localStorage.setItem(timeKey, parseInt(savedEndTime) + (minutes * 60 * 1000));
-            }
+            // [FIX] Kalau waktu sudah habis, end-timestamp ada di MASA LALU. Jangan ditambah
+            // ke timestamp lama (hasilnya tetap minus) — pakai waktu sekarang sebagai basis.
+            const addedMs = minutes * 60 * 1000;
+            const prevEnd = parseInt(localStorage.getItem(timeKey));
+            const base = (!isNaN(prevEnd) && prevEnd > Date.now()) ? prevEnd : Date.now();
+            localStorage.setItem(timeKey, base + addedMs);
+            timeLeft = Math.floor((base + addedMs - Date.now()) / 1000);
 
             updateTimerUI();
             window.showToast?.('success', 'Waktu Ditambahkan!', `Berhasil tambah ${minutes} menit.`);
             updateShopUI();
+            window.afterTimeAdded?.(); // [2.3] lanjutkan kalau tadi waktu sudah habis
 
         } catch(e) {
             studentWallet += cost; updateShopUI();
@@ -3296,6 +3635,17 @@ import Mascot from '../../components/Mascot.astro';
                     window.showToast?.('danger', 'Gagal Mengumpulkan', errData.message || 'Jawaban gagal disimpan. Coba lagi ya.');
                     return;
                 }
+
+                // [2.6 + fix nilai] Pakai nilai resmi dari server (sudah termasuk potongan telat 10%)
+                // supaya angka yang dilihat murid sama persis dengan yang tersimpan di rapor.
+                const gradeData = await gradeRes.json().catch(() => ({}));
+                if (gradeData && gradeData.data) {
+                    if (typeof gradeData.data.final_score === 'number') {
+                        finalScore = gradeData.data.final_score;
+                        if (!window.isDoubleScoreActive) score = gradeData.data.raw_score ?? score;
+                    }
+                    window.prPenaltyInfo = gradeData.data.penalty_applied ? gradeData.data : null;
+                }
             }
 
             const minUsed = Math.floor(timeUsed / 60).toString().padStart(2, '0'); const secUsed = (timeUsed % 60).toString().padStart(2, '0');
@@ -3330,6 +3680,22 @@ import Mascot from '../../components/Mascot.astro';
                 coinBadge.classList.add('hidden');
             }
             coinContainer.classList.remove('hidden');
+
+            // [2.6] Tampilkan kartu pengurangan nilai + nasihat kalau kena penalti telat.
+            const penaltyContainer = document.getElementById('resultPenaltyContainer');
+            if (penaltyContainer) {
+                const p = window.prPenaltyInfo;
+                if (p && p.penalty_applied) {
+                    const rawScore = (typeof p.raw_score === 'number') ? p.raw_score : score;
+                    document.getElementById('penaltyPercent').innerText = p.penalty_percent || 10;
+                    document.getElementById('penaltyRaw').innerText = rawScore;
+                    document.getElementById('penaltyFinal').innerText = p.final_score;
+                    document.getElementById('penaltyDeducted').innerText = p.penalty_deducted || (rawScore - p.final_score);
+                    penaltyContainer.classList.remove('hidden');
+                } else {
+                    penaltyContainer.classList.add('hidden');
+                }
+            }
 
             // [BARU 3] List Item Terpakai dimasukkan ke container baru
             let usedItems = [];
@@ -3400,7 +3766,7 @@ import Mascot from '../../components/Mascot.astro';
                 }
             }
 
-            localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey);
+            localStorage.removeItem(timeKey); localStorage.removeItem(ansKey); localStorage.removeItem(qKey); localStorage.removeItem(psychKey); localStorage.removeItem(idxKey);
             btnSubmitGlobal.innerHTML = '<i class="fa-solid fa-check"></i> Selesai';
             btnSubmitGlobal.className = 'w-full py-5 bg-gray-800 text-white font-bold rounded-2xl transition-all text-lg shadow-sm mb-12 relative overflow-hidden';
             document.getElementById('modalResult').classList.replace('hidden', 'flex');
