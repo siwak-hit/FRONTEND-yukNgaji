@@ -538,7 +538,7 @@ import Toast from '../../components/Toast.astro';
                 let resumeUrl = '';
                 if (grantTarget.student_id && grantTarget.subject && grantTarget.week != null) {
                     const baseUrl = window.location.origin;
-                    resumeUrl = `${baseUrl}/consultations/fill?id=${grantTarget.student_id}&subject=${grantTarget.subject}&week=${grantTarget.week}&pr=true&pr_token=${token}&reset_waktu=true`;
+                    resumeUrl = `${baseUrl}/consultations?id=${grantTarget.student_id}&subject=${grantTarget.subject}&week=${grantTarget.week}&pr=true&pr_token=${token}&reset_waktu=true`;
                     try { await navigator.clipboard.writeText(resumeUrl); } catch (err) {}
                 }
                 window.lastResumeLink = resumeUrl;
@@ -788,7 +788,7 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.copyResetLinkConsul = (studentId, studentName) => {
-        const link = `${window.location.origin}/consultations/fill?id=${studentId}&subject=${STATE.subject}&week=${STATE.week}&pr=true&pr_token=${token}&reset_waktu=true`;
+        const link = `${window.location.origin}/consultations?id=${studentId}&subject=${STATE.subject}&week=${STATE.week}&pr=true&pr_token=${token}&reset_waktu=true`;
         navigator.clipboard.writeText(link)
             .then(() => window.showToast?.('success','Link Bantuan Disalin!',`Link reset/lanjut untuk ${studentName} siap dikirim.`))
             .catch(() => prompt('Copy link ini:', link));
@@ -945,7 +945,8 @@ import Toast from '../../components/Toast.astro';
         document.getElementById('satpamStudentName').innerText = name;
         document.getElementById('satpamSubject').innerText = STATE.subject;
         
-        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${STATE.subject}&week=${STATE.week}&pr=true&pr_token=${paramPrToken}`;
+        const resetWaktu = urlParams.get('reset_waktu') === 'true' ? '&reset_waktu=true' : '';
+        pendingStudentUrl = `/consultations/fill?id=${id}&subject=${STATE.subject}&week=${STATE.week}&pr=true&pr_token=${paramPrToken}${resetWaktu}`;
 
         const modal = document.getElementById('modalSatpamPR');
         modal.classList.replace('hidden', 'flex');

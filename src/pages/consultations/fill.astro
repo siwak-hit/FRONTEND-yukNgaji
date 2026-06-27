@@ -194,14 +194,8 @@ import Mascot from '../../components/Mascot.astro';
                 <p id="startDescText" class="body-text mb-5">Pastikan fokus. Waktu terbatas untuk bagian akademik.</p>
 
                 <div id="prSettings" class="hidden flex-col items-center w-full max-w-xs mb-3 gap-2">
-                    <div class="rounded-[var(--r-lg)] p-3 text-left w-full" style="background-color: var(--info-soft);">
-                        <p class="text-[11px] font-medium leading-relaxed" style="color: var(--info);">
-                            <i class="fa-solid fa-circle-info mr-1"></i> Ini Mode PR. Jawabanmu hanya bisa dikirim 1x. Jika keluar halaman, klik link dari Kak Aziz lagi ya!
-                        </p>
-                    </div>
-                    <!-- Deadline countdown — diisi JS setelah fetch pr-locks-detail -->
+                    <!-- Deadline / izin pengerjaan — diisi JS setelah fetch pr-locks-detail -->
                     <div id="prDeadlineBanner" class="hidden w-full rounded-[var(--r-lg)] p-3 text-center" style="background-color: var(--warning-soft); color: var(--warning);">
-                        <p class="text-[11px] font-black uppercase tracking-wider mb-0.5"><i class="fa-solid fa-clock mr-1"></i> Deadline PR</p>
                         <p id="prDeadlineText" class="text-xs font-bold">–</p>
                     </div>
                 </div>
@@ -1394,7 +1388,7 @@ import Mascot from '../../components/Mascot.astro';
                 const menit = Math.floor(timeLeft / 60);
                 const detik = timeLeft % 60;
                 const teksWaktu = detik > 0 ? `${menit} menit ${detik} detik` : `${menit} menit`;
-                document.getElementById('startDescText').innerText = `Pastikan fokus. Kamu punya waktu ${teksWaktu} untuk mengerjakan soal.`;
+                document.getElementById('startDescText').innerHTML = `Pastikan fokus. Kamu punya waktu <b style="color: var(--accent-strong);">${teksWaktu}</b> untuk mengerjakan soal.`;
 
                 // [OPTIMASI] Gunakan fetchWithTimeout biar gak loading muter terus kalau sinyal jelek
                 const [stdRes, consRes, qRes] = await Promise.all([
@@ -1529,25 +1523,37 @@ import Mascot from '../../components/Mascot.astro';
                     const dJson = await dRes.json();
                     const dData = Array.isArray(dJson.data) ? dJson.data[0] : dJson.data;
                     if (dData && dData.deadline_at) {
-                        const deadline = new Date(dData.deadline_at);
                         const now = new Date();
-                        const diffMs = deadline - now;
                         const banner = document.getElementById('prDeadlineBanner');
                         const deadlineText = document.getElementById('prDeadlineText');
+                        const pad = n => String(n).padStart(2,'0');
+                        const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+                        // Cek dispensasi murid ini (telat tapi dikasih izin sampai jam tertentu)
+                        let extendedList = dData.extended_students;
+                        try { while (typeof extendedList === 'string') extendedList = JSON.parse(extendedList); } catch(e) {}
+                        if (!Array.isArray(extendedList)) extendedList = [];
+                        const extRecord = extendedList.find(ext => ext.student_id === studentId) || null;
+                        const dispUntil = extRecord ? new Date(extRecord.until) : null;
+
                         if (banner && deadlineText) {
-                            const pad = n => String(n).padStart(2,'0');
-                            const fmt = `${deadline.getDate()}/${deadline.getMonth()+1}/${deadline.getFullYear()} ${pad(deadline.getHours())}:${pad(deadline.getMinutes())}`;
-                            if (diffMs > 0) {
-                                const hours = Math.floor(diffMs / 3600000);
-                                const mins = Math.floor((diffMs % 3600000) / 60000);
-                                const sisa = hours > 24 ? `${Math.floor(hours/24)} hari ${hours%24} jam lagi` : hours > 0 ? `${hours} jam ${mins} menit lagi` : `${mins} menit lagi — BURUAN!`;
-                                deadlineText.innerText = `${fmt} (sisa ${sisa})`;
-                                banner.style.backgroundColor = hours < 2 ? 'var(--danger-soft, #fee2e2)' : 'var(--warning-soft)';
-                                banner.style.color = hours < 2 ? 'var(--danger, #ef4444)' : 'var(--warning)';
+                            if (dispUntil && dispUntil > now) {
+                                // Telat deadline, tapi diberi izin mengerjakan sampai jam X
+                                deadlineText.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Kamu telat, tapi diberi izin mengerjakan sampai <b>${fmtTime(dispUntil)}</b>.`;
+                                banner.style.backgroundColor = 'var(--accent-soft)';
+                                banner.style.color = 'var(--accent-strong)';
                             } else {
-                                deadlineText.innerText = `${fmt} — SUDAH LEWAT!`;
-                                banner.style.backgroundColor = 'var(--danger-soft, #fee2e2)';
-                                banner.style.color = 'var(--danger, #ef4444)';
+                                const deadline = new Date(dData.deadline_at);
+                                const diffMs = deadline - now;
+                                if (diffMs > 0) {
+                                    deadlineText.innerHTML = `<i class="fa-solid fa-clock mr-1"></i> Kerjakan sebelum <b>${fmtTime(deadline)}</b> hari ini.`;
+                                    banner.style.backgroundColor = 'var(--warning-soft)';
+                                    banner.style.color = 'var(--warning)';
+                                } else {
+                                    deadlineText.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> Deadline sudah lewat (${fmtTime(deadline)}).`;
+                                    banner.style.backgroundColor = 'var(--danger-soft, #fee2e2)';
+                                    banner.style.color = 'var(--danger, #ef4444)';
+                                }
                             }
                             banner.classList.remove('hidden');
                         }
