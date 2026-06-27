@@ -370,50 +370,74 @@ import Toast from '../../components/Toast.astro';
         const panel = document.getElementById('extReqPanel');
         if (!extRequests.length) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
 
-        const cards = extRequests.map(r => {
+        // Color by how many times student has been granted already (grant_count)
+        const indicatorColor = (gc) => gc === 0
+            ? { border: 'var(--accent)', bg: 'var(--accent-soft)', text: 'var(--accent-strong)', label: '1×' }
+            : gc === 1
+            ? { border: 'var(--warning)', bg: 'var(--warning-soft)', text: 'var(--warning)', label: '2×' }
+            : { border: '#dc2626', bg: '#fee2e2', text: '#dc2626', label: `${gc + 1}×` };
+
+        const buildCard = (r) => {
             const initials = (r.student_name || '?').substring(0, 2).toUpperCase();
             const reason = r.reason ? r.reason.replace(/</g, '&lt;') : '(tanpa alasan)';
             const subj = SUBJECT_LABEL[r.subject] || (r.subject || '').toUpperCase();
+            const gc = r.grant_count || 0;
+            const pct = r.next_penalty_percent || (10 + gc * 5);
+            const ind = indicatorColor(gc);
+            const sName = (r.student_name||'').replace(/'/g,"\\'");
             return `
-                <div class="card card-pad mb-3">
+                <div class="card card-pad mb-3" style="border-left: 3px solid ${ind.border};">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="avatar w-10 h-10 text-xs flex-shrink-0">${initials}</div>
+                        <div class="avatar w-10 h-10 text-xs flex-shrink-0" style="background-color:${ind.bg};color:${ind.text};">${initials}</div>
                         <div class="min-w-0 flex-1">
-                            <p class="caption font-semibold text-ink truncate capitalize">${r.student_name}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="caption font-semibold text-ink truncate capitalize">${r.student_name}</p>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded-full" style="background-color:${ind.bg};color:${ind.text};">Permintaan ${ind.label}</span>
+                            </div>
                             <p class="text-[10px] text-tertiary font-medium">${subj} · Pertemuan ${r.week} · ${timeAgo(r.created_at)}</p>
                         </div>
                     </div>
                     <div class="rounded-[var(--r-md)] p-3 mb-3" style="background-color: var(--surface-sunken);">
-                        <p class="text-[10px] font-black text-tertiary uppercase tracking-widest mb-1">Alasan Telat</p>
+                        <p class="text-[10px] font-black text-tertiary uppercase tracking-widest mb-1">Alasan</p>
                         <p class="caption text-ink">${reason}</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="openGrantExt('${r.id}', true, '${(r.student_name||'').replace(/'/g,"\\'")}', '${r.student_id}', '${r.subject}', ${r.week})" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
-                            <i class="fa-solid fa-scissors"></i> Perpanjang + Potong
+                        <button onclick="openGrantExt('${r.id}', true, '${sName}', '${r.student_id}', '${r.subject}', ${r.week}, ${pct})" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
+                            <i class="fa-solid fa-scissors"></i> Perpanjang + Potong ${pct}%
                         </button>
-                        <button onclick="openGrantExt('${r.id}', false, '${(r.student_name||'').replace(/'/g,"\\'")}', '${r.student_id}', '${r.subject}', ${r.week})" class="btn btn-primary w-full text-xs !py-2.5">
+                        <button onclick="openGrantExt('${r.id}', false, '${sName}', '${r.student_id}', '${r.subject}', ${r.week}, ${pct})" class="btn btn-primary w-full text-xs !py-2.5">
                             <i class="fa-solid fa-check"></i> Perpanjang Saja
                         </button>
                     </div>
                 </div>`;
-        }).join('');
+        };
+
+        const late = extRequests.filter(r => r.kind === 'late' || !r.kind);
+        const extra = extRequests.filter(r => r.kind === 'extra_time');
+
+        const section = (title, icon, items) => items.length ? `
+            <p class="text-[10px] font-black text-tertiary uppercase tracking-widest mb-2 mt-4 flex items-center gap-1.5"><i class="fa-solid ${icon}"></i> ${title} (${items.length})</p>
+            ${items.map(buildCard).join('')}` : '';
 
         panel.innerHTML = `
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center justify-between mb-1">
                 <h3 class="eyebrow flex items-center gap-2"><i class="fa-solid fa-bell" style="color: var(--warning);"></i> Permintaan Perpanjangan (${extRequests.length})</h3>
             </div>
-            ${cards}`;
+            <p class="text-[10px] text-tertiary mb-2"><span style="color:var(--accent);">●</span> Pertama &nbsp;<span style="color:var(--warning);">●</span> Kedua &nbsp;<span style="color:#dc2626;">●</span> Lebih dari 2×</p>
+            ${section('Perpanjangan Deadline Terlambat', 'fa-clock-rotate-left', late)}
+            ${section('Perpanjangan Waktu Pengerjaan', 'fa-hourglass-half', extra)}`;
         panel.classList.remove('hidden');
     };
 
     let grantTarget = { id: null, penalty: false, student_id: null, subject: null, week: null, name: null };
 
-    window.openGrantExt = (requestId, withPenalty, studentName, studentId, subject, week) => {
-        grantTarget = { id: requestId, penalty: withPenalty, student_id: studentId, subject, week, name: studentName };
+    window.openGrantExt = (requestId, withPenalty, studentName, studentId, subject, week, penaltyPct) => {
+        const pct = penaltyPct || 10;
+        grantTarget = { id: requestId, penalty: withPenalty, student_id: studentId, subject, week, name: studentName, penaltyPct: pct };
         document.getElementById('grantExtSub').innerHTML = `untuk <b class="text-ink capitalize">${studentName || 'siswa'}</b>`;
         const note = document.getElementById('grantExtPenaltyNote');
         if (withPenalty) {
-            note.textContent = '⚠️ Nilai PR siswa akan dipotong 10%.';
+            note.textContent = `⚠️ Nilai PR siswa akan dipotong ${pct}%.`;
             note.style.backgroundColor = 'var(--warning-soft)';
             note.style.color = 'var(--warning)';
         } else {
@@ -466,7 +490,7 @@ import Toast from '../../components/Toast.astro';
                 window.lastResumeLink = resumeUrl;
 
                 window.showToast?.('success', 'Dispensasi Diberikan',
-                    grantTarget.penalty ? 'Waktu diperpanjang (nilai dipotong 10%).' : 'Waktu diperpanjang tanpa potongan.');
+                    grantTarget.penalty ? `Waktu diperpanjang (nilai dipotong ${grantTarget.penaltyPct || 10}%).` : 'Waktu diperpanjang tanpa potongan.');
                 extRequests = extRequests.filter(r => r.id !== grantTarget.id);
                 renderExtensionRequests();
                 closeGrantExt();
