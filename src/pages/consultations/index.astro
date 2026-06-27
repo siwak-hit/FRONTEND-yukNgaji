@@ -126,7 +126,7 @@ import Toast from '../../components/Toast.astro';
 
     <!-- [GURU] MODAL PILIH DURASI PERPANJANGAN -->
     <div id="modalGrantExt" class="fixed inset-0 bg-black/70 z-[210] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[var(--r-xl)] p-6 shadow-2xl">
+        <div class="bg-white w-full max-w-sm rounded-[var(--r-xl)] p-6 shadow-2xl overflow-hidden">
             <h3 class="section-title mb-1">Beri Perpanjangan</h3>
             <p id="grantExtSub" class="caption mb-3">untuk siswa</p>
             <p id="grantExtPenaltyNote" class="text-xs font-semibold mb-4 px-3 py-2 rounded-[var(--r-md)]"></p>
@@ -142,7 +142,7 @@ import Toast from '../../components/Toast.astro';
 
     <!-- [2.2] MODAL: kirim link lanjutan ke murid setelah dispensasi diberikan -->
     <div id="modalSendLink" class="fixed inset-0 bg-black/70 z-[230] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-[var(--r-xl)] p-6 shadow-2xl text-center">
+        <div class="bg-white w-full max-w-sm rounded-[var(--r-xl)] p-6 shadow-2xl text-center overflow-hidden">
             <div class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center text-3xl" style="background-color: var(--accent-soft); color: var(--accent-strong);">
                 <i class="fa-solid fa-paper-plane"></i>
             </div>
@@ -356,6 +356,15 @@ import Toast from '../../components/Toast.astro';
     };
 
     let extRequests = [];
+    let extTabActive = 'late';
+    let extFilterGrant = null; // null=all, 0=1 kali, 1=2 kali, 2=>2 kali
+    let currentExtCardIndex = 0;
+
+    window.setExtTab = (tab) => { extTabActive = tab; currentExtCardIndex = 0; renderExtensionRequests(); };
+    window.setExtFilter = (g) => { extFilterGrant = extFilterGrant === g ? null : g; currentExtCardIndex = 0; renderExtensionRequests(); };
+    window.resetExtFilter = () => { extFilterGrant = null; currentExtCardIndex = 0; renderExtensionRequests(); };
+    window.extCardPrev = () => { if (currentExtCardIndex > 0) { currentExtCardIndex--; renderExtensionRequests(); } };
+    window.extCardNext = () => { const fl = window._filteredExtList || []; if (currentExtCardIndex < fl.length - 1) { currentExtCardIndex++; renderExtensionRequests(); } };
 
     const loadExtensionRequests = async () => {
         try {
@@ -370,62 +379,107 @@ import Toast from '../../components/Toast.astro';
         const panel = document.getElementById('extReqPanel');
         if (!extRequests.length) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
 
-        // Color by how many times student has been granted already (grant_count)
-        const indicatorColor = (gc) => gc === 0
-            ? { border: 'var(--accent)', bg: 'var(--accent-soft)', text: 'var(--accent-strong)', label: '1×' }
-            : gc === 1
-            ? { border: 'var(--warning)', bg: 'var(--warning-soft)', text: 'var(--warning)', label: '2×' }
-            : { border: '#dc2626', bg: '#fee2e2', text: '#dc2626', label: `${gc + 1}×` };
+        const COLORS = [
+            { border: 'var(--accent)', bg: 'var(--accent-soft)', text: 'var(--accent-strong)', label: '1 kali' },
+            { border: 'var(--warning)', bg: 'var(--warning-soft)', text: 'var(--warning)', label: '2 kali' },
+            { border: '#dc2626', bg: '#fee2e2', text: '#dc2626', label: '> 2 kali' },
+        ];
+        const getC = (gc) => gc === 0 ? COLORS[0] : gc === 1 ? COLORS[1] : COLORS[2];
 
-        const buildCard = (r) => {
+        const lateAll = extRequests.filter(r => r.kind === 'late' || !r.kind);
+        const extraAll = extRequests.filter(r => r.kind === 'extra_time');
+        const activeList = extTabActive === 'late' ? lateAll : extraAll;
+        const filtered = extFilterGrant !== null
+            ? activeList.filter(r => {
+                const gc = r.grant_count || 0;
+                if (extFilterGrant === 0) return gc === 0;
+                if (extFilterGrant === 1) return gc === 1;
+                return gc >= 2;
+            })
+            : activeList;
+
+        // Simpan filtered list untuk extCardNext + clamp index
+        window._filteredExtList = filtered;
+        if (currentExtCardIndex >= filtered.length) currentExtCardIndex = Math.max(0, filtered.length - 1);
+
+        const tabBtn = (key, label, count) => {
+            const isActive = extTabActive === key;
+            return `<button onclick="setExtTab('${key}')" class="flex-1 py-2 text-xs font-black rounded-[var(--r-sm)] transition-all" style="${isActive ? 'background-color:var(--accent);color:#fff;' : 'color:var(--ink-secondary);'}">${label}${count ? ` (${count})` : ''}</button>`;
+        };
+        const filterBtn = (g, label) => {
+            const isA = extFilterGrant === g;
+            const c = g === 0 ? 'var(--accent)' : g === 1 ? 'var(--warning)' : '#dc2626';
+            return `<button onclick="setExtFilter(${g})" class="text-[10px] font-black px-2.5 py-1 rounded-full border transition-all" style="${isA ? `background:${c};color:#fff;border-color:${c};` : `color:${c};border-color:${c};`}">${label}</button>`;
+        };
+
+        let cardHtml = '';
+        if (filtered.length === 0) {
+            cardHtml = `<p class="caption text-center py-6" style="color:var(--ink-secondary);">Tidak ada permintaan di kategori ini.</p>`;
+        } else {
+            const r = filtered[currentExtCardIndex];
             const initials = (r.student_name || '?').substring(0, 2).toUpperCase();
             const reason = r.reason ? r.reason.replace(/</g, '&lt;') : '(tanpa alasan)';
             const subj = SUBJECT_LABEL[r.subject] || (r.subject || '').toUpperCase();
             const gc = r.grant_count || 0;
             const pct = r.next_penalty_percent || (10 + gc * 5);
-            const ind = indicatorColor(gc);
+            const c = getC(gc);
             const sName = (r.student_name||'').replace(/'/g,"\\'");
-            return `
-                <div class="card card-pad mb-3" style="border-left: 3px solid ${ind.border};">
+            const total = filtered.length;
+            const hasPrev = currentExtCardIndex > 0;
+            const hasNext = currentExtCardIndex < total - 1;
+            cardHtml = `
+                <div class="card card-pad" style="border:2px solid ${c.border};">
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="avatar w-10 h-10 text-xs flex-shrink-0" style="background-color:${ind.bg};color:${ind.text};">${initials}</div>
+                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black flex-shrink-0" style="background-color:${c.bg};color:${c.text};">${initials}</div>
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <p class="caption font-semibold text-ink truncate capitalize">${r.student_name}</p>
-                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded-full" style="background-color:${ind.bg};color:${ind.text};">Permintaan ${ind.label}</span>
-                            </div>
-                            <p class="text-[10px] text-tertiary font-medium">${subj} · Pertemuan ${r.week} · ${timeAgo(r.created_at)}</p>
+                            <p class="caption font-semibold text-ink truncate capitalize">${r.student_name}</p>
+                            <p class="text-[10px] font-medium" style="color:var(--ink-secondary);">${subj} · Pertemuan ${r.week} · ${timeAgo(r.created_at)}</p>
                         </div>
+                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full shrink-0" style="background-color:${c.bg};color:${c.text};">${c.label}</span>
                     </div>
                     <div class="rounded-[var(--r-md)] p-3 mb-3" style="background-color: var(--surface-sunken);">
-                        <p class="text-[10px] font-black text-tertiary uppercase tracking-widest mb-1">Alasan</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest mb-1" style="color:var(--ink-secondary);">Alasan</p>
                         <p class="caption text-ink">${reason}</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 gap-2 mb-3">
                         <button onclick="openGrantExt('${r.id}', true, '${sName}', '${r.student_id}', '${r.subject}', ${r.week}, ${pct})" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
-                            <i class="fa-solid fa-scissors"></i> Perpanjang + Potong ${pct}%
+                            <i class="fa-solid fa-scissors"></i> Potong ${pct}%
                         </button>
                         <button onclick="openGrantExt('${r.id}', false, '${sName}', '${r.student_id}', '${r.subject}', ${r.week}, ${pct})" class="btn btn-primary w-full text-xs !py-2.5">
-                            <i class="fa-solid fa-check"></i> Perpanjang Saja
+                            <i class="fa-solid fa-check"></i> Tanpa Potong
                         </button>
                     </div>
+                    ${total > 1 ? `
+                    <div class="flex items-center justify-between pt-2 border-t" style="border-color:var(--hairline);">
+                        <button onclick="extCardPrev()" ${hasPrev ? '' : 'disabled'} class="btn-icon !w-8 !h-8 text-xs" style="${!hasPrev ? 'opacity:0.3;' : ''}"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="text-[10px] font-bold" style="color:var(--ink-secondary);">${currentExtCardIndex + 1} / ${total}</span>
+                        <button onclick="extCardNext()" ${hasNext ? '' : 'disabled'} class="btn-icon !w-8 !h-8 text-xs" style="${!hasNext ? 'opacity:0.3;' : ''}"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>` : ''}
                 </div>`;
-        };
-
-        const late = extRequests.filter(r => r.kind === 'late' || !r.kind);
-        const extra = extRequests.filter(r => r.kind === 'extra_time');
-
-        const section = (title, icon, items) => items.length ? `
-            <p class="text-[10px] font-black text-tertiary uppercase tracking-widest mb-2 mt-4 flex items-center gap-1.5"><i class="fa-solid ${icon}"></i> ${title} (${items.length})</p>
-            ${items.map(buildCard).join('')}` : '';
+        }
 
         panel.innerHTML = `
-            <div class="flex items-center justify-between mb-1">
-                <h3 class="eyebrow flex items-center gap-2"><i class="fa-solid fa-bell" style="color: var(--warning);"></i> Permintaan Perpanjangan (${extRequests.length})</h3>
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style="background-color:var(--warning-soft);color:var(--warning);">
+                    <i class="fa-solid fa-bell text-xs"></i>
+                </div>
+                <div>
+                    <p class="caption font-semibold text-ink">Permintaan Perpanjangan</p>
+                    <p class="text-[10px]" style="color:var(--ink-secondary);">${extRequests.length} permohonan menunggu</p>
+                </div>
             </div>
-            <p class="text-[10px] text-tertiary mb-2"><span style="color:var(--accent);">●</span> Pertama &nbsp;<span style="color:var(--warning);">●</span> Kedua &nbsp;<span style="color:#dc2626;">●</span> Lebih dari 2×</p>
-            ${section('Perpanjangan Deadline Terlambat', 'fa-clock-rotate-left', late)}
-            ${section('Perpanjangan Waktu Pengerjaan', 'fa-hourglass-half', extra)}`;
+            <div class="flex gap-1 p-1 rounded-[var(--r-md)] mb-3" style="background-color:var(--surface-sunken);">
+                ${tabBtn('late', 'Deadline Telat', lateAll.length)}
+                ${tabBtn('extra_time', 'Waktu Kerjain', extraAll.length)}
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap mb-3">
+                <span class="text-[10px] font-bold" style="color:var(--ink-secondary);">Filter:</span>
+                ${filterBtn(0, '1 kali')}
+                ${filterBtn(1, '2 kali')}
+                ${filterBtn(2, '> 2 kali')}
+                ${extFilterGrant !== null ? `<button onclick="resetExtFilter()" class="text-[10px] px-2 py-1 rounded-full" style="color:var(--ink-secondary);">✕ Reset</button>` : ''}
+            </div>
+            ${cardHtml}`;
         panel.classList.remove('hidden');
     };
 
@@ -827,20 +881,28 @@ import Toast from '../../components/Toast.astro';
                         // KASUS 2: GAK PUNYA DISPENSASI
                         const originalDeadline = new Date(prData.deadline_at);
 
-                        console.log("⏱️ Cek Waktu Normal:");
-                        console.log("Sekarang:", now.toLocaleString());
-                        console.log("Batas Normal:", originalDeadline.toLocaleString());
-
                         if (now > originalDeadline) {
+                            // Cek apakah murid sudah punya permintaan pending (jangan tampil form lagi)
+                            try {
+                                const rqRes = await fetch(`${API_URL}/api/onboarding/pr-extension-mine?student_id=${id}&subject=${STATE.subject}&week=${STATE.week}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                                if (rqRes.ok) {
+                                    const rqData = (await rqRes.json()).data;
+                                    if (rqData && rqData.status === 'pending') {
+                                        showPRWaitingModal();
+                                        return;
+                                    }
+                                }
+                            } catch(e) {}
                             openPRLateModal(prData.deadline_at, id, name);
-                            return; // STOP MUTLAK! Jangan buka kamera!
+                            return;
                         }
                     }
                 }
             } catch(e) {
                 console.error("Gagal ngecek deadline:", e);
-                window.showToast?.('danger', 'Error', 'Gagal memverifikasi waktu dengan server.');
-                return; // STOP MUTLAK! Kalau server error, fail-closed biar aman.
+                // Gagal ambil jadwal PR → tampilkan pesan ramah, biarkan coba satpam
+                window.showToast?.('warning', 'Gangguan Koneksi', 'Gagal verifikasi jadwal PR. Coba lagi sebentar ya!');
+                return;
             }
 
             // Kalau BENAR-BENAR lolos semua penjagaan di atas, baru buka Satpam!
@@ -1204,23 +1266,61 @@ import Toast from '../../components/Toast.astro';
 
     let lateReqStudentId = null;
 
-    window.openPRLateModal = (deadlineString, studentId = null, studentName = '') => {
+    const _showModalPRLate = () => {
         const modal = document.getElementById('modalPRLate');
         const box = document.getElementById('modalPRLateBox');
-        lateReqStudentId = studentId;
-
-        // Format tanggal biar enak dibaca anak-anak
-        const d = new Date(deadlineString);
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        document.getElementById('lateDeadlineText').innerText = d.toLocaleDateString('id-ID', options);
-        const reasonEl = document.getElementById('lateReason');
-        if (reasonEl) reasonEl.value = '';
-
         modal.classList.replace('hidden', 'flex');
         setTimeout(() => {
             modal.classList.replace('opacity-0', 'opacity-100');
             box.classList.replace('scale-95', 'scale-100');
         }, 10);
+    };
+
+    const showPRWaitingModal = () => {
+        const box = document.getElementById('modalPRLateBox');
+        box.innerHTML = `
+            <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h2 class="text-xl font-black text-gray-800 mb-1 text-center">Sedang Menunggu Izin</h2>
+            <p class="text-xs text-gray-500 font-bold mb-5 text-center leading-relaxed">Permintaan perpanjanganmu sudah dikirim. Tunggu Kak Aziz menyetujuinya ya. Muat ulang halaman untuk memperbarui status.</p>
+            <div class="space-y-2.5">
+                <button onclick="location.reload()" class="w-full py-4 bg-amber-500 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest"><i class="fa-solid fa-rotate-right mr-1"></i> Muat Ulang Halaman</button>
+                <button onclick="closePRLateModal()" class="w-full py-3 bg-gray-100 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-xs">Tutup</button>
+            </div>`;
+        _showModalPRLate();
+    };
+
+    window.openPRLateModal = (deadlineString, studentId = null, studentName = '') => {
+        const box = document.getElementById('modalPRLateBox');
+        lateReqStudentId = studentId;
+
+        const d = new Date(deadlineString);
+        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const formattedDate = d.toLocaleDateString('id-ID', opts);
+
+        // Rebuild form setiap kali buka — hindari stale DOM dari sesi sebelumnya
+        box.innerHTML = `
+            <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-lg relative z-10">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <h2 class="text-xl font-black text-gray-800 mb-1 text-center">Yahh, Kamu Telat!</h2>
+            <p class="text-xs text-gray-500 font-bold mb-4 text-center">Waktu pengerjaan tugas PR ini sudah habis.</p>
+            <div class="bg-amber-50 border border-amber-100 rounded-2xl p-3 mb-4 text-center">
+                <p class="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1">Batas Waktu Sebelumnya:</p>
+                <p class="text-sm font-bold text-amber-700">${formattedDate}</p>
+            </div>
+            <label class="block text-[11px] font-black text-gray-600 uppercase tracking-widest mb-2">Kenapa telat ngerjain?</label>
+            <textarea id="lateReason" rows="3" maxlength="300"
+                class="w-full p-3 text-sm bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none"
+                placeholder="Tulis alasanmu, mis. ketiduran, ada acara keluarga, sinyal jelek..."></textarea>
+            <div class="space-y-2.5 mt-5">
+                <button id="btnSendLateReq" onclick="submitExtensionRequestConsul()" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Minta Perpanjangan ke Kak Aziz
+                </button>
+                <button onclick="closePRLateModal()" class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-2xl active:scale-95 transition-all text-xs">Nanti Saja</button>
+            </div>`;
+        _showModalPRLate();
     };
 
     window.submitExtensionRequestConsul = async () => {
