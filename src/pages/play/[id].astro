@@ -7,6 +7,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
 ---
 
 <Layout title="Ujian - yukNgaji">
+    <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;600;700&display=swap" rel="stylesheet" />
 
     <div id="loadingScreen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-50">
         <div class="loader-ring mb-6"></div>
@@ -1848,6 +1849,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     // ==========================================================
     // 7. RENDER SOAL & NAVIGASI UJIAN
     // ==========================================================
+    // Bungkus tiap potongan huruf Arab dgn <span class="ar-text"> agar tampil besar ala Latihan Tajwid.
+    const wrapArabic = (t) => t == null ? '' : String(t).replace(/\p{Script=Arabic}(?:[\p{Script=Arabic}ـ،؛؟\s]*\p{Script=Arabic})?/gu, m => `<span class="ar-text">${m}</span>`);
+
     const renderQuestion = () => {
         const q = questions[currentIndex];
 
@@ -1871,7 +1875,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
             lvlBadge.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${q.difficulty_level || 'Sedang'}`;
         }
 
-        document.getElementById('questionText').innerText = q.question;
+        document.getElementById('questionText').innerHTML = wrapArabic(q.question);
 
         const qJump = document.getElementById('qJump');
         if (qJump) {
@@ -1901,7 +1905,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
                 const label = displayLabels[idx];
                 return `
                     <button onclick="window.selectOption('${q.id}','${originalOptKey}')" class="opt-btn ${sel ? 'selected' : ''}" style="animation-delay:${idx*50}ms">
-                        <div class="opt-letter">${label}</div><span class="opt-text">${text}</span>
+                        <div class="opt-letter">${label}</div><span class="opt-text">${wrapArabic(text)}</span>
                         ${sel ? '<div class="opt-check"><i class="fa-solid fa-check text-[10px]"></i></div>' : ''}
                     </button>`;
             }).join('');
@@ -2086,7 +2090,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
         const q = questions[currentIndex];
         document.getElementById('progressText').innerText = `Mengetik ${currentIndex + 1} dari ${questions.length}`;
         document.getElementById('progressBar').style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
-        document.getElementById('arcadeQuestionText').innerText = q.question;
+        document.getElementById('arcadeQuestionText').innerHTML = wrapArabic(q.question);
 
         // Mode mengetik: dropdown loncat & tombol prev disembunyikan; tombol Clue tampil di KIRI,
         // tombol Kumpulkan/Lewati di KANAN (alur mengetik berurutan / auto-maju).
@@ -3378,6 +3382,10 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
   .q-image-wrap { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 24px; border: 2px dashed var(--border); max-height: 250px; background: var(--bg); }
   .q-image { width: 100%; height: 100%; object-fit: contain; }
   .q-text { font-size: clamp(1rem, 2.6vw, 1.3rem); font-weight: 800; color: var(--text); line-height: 1.45; text-align: center; }
+  /* Teks Arab tampil besar ala Latihan Tajwid (bukan teks biasa).
+     letter/word-spacing: normal + calt/liga wajib agar huruf tersambung rapi (bukan terpisah per huruf). */
+  .ar-text { font-family: 'Scheherazade New','Amiri Quran','Amiri',serif; font-size: 1.9em; line-height: 2; direction: rtl; unicode-bidi: isolate;
+    letter-spacing: normal; word-spacing: normal; font-feature-settings: "liga" 1, "calt" 1, "rlig" 1; }
 
   .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
   @media(min-width: 768px) { .options-grid { grid-template-columns: 1fr 1fr; } }
