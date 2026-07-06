@@ -1644,7 +1644,7 @@ import Mascot from '../../components/Mascot.astro';
         const str = String(text);
         return str.replace(
             // Sertakan harakat (\p{Mn}) + tatweel + presentation forms/kurung ornamen agar kata berharakat tidak terpecah per huruf.
-            /[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu,
+            /[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»()[\]"'“”‘’]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu,
             (m) => `<span class="ar-text">${m}</span>`
         );
     };
