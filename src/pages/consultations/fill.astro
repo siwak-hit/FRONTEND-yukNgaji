@@ -1643,7 +1643,8 @@ import Mascot from '../../components/Mascot.astro';
         if (text == null) return text;
         const str = String(text);
         return str.replace(
-            /\p{Script=Arabic}(?:[\p{Script=Arabic}ـ،؛؟\s]*\p{Script=Arabic})?/gu,
+            // Sertakan harakat (\p{Mn}) + tatweel + presentation forms/kurung ornamen agar kata berharakat tidak terpecah per huruf.
+            /[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu,
             (m) => `<span class="ar-text">${m}</span>`
         );
     };

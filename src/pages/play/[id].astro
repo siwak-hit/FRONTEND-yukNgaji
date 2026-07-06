@@ -1850,7 +1850,9 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     // 7. RENDER SOAL & NAVIGASI UJIAN
     // ==========================================================
     // Bungkus tiap potongan huruf Arab dgn <span class="ar-text"> agar tampil besar ala Latihan Tajwid.
-    const wrapArabic = (t) => t == null ? '' : String(t).replace(/\p{Script=Arabic}(?:[\p{Script=Arabic}ـ،؛؟\s]*\p{Script=Arabic})?/gu, m => `<span class="ar-text">${m}</span>`);
+    // Kelas mencakup harakat (\p{Mn}, Script=Inherited) + tatweel + presentation forms/kurung ornamen,
+    // supaya kata berharakat TIDAK terpecah per huruf.
+    const wrapArabic = (t) => t == null ? '' : String(t).replace(/[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu, m => `<span class="ar-text">${m}</span>`);
 
     const renderQuestion = () => {
         const q = questions[currentIndex];
