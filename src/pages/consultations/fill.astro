@@ -6,6 +6,7 @@ import Mascot from '../../components/Mascot.astro';
 ---
 
 <Layout title="Sesi Pengerjaan - yukNgaji">
+    <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;600;700&display=swap" rel="stylesheet" />
     <div class="min-h-screen flex flex-col overflow-hidden relative" style="background-color: var(--parchment);">
 
         <header id="mainHeader" class="sticky top-0 px-5 py-3 backdrop-blur-md border-b z-[80] flex items-center justify-between transition-all duration-500 transform translate-y-0" style="background-color: rgba(255,255,255,0.92); border-color: var(--hairline);">
@@ -705,16 +706,17 @@ import Mascot from '../../components/Mascot.astro';
     /* Huruf Arab tampil lebih besar & rapi tanpa memperbesar teks latin di sekitarnya.
        Dipasang global karena soal/opsi dirender lewat innerHTML. */
     .ar-text {
-        font-family: 'Noto Naskh Arabic', 'Amiri', 'Geeza Pro', 'Traditional Arabic', serif !important;
-        /* Amiri/Noto hanya punya weight 400/500/700 — paksa 400 supaya tidak jatuh
-           ke fallback non-Arab (penyebab huruf jadi terpisah-pisah di HP). */
+        display: block;             /* frasa Arab di baris sendiri, tidak menyambung teks latin */
+        text-align: center;
+        margin: .4em 0;
+        font-family: 'Scheherazade New', 'Amiri Quran', 'Amiri', serif !important;
         font-weight: 400 !important;
-        font-size: 1.45em;
+        font-size: clamp(1.8rem, 7vw, 2.6rem);   /* besar ala Latihan Tajwid */
         line-height: 1.9;           /* longgar agar harakat tidak bertumpuk */
         letter-spacing: normal !important;  /* letter-spacing memutus sambungan huruf Arab */
+        word-spacing: normal !important;
         direction: rtl;
-        unicode-bidi: isolate;      /* pisahkan dari teks latin di sekitarnya */
-        font-feature-settings: "liga" 1, "calt" 1;  /* aktifkan shaping/penyambungan */
+        font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;  /* shaping/penyambungan huruf */
     }
 </style>
 
