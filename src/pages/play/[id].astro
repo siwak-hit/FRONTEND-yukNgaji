@@ -1849,10 +1849,11 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     // ==========================================================
     // 7. RENDER SOAL & NAVIGASI UJIAN
     // ==========================================================
-    // Bungkus tiap potongan huruf Arab dgn <span class="ar-text"> agar tampil besar ala Latihan Tajwid.
-    // Kelas mencakup harakat (\p{Mn}, Script=Inherited) + tatweel + presentation forms/kurung ornamen,
-    // supaya kata berharakat TIDAK terpecah per huruf.
-    const wrapArabic = (t) => t == null ? '' : String(t).replace(/[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»()[\]"'“”‘’]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu, m => `<span class="ar-text">${m}</span>`);
+    // Bungkus tiap frasa Arab dgn <span class="ar-text"> agar tampil besar ala Latihan Tajwid.
+    // Kelas mencakup harakat (\p{Mn}) + tatweel + presentation forms/kurung ornamen supaya kata berharakat
+    // tidak terpecah, DAN tag HTML inline (<u>, <span style=…>) dibiarkan menempel dlm frasa — jadi kata
+    // bisa digarisbawahi/diwarnai lewat markup di teks soal tanpa memecah frasa jadi banyak baris.
+    const wrapArabic = (t) => t == null ? '' : String(t).replace(/(?:<[^>]*>|[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»《》()[\]"'“”‘’])*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿](?:<[^>]*>|[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»《》()[\]"'“”‘’])*/gu, m => `<span class="ar-text">${m.trim()}</span>`);
 
     const renderQuestion = () => {
         const q = questions[currentIndex];
@@ -3389,6 +3390,8 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
   .ar-text { display: block; text-align: center; margin: .4em 0; font-family: 'Scheherazade New','Amiri Quran','Amiri',serif;
     font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.9; direction: rtl;
     letter-spacing: normal; word-spacing: normal; font-feature-settings: "liga" 1, "calt" 1, "rlig" 1; }
+  /* garis bawah kata (via <u>/inline style di teks soal) diberi jarak agar tak menabrak harakat bawah */
+  .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; }
 
   .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
   @media(min-width: 768px) { .options-grid { grid-template-columns: 1fr 1fr; } }

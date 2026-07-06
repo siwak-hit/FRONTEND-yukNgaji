@@ -718,6 +718,8 @@ import Mascot from '../../components/Mascot.astro';
         direction: rtl;
         font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;  /* shaping/penyambungan huruf */
     }
+    /* garis bawah kata (via <u>/inline style di teks soal) diberi jarak agar tak menabrak harakat bawah */
+    .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
@@ -1643,9 +1645,10 @@ import Mascot from '../../components/Mascot.astro';
         if (text == null) return text;
         const str = String(text);
         return str.replace(
-            // Sertakan harakat (\p{Mn}) + tatweel + presentation forms/kurung ornamen agar kata berharakat tidak terpecah per huruf.
-            /[\p{Script=Arabic}ـﭐ-﷿ﹰ-﻿](?:[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»()[\]"'“”‘’]*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿])?/gu,
-            (m) => `<span class="ar-text">${m}</span>`
+            // Harakat (\p{Mn}) + tatweel + presentation forms/kurung ornamen agar kata berharakat tak terpecah,
+            // DAN tag HTML inline (<u>, <span style=…>) dibiarkan menempel dlm frasa (garis bawah/warna per kata).
+            /(?:<[^>]*>|[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»《》()[\]"'“”‘’])*[\p{Script=Arabic}\p{Mn}ﭐ-﷿ﹰ-﻿](?:<[^>]*>|[\p{Script=Arabic}\p{Mn}ـﭐ-﷿ﹰ-﻿\s،؛؟«»《》()[\]"'“”‘’])*/gu,
+            (m) => `<span class="ar-text">${m.trim()}</span>`
         );
     };
 
