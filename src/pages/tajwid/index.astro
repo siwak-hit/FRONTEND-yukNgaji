@@ -1,0 +1,375 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+---
+
+<Layout title="Latihan Tajwid - yukNgaji">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;600;700&display=swap" rel="stylesheet" />
+
+    <div class="px-6 py-8 pb-32 min-h-screen flex flex-col">
+        <header class="mb-5 flex items-start justify-between gap-2">
+            <div>
+                <p class="eyebrow mb-1">Latihan Bacaan</p>
+                <h1 class="page-title">Latihan Tajwid</h1>
+                <p class="caption mt-1">Buat rujukan bacaan untuk dinilai otomatis ke siswa.</p>
+            </div>
+            <a href="/tajwid/hasil" class="btn-soft !py-1.5 !px-3 text-xs flex-shrink-0"><i class="fa-solid fa-list-check mr-1"></i>Hasil Siswa</a>
+        </header>
+
+        <div class="card card-pad mb-4" style="background: var(--accent-soft); border-color: transparent;">
+            <p class="eyebrow mb-2" style="color: var(--accent-strong);">Cara membuat rujukan</p>
+            <ol class="text-sm space-y-1.5" style="color: var(--accent-strong);">
+                <li><b>1.</b> Pilih surat, tekan <b>“Siapkan Rujukan”</b> pada ayat.</li>
+                <li><b>2.</b> Ketuk kata yang dibaca <b>panjang</b> untuk menandai jenis mad.</li>
+                <li><b>3.</b> <b>Rekam</b> bacaanmu yang benar — jadi <b>kunci jawaban</b> penilaian siswa.</li>
+                <li><b>4.</b> Tekan <b>Simpan</b>.</li>
+            </ol>
+        </div>
+
+        <label class="caption mb-1 block" for="surahSelect">Surat (Juz 'Amma)</label>
+        <select id="surahSelect" class="w-full mb-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface-sunken)] px-3 py-2.5 text-sm">
+            <option value="">Memuat…</option>
+        </select>
+
+        <!-- Legenda warna selalu tampil -->
+        <p class="caption mb-1">Jenis mad (ketuk kata untuk memilih):</p>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <span class="chip-legend c-orange">🟠 Mad Aridh Lissukun</span>
+            <span class="chip-legend c-green">🟢 Mad Wajib / Jaiz</span>
+            <span class="chip-legend c-blue">🔵 Mad Thobi'i (info)</span>
+        </div>
+
+        <div id="shareBox" class="mb-3"></div>
+        <div id="ayatList" class="flex flex-col gap-3"></div>
+        <p id="status" class="caption mt-4"></p>
+    </div>
+
+    <!-- Drawer bawaan design system -->
+    <div id="drawer" class="modal-overlay hidden">
+        <div class="modal-sheet">
+            <div class="sheet-grabber"></div>
+            <div id="drawerBody"></div>
+        </div>
+    </div>
+
+    <NavbarGuru />
+</Layout>
+
+<style is:global>
+  .quran-text { font-family:'Scheherazade New','Amiri Quran',serif; direction:rtl; text-align:right;
+    font-size:clamp(1.9rem,7vw,2.6rem); line-height:2.8; color:var(--ink,#1a1a1a); }
+  .w { padding:0 .3rem; border-radius:8px; cursor:pointer; transition:background .12s, outline .12s; }
+  .w:hover { background:#eef2ff; outline:2px dashed #c7d2fe; }
+  .w.c-orange { box-shadow: inset 0 -5px 0 #f59e0b; }
+  .w.c-green  { box-shadow: inset 0 -5px 0 #16a34a; }
+  .w.c-blue   { box-shadow: inset 0 -5px 0 #60a5fa; }
+  .chip-legend { font-size:11px; padding:2px 9px; border-radius:999px; font-weight:700; display:inline-block; }
+  .chip-legend.c-orange{ background:#fef3c7; color:#854d0e; }
+  .chip-legend.c-green { background:#dcfce7; color:#166534; }
+  .chip-legend.c-blue  { background:#dbeafe; color:#1e40af; }
+  .done-badge { font-size:11px; font-weight:700; color:var(--accent-strong,#166534); }
+  .tj-del { width:32px;height:32px;border-radius:8px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;flex-shrink:0; }
+  .tj-del:hover { background:#fecaca; }
+  .recdot { width:10px;height:10px;border-radius:999px;background:#fff;display:inline-block;animation:pulse 1s infinite;vertical-align:middle;margin-right:4px; }
+  @keyframes pulse{50%{opacity:.3}}
+</style>
+
+<script>
+  const API = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const token = localStorage.getItem('token');
+  if (!token) location.href = '/';
+  const headers = { Authorization: `Bearer ${token}` };
+  const $ = (id) => document.getElementById(id);
+
+  // --- Drawer (ganti prompt/confirm/alert) ---
+  let _onClose = null;
+  function openDrawer(html, onClose) { _onClose = onClose || null; $('drawerBody').innerHTML = html; $('drawer').classList.remove('hidden'); }
+  function closeDrawer() { $('drawer').classList.add('hidden'); const f = _onClose; _onClose = null; if (f) f(); }
+  function confirmDrawer(title, msg, okLabel) {
+    return new Promise(res => {
+      let settled = false;
+      const finish = (v) => { if (settled) return; settled = true; closeDrawer(); res(v); };
+      openDrawer(`<h3 class="section-title mb-1">${title}</h3><p class="caption mb-4">${msg}</p>
+        <div class="flex gap-2"><button class="btn-soft flex-1" id="dNo">Batal</button><button class="btn-primary flex-1" id="dYes">${okLabel || 'Ya'}</button></div>`, () => finish(false));
+      $('dNo').onclick = () => finish(false);
+      $('dYes').onclick = () => finish(true);
+    });
+  }
+  $('drawer').addEventListener('click', e => { if (e.target === $('drawer')) closeDrawer(); });
+
+  // none -> oranye(aridh) -> hijau(wajib/jaiz) -> biru(thobii)
+  const MAD_CYCLE = [
+    null,
+    { name: 'Mad Aridh Lissukun', graded: true,  type: 'oneSided', c: 'c-orange' },
+    { name: 'Mad Wajib / Jaiz',   graded: true,  type: 'twoSided', c: 'c-green' },
+    { name: "Mad Thobi'i",        graded: false,                    c: 'c-blue' },
+  ];
+  const clsOf = (m) => (m ? m.c : '');
+  const madToIdx = (m) => !m ? 0 : (!m.graded ? 3 : m.type === 'oneSided' ? 1 : 2);
+
+  const surahCache = {};
+  const refMap = {};       // ayatId -> saved reference {words, durs}
+  const ayahNo = {};       // ayatId -> nomor ayat
+  const state = {};        // ayatId -> { words, chips, blob, hasRef, savedDurs }
+  let groups = [], curGroup = 0, curKey = null, curTotal = 0;   // ayat dibagi grup per 4
+  const doneBadge = (no) => `<span class="done-badge"><i class="fa-solid fa-circle-check"></i> Ayat ${no} · sudah dirujuk</span>`;
+  const completeGroups = () => groups.filter(g => { const all = g.every(a => refMap[a.id]); return curTotal <= 4 ? all : (g.length === 4 && all); }).length;
+
+  async function loadSurahs() {
+    try {
+      const r = await (await fetch(`${API}/api/tajwid/surahs`, { headers })).json();
+      const sel = $('surahSelect');
+      sel.innerHTML = '<option value="">— pilih surat —</option>';
+      r.data.forEach((s) => sel.add(new Option(`${s.surah_name} (${s.ayah_count} ayat)`, s.surah_key)));
+      sel.onchange = () => sel.value ? loadAyat(sel.value) : ($('ayatList').innerHTML = '');
+    } catch (e) { $('status').textContent = 'Gagal memuat surat: ' + e.message + ' (backend jalan?)'; }
+  }
+
+  async function loadAyat(key) {
+    $('status').textContent = 'Memuat ayat…'; $('ayatList').innerHTML = '';
+    try {
+      let data = surahCache[key];
+      if (!data) { data = (await (await fetch(`${API}/api/tajwid/surah/${key}`, { headers })).json()).data; surahCache[key] = data; }
+      const refs = (await (await fetch(`${API}/api/tajwid/surah/${key}/references`, { headers })).json()).data || [];
+      refs.forEach(r => refMap[r.ayat_id] = r);
+      data.forEach(a => { ayahNo[a.id] = a.ayah_no; delete state[a.id]; });
+      groups = []; for (let i = 0; i < data.length; i += 4) groups.push(data.slice(i, i + 4));
+      curKey = key; curTotal = data.length; curGroup = 0;
+      renderGroup(0); renderShare();
+      $('status').textContent = `${data.length} ayat · ${groups.length} grup (per 4 ayat).`;
+    } catch (e) { $('status').textContent = 'Gagal: ' + e.message; }
+  }
+
+  // tampilkan 1 grup (maks 4 ayat) + navigasi prev/next
+  function renderGroup(gi) {
+    curGroup = Math.max(0, Math.min(gi, groups.length - 1));
+    const g = groups[curGroup];
+    const first = g[0].ayah_no, last = g[g.length - 1].ayah_no;
+    const partial = curTotal > 4 && g.length < 4;
+    const complete = g.every(a => refMap[a.id]) && (curTotal <= 4 || g.length === 4);
+    const note = partial ? ' · sisa (tak dipakai)' : complete ? ' · ✓ lengkap' : ' · belum lengkap';
+    $('ayatList').innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <button class="btn-soft !py-1.5 !px-3 text-sm" id="gPrev" ${curGroup === 0 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="text-center"><p class="section-title">Grup ${curGroup + 1} / ${groups.length}</p><p class="caption">Ayat ${first}–${last}${note}</p></div>
+        <button class="btn-soft !py-1.5 !px-3 text-sm" id="gNext" ${curGroup === groups.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      ${partial ? '<p class="caption mb-3" style="color:#b45309">Grup ini kurang dari 4 ayat — tidak dipakai untuk latihan siswa.</p>' : ''}
+      ${g.map(a => cardHtml(a)).join('')}`;
+    g.forEach(a => { $(`prep-${a.id}`).onclick = () => openEditor(a.id); const d = $(`del-${a.id}`); if (d) d.onclick = () => deleteRef(a.id); });
+    $('gPrev').onclick = () => renderGroup(curGroup - 1);
+    $('gNext').onclick = () => renderGroup(curGroup + 1);
+  }
+
+  function renderShare() {
+    const complete = completeGroups();
+    const possible = curTotal <= 4 ? 1 : Math.floor(curTotal / 4);
+    const ready = complete >= 1;
+    $('shareBox').innerHTML = `
+      <div class="card card-pad flex items-center justify-between gap-2">
+        <div>
+          <p class="section-title">Bagikan ke siswa</p>
+          <p class="caption">${ready
+            ? `${complete} grup lengkap · siap dibagikan.`
+            : `Lengkapi minimal <b>1 grup</b> (4 ayat). Baru <b>${complete}/${possible}</b> grup.`}</p>
+        </div>
+        <button class="btn-primary !py-2 !px-4 text-sm flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" id="mkLink" ${ready ? '' : 'disabled'}>
+          <i class="fa-solid fa-link mr-1"></i>Buat Link
+        </button>
+      </div>`;
+    if (ready) $('mkLink').onclick = () => openCreateLink(curKey, complete);
+  }
+
+  // drawer: pilih jumlah ayat (default = jumlah ayat berujuk) lalu buat link
+  function openCreateLink(key, complete) {
+    const rule = curTotal <= 4 ? `semua ${curTotal} ayat` : '1 grup (4 ayat) acak';
+    openDrawer(`
+      <h3 class="section-title mb-1">Buat Link Latihan</h3>
+      <p class="caption mb-3"><b>${complete} grup</b> siap. Tiap siswa membaca <b>${rule}</b>.</p>
+      <label class="caption block mb-1">Pertemuan ke-</label>
+      <input type="number" id="pertInput" min="1" value="1" class="field w-full mb-4" />
+      <div class="flex gap-2">
+        <button class="btn-soft flex-1" id="dCancel">Batal</button>
+        <button class="btn-primary flex-1" id="dMake">Buat Link</button>
+      </div>
+      <div id="drawerLinkOut" class="mt-3"></div>`);
+    $('dCancel').onclick = closeDrawer;
+    $('dMake').onclick = async () => {
+      const pertemuan = parseInt($('pertInput').value) || null;
+      $('drawerLinkOut').innerHTML = '<p class="caption">⏳ membuat…</p>';
+      try {
+        const j = await (await fetch(`${API}/api/tajwid/exercises`, {
+          method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ surah_key: key, pertemuan }),
+        })).json();
+        if (j.status !== 'success') throw new Error(j.message);
+        const url = `${location.origin}/latihan-tajwid?t=${j.exercise.token}`;
+        $('drawerLinkOut').innerHTML = `
+          <div class="card card-pad" style="background:var(--accent-soft);border-color:transparent">
+            <p class="caption mb-1" style="color:var(--accent-strong)">Link latihan siswa:</p>
+            <div class="flex items-center gap-2">
+              <input type="text" readonly value="${url}" class="field flex-1 !text-xs" onclick="this.select()" />
+              <button class="btn-soft !py-1.5 !px-3 text-xs flex-shrink-0" onclick="navigator.clipboard.writeText('${url}');this.textContent='Tersalin ✓'">Salin</button>
+            </div>
+          </div>`;
+      } catch (e) { $('drawerLinkOut').innerHTML = `<p class="caption" style="color:#b45309">⚠️ ${e.message}</p>`; }
+    };
+  }
+
+  const cardHtml = (a) => {
+    const done = !!refMap[a.id];
+    return `
+    <div class="card card-pad mb-2" id="card-${a.id}">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <span class="eyebrow" id="eye-${a.id}">${done ? doneBadge(a.ayah_no) : 'Ayat ' + a.ayah_no}</span>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          ${done ? `<button class="tj-del" id="del-${a.id}" title="Hapus rujukan"><i class="fa-solid fa-trash"></i></button>` : ''}
+          <button class="${done ? 'btn-soft' : 'btn-primary'} !py-1.5 !px-3 text-xs" id="prep-${a.id}">
+            ${done ? '<i class="fa-solid fa-chevron-down mr-1"></i>Lihat / Rekam ulang' : '<i class="fa-solid fa-microphone-lines mr-1"></i>Siapkan Rujukan'}
+          </button>
+        </div>
+      </div>
+      <div class="quran-text" id="ar-${a.id}">${a.arabic}</div>
+      <div id="editor-${a.id}" class="hidden mt-3 pt-3 border-t border-[var(--divider)]"></div>
+    </div>`;
+  };
+
+  async function openEditor(id) {
+    const ed = $(`editor-${id}`);
+    if (!ed.classList.contains('hidden')) { ed.classList.add('hidden'); return; }
+    ed.classList.remove('hidden');
+    if (state[id]) { renderEditor(id); return; }
+    ed.innerHTML = '<p class="caption">Memuat…</p>';
+    try {
+      if (refMap[id]) {
+        // sudah dirujuk -> pakai tag & durasi yang tersimpan (bukan usulan lagi)
+        const ref = refMap[id];
+        state[id] = { words: ref.words.map(w => ({ t: w.t })), chips: ref.words.map(w => madToIdx(w.mad)), blob: null, hasRef: true, savedDurs: ref.durs };
+      } else {
+        const sug = await (await fetch(`${API}/api/tajwid/ayat/${id}/suggest`, { headers })).json();
+        state[id] = { words: sug.words.map(w => ({ t: w.t })), chips: sug.words.map(w => madToIdx(w.mad)), blob: null, hasRef: false };
+      }
+      renderEditor(id);
+    } catch (e) { ed.innerHTML = `<p class="caption" style="color:#b45309">Gagal: ${e.message}</p>`; }
+  }
+
+  const tagSummary = (id) => {
+    const st = state[id];
+    const items = st.words.map((w, i) => ({ t: w.t, m: MAD_CYCLE[st.chips[i]] })).filter(x => x.m);
+    if (!items.length) return '<span class="caption">Belum ada kata ditandai. Ketuk kata yang dibaca panjang.</span>';
+    return items.map(x => `<span class="chip-legend ${x.m.c}">${x.t} — ${x.m.name}</span>`).join(' ');
+  };
+
+  function renderEditor(id) {
+    const st = state[id];
+    $(`editor-${id}`).innerHTML = `
+      <p class="caption mb-2"><b>Langkah 2 —</b> ketuk kata yang dibaca panjang:</p>
+      <div class="quran-text mb-2" id="chips-${id}">${
+        st.words.map((w, i) => `<span class="w ${clsOf(MAD_CYCLE[st.chips[i]])}" data-i="${i}">${w.t}</span>`).join(' ')
+      }</div>
+      <div class="flex flex-wrap gap-1.5 mb-3" id="sum-${id}">${tagSummary(id)}</div>
+      <p class="caption mb-2"><b>Langkah 3 —</b> rekam bacaanmu yang benar (kunci jawaban):</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button class="btn-primary !py-2 !px-4 text-sm" id="rec-${id}">🎙️ Rekam (mulai 3 dtk)</button>
+        <button class="btn-soft !py-2 !px-4 text-sm" id="save-${id}" disabled>Simpan Rujukan</button>
+        <span class="caption" id="edstat-${id}"></span>
+      </div>
+      <div class="caption mt-2" id="edinfo-${id}">${st.hasRef && st.savedDurs ? 'Rujukan tersimpan · durasi: [' + st.savedDurs.join(', ') + ']s' : ''}</div>`;
+    $(`chips-${id}`).querySelectorAll('.w').forEach(el => el.onclick = () => {
+      const i = +el.dataset.i;
+      st.chips[i] = (st.chips[i] + 1) % MAD_CYCLE.length;
+      el.className = 'w ' + clsOf(MAD_CYCLE[st.chips[i]]);
+      $(`sum-${id}`).innerHTML = tagSummary(id);
+    });
+    $(`rec-${id}`).onclick = () => recordFlow(id);
+    $(`save-${id}`).onclick = () => saveRef(id);
+    if (st.blob) $(`save-${id}`).disabled = false;   // rekaman masih ada (setelah pindah grup)
+  }
+
+  let activeRec = null;
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  async function recordFlow(id) {
+    const btn = $(`rec-${id}`);
+    if (activeRec && activeRec.id === id && activeRec.mr.state === 'recording') {
+      $(`edstat-${id}`).textContent = 'menahan ujung…';
+      setTimeout(() => activeRec.mr.state === 'recording' && activeRec.mr.stop(), 400);
+      return;
+    }
+    for (let n = 3; n >= 1; n--) { btn.textContent = `⏳ ${n}`; btn.style.background = '#16a34a'; await sleep(700); }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { $(`edstat-${id}`).textContent = 'Mik gagal: ' + e.message; btn.textContent = '🎙️ Rekam (mulai 3 dtk)'; btn.style.background = ''; return; }
+    const chunks = []; const mr = new MediaRecorder(stream);
+    activeRec = { id, mr };
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      state[id].blob = new Blob(chunks, { type: 'audio/webm' });
+      btn.textContent = '🎙️ Rekam ulang'; btn.style.background = '';
+      $(`edstat-${id}`).innerHTML = '✓ terekam';
+      $(`save-${id}`).disabled = false; activeRec = null;
+    };
+    mr.start();
+    btn.innerHTML = '<span class="recdot"></span>Stop'; btn.style.background = '#dc2626';
+    $(`edstat-${id}`).textContent = 'merekam… baca ayatnya lalu Stop';
+  }
+
+  async function saveRef(id) {
+    const st = state[id];
+    if (!st.blob) return;
+    if (st.hasRef && !(await confirmDrawer('Timpa rujukan?', 'Rujukan ayat ini sudah ada. Ganti dengan rekaman baru?', 'Timpa'))) return;
+    const words = st.words.map((w, i) => MAD_CYCLE[st.chips[i]] ? { t: w.t, mad: MAD_CYCLE[st.chips[i]] } : { t: w.t });
+    $(`edstat-${id}`).textContent = '⏳ mengirim ke AI…';
+    $(`save-${id}`).disabled = true;
+    const fd = new FormData();
+    fd.append('audio', st.blob, 'rujukan.webm');
+    fd.append('words', JSON.stringify(words));
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/ayat/${id}/reference`, { method: 'POST', headers, body: fd })).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      st.hasRef = true; st.savedDurs = j.durs;
+      refMap[id] = { ayat_id: id, words, durs: j.durs };
+      markDone(id);
+      $(`edstat-${id}`).innerHTML = '✅ rujukan tersimpan';
+      $(`edinfo-${id}`).innerHTML = `durasi kata: [${j.durs.join(', ')}]s · AI dengar: <b>${j.heard}</b>`
+        + (j.wordMismatch ? ' <span style="color:#b45309">⚠️ jumlah kata beda dari teks — coba rekam lebih jelas</span>' : '');
+    } catch (e) { $(`edstat-${id}`).textContent = '⚠️ ' + e.message; }
+    finally { $(`save-${id}`).disabled = false; }
+  }
+
+  // ubah header kartu jadi "sudah dirujuk" + tombol hapus + refresh status link
+  function markDone(id) {
+    $(`eye-${id}`).innerHTML = doneBadge(ayahNo[id]);
+    const btn = $(`prep-${id}`);
+    btn.classList.remove('btn-primary'); btn.classList.add('btn-soft');
+    btn.innerHTML = '<i class="fa-solid fa-chevron-down mr-1"></i>Lihat / Rekam ulang';
+    if (!$(`del-${id}`)) {
+      btn.insertAdjacentHTML('beforebegin', `<button class="tj-del" id="del-${id}" title="Hapus rujukan"><i class="fa-solid fa-trash"></i></button>`);
+      $(`del-${id}`).onclick = () => deleteRef(id);
+    }
+    renderShare();
+  }
+
+  function markUndone(id) {
+    $(`eye-${id}`).textContent = `Ayat ${ayahNo[id]}`;
+    const del = $(`del-${id}`); if (del) del.remove();
+    const btn = $(`prep-${id}`);
+    btn.classList.remove('btn-soft'); btn.classList.add('btn-primary');
+    btn.innerHTML = '<i class="fa-solid fa-microphone-lines mr-1"></i>Siapkan Rujukan';
+    const ed = $(`editor-${id}`); ed.classList.add('hidden'); ed.innerHTML = '';
+  }
+
+  async function deleteRef(id) {
+    if (!(await confirmDrawer('Hapus rujukan?', 'Rekaman & tanda mad ayat ini akan dihapus. Lanjut?', 'Hapus'))) return;
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/ayat/${id}/reference`, { method: 'DELETE', headers })).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      delete refMap[id]; delete state[id];
+      markUndone(id); renderShare();
+    } catch (e) { alert(e.message); }
+  }
+
+  loadSurahs();
+</script>

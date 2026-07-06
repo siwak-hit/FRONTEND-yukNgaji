@@ -1,0 +1,307 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Latihan Tajwid">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;600;700&display=swap" rel="stylesheet" />
+
+    <div class="min-h-screen flex flex-col items-center px-6 py-8 max-w-xl mx-auto">
+        <!-- loading global -->
+        <div id="loading" class="flex-1 flex flex-col items-center justify-center gap-3">
+            <div class="spinner"></div><p class="caption" id="loadingText">Memuat latihan…</p>
+        </div>
+
+        <!-- lobby: pilih nama -->
+        <div id="lobby" class="w-full hidden">
+            <header class="text-center mb-6">
+                <p class="eyebrow">Latihan Tajwid</p>
+                <h1 class="page-title" id="lobbyTitle">Bacaan Mad</h1>
+                <p class="caption mt-1" id="lobbySub"></p>
+            </header>
+            <p class="caption mb-2">Pilih namamu:</p>
+            <div id="nameGrid" class="grid grid-cols-3 gap-3 mb-2"></div>
+            <p id="lobbyErr" class="caption mb-3" style="color:#dc2626"></p>
+            <button id="startBtn" class="btn-primary w-full !py-3 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Mulai</button>
+        </div>
+
+        <!-- practice -->
+        <div id="practice" class="w-full hidden">
+            <div class="flex items-center justify-between mb-4">
+                <span class="eyebrow" id="progress">Ayat 1 / 3</span>
+                <span class="caption" id="who"></span>
+            </div>
+            <div class="card card-pad mb-5">
+                <div class="quran-text" id="ayahText"></div>
+            </div>
+
+            <canvas id="wave" width="320" height="60" class="w-full mb-4" style="max-height:60px"></canvas>
+
+            <div class="flex flex-col items-center gap-2">
+                <button id="micBtn" class="mic-btn"><i class="fa-solid fa-microphone"></i></button>
+                <p class="caption" id="micHint">Tekan untuk mulai (hitung mundur 3 detik)</p>
+            </div>
+
+            <div id="result" class="mt-5"></div>
+            <button id="nextBtn" class="btn-primary w-full !py-3 mt-4 hidden">Lanjut →</button>
+        </div>
+
+        <!-- selesai -->
+        <div id="done" class="w-full hidden text-center">
+            <div class="text-6xl mb-3">🎉</div>
+            <h1 class="page-title">Selesai!</h1>
+            <p class="caption mt-1 mb-3">Rata-rata skor bacaanmu:</p>
+            <div class="score-big" id="avgScore">—</div>
+            <div id="doneTable" class="mt-4 text-left"></div>
+            <p class="caption mt-4" id="doneNote">Nilai akhir menunggu koreksi guru.</p>
+        </div>
+    </div>
+</Layout>
+
+<style is:global>
+  .quran-text { font-family:'Scheherazade New','Amiri Quran',serif; direction:rtl; text-align:center;
+    font-size:clamp(2rem,8vw,2.8rem); line-height:2.9; color:var(--ink,#1a1a1a); }
+  .w.c-orange { box-shadow: inset 0 -5px 0 #f59e0b; } .w.c-green { box-shadow: inset 0 -5px 0 #16a34a; }
+  .w.c-blue { box-shadow: inset 0 -5px 0 #60a5fa; }
+  .w { padding:0 .25rem; border-radius:6px; }
+  .w.ok{background:#dcfce7}.w.bad{background:#fee2e2}
+  .name-card { position:relative;display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:.85rem .4rem;border-radius:16px;
+    border:2px solid var(--hairline,#e5e7eb);background:var(--canvas,#fff);cursor:pointer;transition:.15s; }
+  .name-card:hover:not(:disabled) { border-color:var(--accent,#16a34a); }
+  .name-card.selected { border-color:var(--accent-strong,#166534);background:var(--accent-soft,#dcfce7); }
+  .name-card:disabled { opacity:.5;cursor:not-allowed; }
+  .name-check { position:absolute;top:5px;right:5px;color:#16a34a;font-size:15px;line-height:1; }
+  .name-avatar { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px; }
+  .name-label { font-size:13px;font-weight:600;text-align:center;line-height:1.2;color:var(--ink,#1a1a1a);word-break:break-word; }
+  .spinner { width:36px;height:36px;border:4px solid #e5e7eb;border-top-color:var(--accent-strong,#16a34a);border-radius:50%;animation:spin .8s linear infinite; }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .mic-btn { width:84px;height:84px;border-radius:50%;border:none;background:#16a34a;color:#fff;font-size:30px;
+    box-shadow:0 6px 20px rgba(22,163,74,.35);transition:.15s;cursor:pointer; }
+  .mic-btn.rec { background:#dc2626;box-shadow:0 6px 24px rgba(220,38,38,.45);animation:beat 1s infinite; }
+  .mic-btn:disabled { background:#d1d5db;box-shadow:none;cursor:not-allowed;color:#fff; }
+  @keyframes beat{50%{transform:scale(1.08)}}
+  .score-big { font-size:64px;font-weight:800;line-height:1; }
+  .detail-tbl { width:100%;border-collapse:collapse;font-size:13px; }
+  .detail-tbl th,.detail-tbl td { border:1px solid var(--hairline,#e5e7eb);padding:6px 8px;text-align:left; }
+  .detail-tbl th { background:var(--surface-sunken,#f7f7f7);font-weight:700; }
+</style>
+
+<script>
+  const API = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const token = new URLSearchParams(location.search).get('t');
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => ['loading','lobby','practice','done'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+
+  const clsOf = (m) => !m ? '' : (!m.graded ? 'c-blue' : m.type === 'oneSided' ? 'c-orange' : 'c-green');
+  const WHITELIST = ['john doe', 'xaviera'];
+  const isWhitelist = (n) => WHITELIST.includes((n || '').trim().toLowerCase());
+  const scoreColor = (v) => v == null ? '#9ca3af' : v >= 80 ? '#16a34a' : v >= 50 ? '#f59e0b' : '#dc2626';
+  const mean = (a) => { const v = a.filter(x => x != null); return v.length ? Math.round(v.reduce((x, y) => x + y, 0) / v.length) : null; };
+  let ex = null, student = null, selectedStudent = null, windowAyat = [], idx = 0, scores = [];
+
+  const AVA = ['#dcfce7|#166534', '#dbeafe|#1e40af', '#fef3c7|#854d0e', '#fae8ff|#86198f', '#ffe4e6|#9f1239', '#e0e7ff|#3730a3', '#ccfbf1|#115e59'];
+  const initials = (name) => name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  const updateStart = () => { $('startBtn').disabled = !selectedStudent; };
+
+  function renderNames() {
+    const grid = $('nameGrid');
+    if (!ex.students.length) { grid.innerHTML = '<p class="caption" style="grid-column:1/-1">Belum ada siswa terdaftar di kelas ini.</p>'; return; }
+    const submitted = ex.submitted || [];
+    grid.innerHTML = ex.students.map((s, i) => {
+      const [bg, fg] = AVA[i % AVA.length].split('|');
+      const done = submitted.includes(s.id);
+      const locked = done && !isWhitelist(s.name);   // sudah dinilai & bukan akun uji -> terkunci
+      return `<button class="name-card" data-id="${s.id}" data-name="${s.name}" ${locked ? 'disabled' : ''}>
+        ${done ? '<span class="name-check"><i class="fa-solid fa-circle-check"></i></span>' : ''}
+        <span class="name-avatar" style="background:${bg};color:${fg}">${initials(s.name)}</span>
+        <span class="name-label">${s.name}</span></button>`;
+    }).join('');
+    grid.querySelectorAll('.name-card').forEach(el => el.onclick = () => {
+      if (el.disabled) return;
+      const wasSelected = el.classList.contains('selected');
+      grid.querySelectorAll('.name-card').forEach(x => x.classList.remove('selected'));
+      if (wasSelected) { selectedStudent = null; }             // klik lagi -> nonaktif (toggle)
+      else { el.classList.add('selected'); selectedStudent = { id: el.dataset.id, name: el.dataset.name }; }
+      $('lobbyErr').textContent = '';
+      updateStart();
+    });
+    updateStart();
+  }
+
+  async function init() {
+    if (!token) { $('loadingText').textContent = 'Link tidak valid.'; return; }
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/public/${token}`)).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      ex = j.data;
+      $('lobbyTitle').textContent = ex.title || 'Bacaan Mad';
+      $('lobbySub').textContent = `${ex.window_size} ayat akan ditampilkan secara acak.`;
+      renderNames();
+      show('lobby');
+    } catch (e) { $('loadingText').textContent = 'Gagal: ' + e.message; }
+  }
+
+  $('startBtn').onclick = () => {
+    if (!selectedStudent) { $('lobbyErr').textContent = 'Pilih namamu dulu ya.'; return; }
+    $('lobbyErr').textContent = '';
+    student = selectedStudent;
+    // #2: sudah pernah dinilai & bukan akun uji -> langsung ke halaman selesai (tak bisa ulang)
+    if ((ex.submitted || []).includes(student.id) && !isWhitelist(student.name)) {
+      return showExistingResult();
+    }
+    // ambil 1 grup lengkap (per 4 ayat) secara acak
+    const groups = ex.groups || [];
+    if (!groups.length) { $('lobbyErr').textContent = 'Latihan belum siap (belum ada grup lengkap).'; return; }
+    windowAyat = groups[Math.floor(Math.random() * groups.length)];
+    idx = 0; scores = [];
+    $('who').textContent = student.name;
+    renderAyah();
+    show('practice');
+  };
+
+  async function showExistingResult() {
+    show('loading'); $('loadingText').textContent = 'Kamu sudah menyelesaikan latihan ini…';
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/public/result/${ex.id}/${student.id}`)).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      renderDone(j.data.items.map(it => ({ ayah_no: it.ayah_no, score: it.score })), j.data.avg, true);
+    } catch (e) { $('loadingText').textContent = 'Gagal memuat hasil: ' + e.message; }
+  }
+
+  function renderAyah() {
+    const a = windowAyat[idx];
+    $('progress').textContent = `Ayat ${idx + 1} / ${windowAyat.length}`;
+    $('ayahText').textContent = a.arabic;   // teks polos, tanpa petunjuk letak mad
+    $('result').innerHTML = ''; $('nextBtn').classList.add('hidden');
+    resetMic();
+  }
+
+  // ---- mikrofon + countdown + waveform ----
+  let mr = null, chunks = [], audioCtx = null, raf = null;
+  function resetMic() {
+    const b = $('micBtn'); b.disabled = false; b.classList.remove('rec');
+    b.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    $('micHint').textContent = 'Tekan untuk mulai (hitung mundur 3 detik)';
+    clearWave();
+  }
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  $('micBtn').onclick = async () => {
+    const b = $('micBtn');
+    if (mr && mr.state === 'recording') {
+      $('micHint').textContent = 'menahan ujung…';
+      setTimeout(() => mr.state === 'recording' && mr.stop(), 400);
+      return;
+    }
+    b.disabled = true;
+    for (let n = 3; n >= 1; n--) { b.innerHTML = n; $('micHint').textContent = 'bersiap…'; await sleep(700); }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { $('micHint').textContent = 'Mik gagal: ' + e.message; resetMic(); return; }
+    chunks = []; mr = new MediaRecorder(stream);
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = async () => { stream.getTracks().forEach(t => t.stop()); stopWave(); await submit(new Blob(chunks, { type: 'audio/webm' })); };
+    mr.start(); startWave(stream);
+    b.disabled = false; b.classList.add('rec'); b.innerHTML = '<i class="fa-solid fa-stop"></i>';
+    $('micHint').textContent = 'Merekam… tekan untuk berhenti';
+  };
+
+  function startWave(stream) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    const an = audioCtx.createAnalyser(); an.fftSize = 128; src.connect(an);
+    const cv = $('wave'), ctx = cv.getContext('2d'), buf = new Uint8Array(an.frequencyBinCount);
+    (function draw() {
+      raf = requestAnimationFrame(draw);
+      an.getByteFrequencyData(buf);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const bw = cv.width / buf.length;
+      ctx.fillStyle = '#dc2626';
+      buf.forEach((v, i) => { const h = (v / 255) * cv.height; ctx.fillRect(i * bw, cv.height - h, bw - 1, h); });
+    })();
+  }
+  function stopWave() { if (raf) cancelAnimationFrame(raf); if (audioCtx) audioCtx.close(); audioCtx = null; clearWave(); }
+  function clearWave() { const cv = $('wave'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
+
+  async function submit(blob) {
+    const a = windowAyat[idx];
+    $('micBtn').disabled = true;
+    $('result').innerHTML = '<div class="flex items-center gap-2 justify-center"><div class="spinner" style="width:22px;height:22px;border-width:3px"></div><span class="caption">Menilai bacaan…</span></div>';
+    const fd = new FormData();
+    fd.append('audio', blob, 'baca.webm');
+    fd.append('student_id', student.id);
+    fd.append('student_name', student.name);
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/public/${token}/ayat/${a.id}/score`, { method: 'POST', body: fd })).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      if (j.unclear) { showUnclear(); return; }
+      showResult(j);
+    } catch (e) {
+      const locked = /sudah menilai|mengulang/i.test(e.message);
+      $('result').innerHTML = `<p class="caption" style="color:#b45309;text-align:center">⚠️ ${e.message}</p>`;
+      if (locked) { $('micBtn').disabled = true; $('micHint').textContent = 'Sudah dinilai.'; $('nextBtn').classList.remove('hidden'); }
+      else resetMic();
+    }
+  }
+
+  function showUnclear() {
+    $('result').innerHTML = `<div class="card card-pad text-center" style="border-color:#fde68a;background:#fffbeb">
+      <p style="color:#854d0e">🎧 Bacaanmu belum terdengar jelas / kurang lengkap. Yuk baca lagi lebih jelas & pelan.</p></div>`;
+    resetMic();   // boleh ulang (belum tersimpan)
+  }
+
+  function showResult(j) {
+    const a = windowAyat[idx];
+    $('ayahText').textContent = a.arabic;   // tetap polos
+    scores.push(j.total ?? null);
+    const detail = (j.details || []).length
+      ? `<table class="detail-tbl"><thead><tr><th>Bagian mad</th><th>Nilai</th><th>Catatan</th></tr></thead><tbody>`
+        + j.details.map(d => `<tr><td>${d.name}</td><td style="text-align:center"><b>${d.s ?? '-'}</b></td><td>${d.txt}</td></tr>`).join('')
+        + `</tbody></table>`
+      : '<p class="caption text-center">Ayat ini tidak memiliki mad panjang untuk dinilai.</p>';
+    $('result').innerHTML = `
+      <div class="card card-pad">
+        <p class="caption text-center">Skor sementara (AI)</p>
+        <div class="score-big text-center" style="color:${scoreColor(j.total)}">${j.total ?? '—'}</div>
+        <div class="mt-3">${detail}</div>
+        <p class="caption mt-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.6rem .7rem;color:#854d0e">
+          ⏳ Ini <b>nilai sementara dari sistem</b>. Nilai asli menunggu <b>koreksi guru</b>.
+        </p>
+      </div>`;
+    // tombol mik kembali jadi ikon MIK (bukan kotak); abu-abu & mati kecuali akun uji
+    $('micBtn').classList.remove('rec');
+    $('micBtn').innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    if (j.canRetry) { $('micBtn').disabled = false; $('micHint').textContent = 'Akun uji: boleh rekam ulang. Tekan mik lagi.'; }
+    else { $('micBtn').disabled = true; $('micHint').textContent = 'Sudah dinilai — tidak bisa mengulang.'; }
+    $('nextBtn').classList.remove('hidden');
+    $('nextBtn').textContent = (idx < windowAyat.length - 1) ? 'Lanjut →' : 'Selesai';
+  }
+
+  $('nextBtn').onclick = () => {
+    if (idx < windowAyat.length - 1) { idx++; renderAyah(); }
+    else finish();
+  };
+
+  function finish() {
+    const items = windowAyat.map((a, i) => ({ ayah_no: a.ayah_no, score: scores[i] }));
+    renderDone(items, mean(scores), false);
+  }
+
+  // tabel skor per-ayat + rata-rata
+  function renderDone(items, avg, already) {
+    $('avgScore').textContent = avg ?? '—';
+    $('avgScore').style.color = scoreColor(avg);
+    $('doneTable').innerHTML = items.length
+      ? `<table class="detail-tbl"><thead><tr><th>Ayat</th><th style="text-align:center">Skor</th></tr></thead><tbody>`
+        + items.map(it => `<tr><td>Ayat ${it.ayah_no ?? '-'}</td><td style="text-align:center"><b style="color:${scoreColor(it.score)}">${it.score ?? '—'}</b></td></tr>`).join('')
+        + `</tbody></table>` : '';
+    $('doneNote').textContent = already
+      ? 'Kamu sudah pernah menyelesaikan latihan ini. Nilai akhir sesuai koreksi guru.'
+      : 'Nilai akhir menunggu koreksi guru.';
+    show('done');
+  }
+
+  init();
+</script>

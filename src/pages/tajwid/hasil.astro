@@ -1,0 +1,203 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import NavbarGuru from '../../components/NavbarGuru.astro';
+---
+
+<Layout title="Hasil Latihan Tajwid - yukNgaji">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;600&display=swap" rel="stylesheet" />
+    <div class="px-6 py-8 pb-32 min-h-screen">
+        <header class="mb-4 flex items-center justify-between">
+            <div>
+                <p class="eyebrow mb-1">Koreksi</p>
+                <h1 class="page-title">Hasil Latihan</h1>
+            </div>
+            <a href="/tajwid" class="btn-soft !py-1.5 !px-3 text-xs"><i class="fa-solid fa-arrow-left mr-1"></i>Kembali</a>
+        </header>
+
+        <div id="crumb" class="caption mb-3"></div>
+        <div id="view"><p class="caption">Memuat…</p></div>
+    </div>
+
+    <NavbarGuru />
+</Layout>
+
+<style is:global>
+  .arb { font-family:'Scheherazade New',serif; direction:rtl; text-align:right; font-size:1.7rem; line-height:2.3; color:var(--ink); }
+  .arb .w { padding:0 .2rem; border-radius:6px; }
+  .arb .w.c-orange{ box-shadow:inset 0 -4px 0 #f59e0b; }
+  .arb .w.c-green { box-shadow:inset 0 -4px 0 #16a34a; }
+  .arb .w.c-blue  { box-shadow:inset 0 -4px 0 #60a5fa; }
+</style>
+
+<script>
+  const API = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  const token = localStorage.getItem('token');
+  if (!token) location.href = '/';
+  const headers = { Authorization: `Bearer ${token}` };
+  const $ = (id) => document.getElementById(id);
+  const scoreColor = (s) => s == null ? '#9ca3af' : s >= 80 ? '#16a34a' : s >= 50 ? '#f59e0b' : '#dc2626';
+  const avg = (a) => { const v = a.filter(x => x != null); return v.length ? Math.round(v.reduce((x, y) => x + y, 0) / v.length) : null; };
+  const fmtDate = (d) => new Date(d).toLocaleDateString('id', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const surahName = {};
+  const ayahCache = {};   // surahKey -> {ayatId: ayahNo}
+  let meetings = [];      // [{date, surahs:{key:[subs]}}]
+
+  async function init() {
+    try {
+      const [sur, all] = await Promise.all([
+        (await fetch(`${API}/api/tajwid/surahs`, { headers })).json(),
+        (await fetch(`${API}/api/tajwid/results-all`, { headers })).json(),
+      ]);
+      sur.data.forEach(s => surahName[s.surah_key] = s.surah_name);
+      // grup: pertemuan (nomor dari guru) -> surat -> setoran. Fallback tanggal kalau nomor kosong.
+      const tree = {};
+      (all.data || []).forEach(s => {
+        const ex = s.tajwid_exercises; if (!ex) return;
+        const key = ex.pertemuan != null ? 'P' + ex.pertemuan : 'D' + (ex.created_at || '').slice(0, 10);
+        (tree[key] = tree[key] || { pertemuan: ex.pertemuan ?? null, date: (ex.created_at || '').slice(0, 10), surahs: {} });
+        (tree[key].surahs[ex.surah_key] = tree[key].surahs[ex.surah_key] || []).push(s);
+      });
+      meetings = Object.values(tree).sort((a, b) => {
+        if (a.pertemuan != null && b.pertemuan != null) return a.pertemuan - b.pertemuan;
+        if (a.pertemuan != null) return -1;
+        if (b.pertemuan != null) return 1;
+        return a.date.localeCompare(b.date);
+      });
+      renderMeetings();
+    } catch (e) { $('view').innerHTML = `<p class="caption">Gagal: ${e.message}</p>`; }
+  }
+
+  function renderMeetings() {
+    $('crumb').innerHTML = '';
+    if (!meetings.length) { $('view').innerHTML = '<p class="caption">Belum ada siswa yang menyetor.</p>'; return; }
+    $('view').innerHTML = meetings.map((m, i) => {
+      const nSurah = Object.keys(m.surahs).length;
+      const nSub = Object.values(m.surahs).reduce((a, arr) => a + arr.length, 0);
+      const label = m.pertemuan != null ? `Pertemuan ${m.pertemuan}` : 'Pertemuan (tanpa nomor)';
+      return `<button class="card card-pad text-left w-full mb-2" data-m="${i}">
+        <p class="section-title">${label}</p>
+        <p class="caption">${fmtDate(m.date)} · ${nSurah} surat · ${nSub} setoran</p>
+      </button>`;
+    }).join('');
+    $('view').querySelectorAll('[data-m]').forEach(b => b.onclick = () => renderSurahs(+b.dataset.m));
+  }
+
+  function renderSurahs(mi) {
+    const m = meetings[mi];
+    $('crumb').innerHTML = `<a href="#" id="cbMeet" style="color:var(--accent-strong)">← Pertemuan</a>`;
+    $('cbMeet').onclick = (e) => { e.preventDefault(); renderMeetings(); };
+    const mlabel = m.pertemuan != null ? `Pertemuan ${m.pertemuan}` : 'Pertemuan';
+    $('view').innerHTML = `<p class="caption mb-2">${mlabel} · ${fmtDate(m.date)}</p>` +
+      Object.keys(m.surahs).map(sk => {
+        const subs = m.surahs[sk];
+        const nStudent = new Set(subs.map(s => s.student_id)).size;
+        return `<button class="card card-pad text-left w-full mb-2" data-sk="${sk}">
+          <p class="section-title">${surahName[sk] || sk}</p>
+          <p class="caption">${nStudent} siswa latihan</p>
+        </button>`;
+      }).join('');
+    $('view').querySelectorAll('[data-sk]').forEach(b => b.onclick = () => renderStudents(mi, b.dataset.sk));
+  }
+
+  const clsOf = (m) => !m ? '' : (!m.graded ? 'c-blue' : m.type === 'oneSided' ? 'c-orange' : 'c-green');
+  let curAyahNo = {}, curRefWords = {}, curStudents = {}, pageIdx = {};
+
+  async function renderStudents(mi, sk) {
+    const m = meetings[mi];
+    const subs = m.surahs[sk];
+    $('crumb').innerHTML = `<a href="#" id="cbMeet" style="color:var(--accent-strong)">← Pertemuan</a> <span style="color:var(--ink-tertiary)">/</span> <a href="#" id="cbSur" style="color:var(--accent-strong)">${surahName[sk] || sk}</a>`;
+    $('cbMeet').onclick = (e) => { e.preventDefault(); renderMeetings(); };
+    $('cbSur').onclick = (e) => { e.preventDefault(); renderSurahs(mi); };
+    $('view').innerHTML = '<p class="caption">Memuat…</p>';
+
+    // nomor ayat + kata rujukan (utk teks arab bertanda mad)
+    let ayahNo = ayahCache[sk];
+    if (!ayahNo) { const a = (await (await fetch(`${API}/api/tajwid/surah/${sk}`, { headers })).json()).data; ayahNo = {}; a.forEach(x => ayahNo[x.id] = x.ayah_no); ayahCache[sk] = ayahNo; }
+    const refs = (await (await fetch(`${API}/api/tajwid/surah/${sk}/references`, { headers })).json()).data || [];
+    const refWords = {}; refs.forEach(r => refWords[r.ayat_id] = r.words);
+    curAyahNo = ayahNo; curRefWords = refWords; pageIdx = {};
+
+    const byStudent = {};
+    subs.forEach(s => { (byStudent[s.student_id] = byStudent[s.student_id] || { name: s.student_name, id: s.student_id, items: [] }).items.push(s); });
+    Object.values(byStudent).forEach(st => st.items.sort((a, b) => (ayahNo[a.ayat_id] || 0) - (ayahNo[b.ayat_id] || 0)));
+    curStudents = byStudent;
+
+    $('view').innerHTML = Object.values(byStudent).map(st => {
+      const finals = st.items.map(s => s.final_score ?? s.ai_score);
+      return `<div class="card card-pad mb-3">
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <div><h3 class="section-title">${st.name}</h3><span class="caption">Rata-rata: <b style="color:${scoreColor(avg(finals))}">${avg(finals) ?? '—'}</b></span></div>
+          <button class="btn-primary !py-1.5 !px-3 text-xs flex-shrink-0" data-notify="${st.id}" data-ex="${st.items[0].exercise_id}"><i class="fa-solid fa-paper-plane mr-1"></i>Kirim Nilai</button>
+        </div>
+        <div id="rows-${st.id}"></div>
+      </div>`;
+    }).join('');
+    Object.values(byStudent).forEach(st => renderRows(st.id));
+    $('view').querySelectorAll('[data-notify]').forEach(b => b.onclick = () => notifyStudent(b.dataset.notify, b.dataset.ex, b));
+  }
+
+  // ≤3 ayat: tumpuk. >3 ayat: pakai prev/next.
+  function renderRows(sid) {
+    const items = curStudents[sid].items;
+    const el = document.getElementById(`rows-${sid}`);
+    if (items.length <= 3) {
+      el.innerHTML = items.map(rowHtml).join('');
+    } else {
+      const i = Math.max(0, Math.min(pageIdx[sid] || 0, items.length - 1));
+      el.innerHTML = `<div class="flex items-center justify-between mb-2">
+          <button class="btn-soft !py-1 !px-3 text-xs" data-prev ${i === 0 ? 'disabled' : ''}>← Prev</button>
+          <span class="caption">Ayat ${i + 1} / ${items.length}</span>
+          <button class="btn-soft !py-1 !px-3 text-xs" data-next ${i === items.length - 1 ? 'disabled' : ''}>Next →</button>
+        </div>` + rowHtml(items[i]);
+      const prev = el.querySelector('[data-prev]'), next = el.querySelector('[data-next]');
+      if (prev) prev.onclick = () => { pageIdx[sid] = i - 1; renderRows(sid); };
+      if (next) next.onclick = () => { pageIdx[sid] = i + 1; renderRows(sid); };
+    }
+    el.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveReview(b.dataset.save));
+  }
+
+  function rowHtml(s) {
+    const no = curAyahNo[s.ayat_id];
+    const words = curRefWords[s.ayat_id] || [];
+    const arabic = words.length ? `<div class="arb mb-2">${words.map(w => `<span class="w ${clsOf(w.mad)}">${w.t}</span>`).join(' ')}</div>` : '';
+    return `<div class="rounded-xl border border-[var(--hairline)] p-3 mb-2">
+      <div class="flex items-center justify-between mb-1">
+        <span class="eyebrow">Ayat ${no ?? s.ayat_id}</span>
+        <span class="text-xs">AI: <b style="color:${scoreColor(s.ai_score)}">${s.ai_score ?? '—'}</b>${s.status === 'reviewed' ? ' · <span style="color:#16a34a">✓ dikoreksi</span>' : ''}</span>
+      </div>
+      ${arabic}
+      ${s.audio_url ? `<audio controls src="${s.audio_url}" class="w-full mb-2" style="height:38px"></audio>` : '<p class="caption mb-2">(rekaman tidak tersimpan)</p>'}
+      <div class="flex items-end gap-2">
+        <div><label class="caption block">Nilai akhir</label><input type="number" min="0" max="100" value="${s.final_score ?? s.ai_score ?? ''}" id="fs-${s.id}" class="field !w-20" /></div>
+        <div class="flex-1"><label class="caption block">Catatan</label><input type="text" value="${(s.teacher_note || '').replace(/"/g, '&quot;')}" id="tn-${s.id}" class="field w-full" placeholder="opsional" /></div>
+        <button class="btn-soft !py-2 !px-3 text-sm" data-save="${s.id}">Simpan</button>
+      </div>
+    </div>`;
+  }
+
+  async function saveReview(id) {
+    const btn = document.querySelector(`[data-save="${id}"]`);
+    btn.disabled = true; btn.textContent = '⏳';
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/submissions/${id}/review`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ final_score: $(`fs-${id}`).value, teacher_note: $(`tn-${id}`).value }),
+      })).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      btn.textContent = 'Tersimpan ✓';
+    } catch (e) { btn.disabled = false; btn.textContent = 'Simpan'; alert(e.message); }
+  }
+
+  async function notifyStudent(studentId, exId, btn) {
+    btn.disabled = true; btn.textContent = '⏳';
+    try {
+      const j = await (await fetch(`${API}/api/tajwid/exercises/${exId}/students/${studentId}/notify`, { method: 'POST', headers })).json();
+      if (j.status !== 'success') throw new Error(j.message);
+      btn.innerHTML = 'Terkirim ✓';
+    } catch (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i>Kirim Nilai'; alert(e.message); }
+  }
+
+  init();
+</script>

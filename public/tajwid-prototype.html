@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Latihan Tajwid — Slice</title>
+<style>
+  :root { font-family: system-ui, sans-serif; }
+  body { max-width: 820px; margin: 0 auto; padding: 20px; color: #1a1a1a; }
+  h1 { font-size: 20px; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin: 12px 0; }
+  button { padding: 10px 16px; border-radius: 8px; border: 1px solid #16a34a; background: #16a34a; color: #fff; font-size: 15px; cursor: pointer; }
+  button.rec { background: #dc2626; border-color: #dc2626; }
+  button.ghost { background:#fff; color:#16a34a; }
+  select, input[type=text] { padding: 8px; border-radius: 8px; border: 1px solid #ccc; }
+  input[type=text] { width: 100%; box-sizing: border-box; }
+  #status { font-size: 14px; color: #555; min-height: 20px; }
+  .arabic { font-size: 32px; direction: rtl; text-align: right; line-height: 2.1; font-family: "Traditional Arabic","Amiri",serif; }
+  .w { padding: 2px 6px; border-radius: 6px; }
+  .w.mad  { box-shadow: inset 0 -3px 0 #f59e0b; }  /* mad panjang: DINILAI */
+  .w.info { box-shadow: inset 0 -3px 0 #93c5fd; }  /* mad thobi'i: highlight, tak dinilai */
+  .w.ok  { background: #dcfce7; }
+  .w.bad { background: #fee2e2; }
+  .w.over{ background: #fef9c3; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+  th, td { border: 1px solid #eee; padding: 6px 8px; text-align: left; }
+  th { background: #f7f7f7; }
+  .metric { font-size: 13px; color: #444; }
+  .warn { color: #b45309; font-size: 13px; }
+  .score { font-size: 44px; font-weight: 700; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .pill.ok{background:#dcfce7;color:#166534}.pill.bad{background:#fee2e2;color:#991b1b}.pill.over{background:#fef9c3;color:#854d0e}
+  .tab { display:inline-block; padding:6px 12px; border:1px solid #ccc; border-radius:8px; cursor:pointer; margin-right:6px; }
+  .tab.on { background:#16a34a; color:#fff; border-color:#16a34a; }
+</style>
+</head>
+<body>
+  <h1>🎯 Latihan Tajwid (Mad) — vertical slice</h1>
+
+  <div class="card">
+    <label class="metric">Base API:</label>
+    <input type="text" id="base" value="http://localhost:3000/api/tajwid" />
+    <div style="margin-top:10px">
+      <label class="metric">Ayat: </label>
+      <select id="ayat"></select>
+      <span class="metric" id="refState"></span>
+    </div>
+    <div style="margin-top:10px">
+      <span class="tab on" id="tabPractice" data-mode="practice">👦 Latihan (siswa)</span>
+      <span class="tab" id="tabRef" data-mode="reference">🎓 Rekam Rujukan (guru)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="arabic" id="ref"></div>
+    <p class="metric" id="hint">Garis bawah oranye = titik mad yang dinilai.</p>
+    <button id="rec">🎙️ Mulai rekam</button>
+    <span class="metric" id="rectime"></span>
+    <div id="status" style="margin-top:8px">Memuat daftar ayat…</div>
+  </div>
+
+  <div class="card" id="out" style="display:none">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div><div class="score" id="scoreNum">—</div><div class="metric">skor</div></div>
+      <div class="arabic" id="result" style="flex:1"></div>
+    </div>
+    <div class="metric" id="perf" style="margin-top:8px"></div>
+    <table id="tbl"><thead><tr><th>Mad (dinilai)</th><th>Durasi siswa</th><th>Harusnya (±)</th><th>Relatif</th><th>Penilaian</th></tr></thead><tbody></tbody></table>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const base = () => $('base').value.replace(/\/$/, '');
+let MODE = 'practice';
+let ayat = null;      // ayat aktif {id, arabic, words, has_reference}
+
+const normAr = s => (s||'').replace(/[ً-ٰٟـ]/g,'').replace(/[إأآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
+const setStatus = t => $('status').textContent = t;
+
+// --- tab mode --- (setMode didefinisikan di bawah, dipakai bersama loadAyat)
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { setMode(t.dataset.mode); $('out').style.display='none'; });
+
+// --- load daftar ayat ---
+async function loadList(){
+  try {
+    const r = await (await fetch(base()+'/ayat')).json();
+    const sel = $('ayat'); sel.innerHTML='';
+    r.data.forEach(a => sel.add(new Option(`${a.surah_name} : ${a.ayah_no}${a.has_reference?'':' (belum ada rujukan)'}`, a.id)));
+    sel.onchange = () => loadAyat(sel.value);
+    if (r.data.length) loadAyat(r.data[0].id); else setStatus('Belum ada ayat. Jalankan migrasi SQL dulu.');
+  } catch(e){ setStatus('Gagal muat daftar: '+e.message+' (backend jalan?)'); }
+}
+// kelas garis bawah: oranye = mad dinilai, biru = mad thobi'i info (tak dinilai)
+const wc = w => !w.mad ? '' : (w.mad.graded ? 'mad' : 'info');
+
+function setMode(mode){
+  MODE = mode;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.mode === mode));
+  $('hint').innerHTML = mode === 'reference'
+    ? '🎓 Baca ayat ini dengan tajwid yang BENAR — ini jadi patokan menilai siswa.'
+    : 'Garis <b style="color:#f59e0b">oranye</b> = mad panjang (dinilai). Garis <b style="color:#3b82f6">biru</b> = mad thobi\'i (belajar, tak dinilai).';
+}
+
+async function loadAyat(id){
+  const r = await (await fetch(base()+'/ayat/'+id)).json();
+  ayat = r.data;
+  $('ref').innerHTML = ayat.words.map(w => `<span class="w ${wc(w)}">${w.t}</span>`).join(' ');
+  $('refState').textContent = ayat.has_reference ? '✓ rujukan siap' : '⚠️ belum ada rujukan';
+  $('out').style.display='none';
+  if (!ayat.has_reference){
+    setMode('reference');
+    setStatus('⚠️ Ayat ini belum ada rujukan. Rekam RUJUKAN dulu (bacaan benar), baru bisa Latihan.');
+  } else {
+    setStatus('Siap.');
+  }
+}
+
+// --- rekam (anti-kepotong 0.4s) ---
+let mr=null, chunks=[], timer=null, t0=0;
+$('rec').onclick = async () => {
+  if (mr && mr.state==='recording'){
+    setStatus('menahan ujung 0,4s…'); $('rec').textContent='⏳';
+    setTimeout(()=>{ if(mr&&mr.state==='recording') mr.stop(); }, 400);
+    return;
+  }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ setStatus('Mik gagal: '+e.message); return; }
+  chunks=[]; mr=new MediaRecorder(stream);
+  mr.ondataavailable=e=>chunks.push(e.data);
+  mr.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    clearInterval(timer); $('rectime').textContent='';
+    $('rec').classList.remove('rec'); $('rec').textContent='🎙️ Mulai rekam';
+    await submit(new Blob(chunks,{type:'audio/webm'}));
+  };
+  mr.start(); t0=performance.now();
+  timer=setInterval(()=>$('rectime').textContent='merekam '+((performance.now()-t0)/1000).toFixed(1)+'s…',100);
+  $('rec').classList.add('rec'); $('rec').textContent='⏹ Stop';
+  setStatus('Merekam… baca ayatnya lalu Stop.');
+};
+
+async function submit(blob){
+  if (!ayat) return;
+  if (MODE==='practice' && !ayat.has_reference){
+    setStatus('⚠️ Belum ada rujukan. Pindah ke tab "Rekam Rujukan" dan rekam bacaan benar dulu.');
+    return;
+  }
+  const url = base()+'/ayat/'+ayat.id+(MODE==='reference'?'/reference':'/score');
+  setStatus('Mengirim ke Groq…');
+  const fd=new FormData(); fd.append('audio',blob,'rekaman.webm');
+  let j;
+  try { j = await (await fetch(url,{method:'POST',body:fd})).json(); }
+  catch(e){ setStatus('Error jaringan: '+e.message); return; }
+  if (j.status!=='success'){ setStatus('⚠️ '+j.message); return; }
+  MODE==='reference' ? showReference(j) : showScore(j);
+}
+
+function showReference(j){
+  ayat.has_reference = true;   // biar tab Latihan langsung bisa tanpa reload
+  $('out').style.display='block';
+  $('scoreNum').textContent='✓'; $('scoreNum').style.color='#16a34a';
+  $('result').innerHTML = ayat.words.map(w=>`<span class="w ${wc(w)}">${w.t}</span>`).join(' ');
+  const warn = j.profile.wordMismatch ? ' <span class="warn">⚠️ jumlah kata beda dari teks — rujukan kurang akurat, coba rekam ulang lebih jelas.</span>' : '';
+  $('perf').innerHTML = `Rujukan tersimpan. durasi kata: [${j.profile.durs.join(', ')}]s • AI dengar: <b>${j.heard}</b>${warn}`;
+  $('tbl').querySelector('tbody').innerHTML='';
+  $('refState').textContent='✓ rujukan siap';
+  setStatus('Rujukan disimpan. Pindah ke tab Latihan untuk uji.');
+}
+
+function showScore(j){
+  $('out').style.display='block';
+  $('scoreNum').textContent = j.total ?? '—';
+  $('scoreNum').style.color = (j.total>=80)?'#16a34a':(j.total>=50)?'#f59e0b':'#dc2626';
+  const band = s => s==null?'':s>=80?'ok':s>=50?'over':'bad';
+  const byIdx = Object.fromEntries(j.details.map(d=>[d.i,d]));
+  $('result').innerHTML = ayat.words.map((w,i)=>{
+    if (!w.mad) return `<span class="w">${w.t}</span>`;
+    if (!w.mad.graded) return `<span class="w info">${w.t}</span>`;   // thobi'i: tetap biru, tak dinilai
+    return `<span class="w mad ${band(byIdx[i]?.s)}">${w.t}</span>`;
+  }).join(' ');
+  const warn = j.wordMismatch ? ' <span class="warn">⚠️ jumlah kata beda dari teks</span>' : '';
+  $('perf').innerHTML = `tempo ${j.tempo}× rujukan • AI dengar: <b>${j.heard}</b>${warn}`;
+  const tb=$('tbl').querySelector('tbody'); tb.innerHTML='';
+  j.details.forEach(d=>{
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${d.name}</td><td>${d.stuDur??'-'}s</td><td>${d.expected??'-'}s</td><td>${d.rel??'-'}×</td>`
+      +`<td><span class="pill ${band(d.s)}">${d.s??'-'}</span> ${d.txt}</td></tr>`);
+  });
+  setStatus('Selesai.');
+}
+
+loadList();
+</script>
+</body>
+</html>
