@@ -719,7 +719,7 @@ import Mascot from '../../components/Mascot.astro';
         font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;  /* shaping/penyambungan huruf */
     }
     /* garis bawah kata (via <u>/inline style di teks soal) diberi jarak agar tak menabrak harakat bawah */
-    .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; }
+    .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; text-decoration-skip-ink: none; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>

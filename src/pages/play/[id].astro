@@ -3391,7 +3391,7 @@ import ArcadeTyping from '../../components/ArcadeTyping.astro';
     font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.9; direction: rtl;
     letter-spacing: normal; word-spacing: normal; font-feature-settings: "liga" 1, "calt" 1, "rlig" 1; }
   /* garis bawah kata (via <u>/inline style di teks soal) diberi jarak agar tak menabrak harakat bawah */
-  .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; }
+  .ar-text u, .ar-text [style*="underline"] { text-underline-offset: .22em; text-decoration-thickness: 2px; text-decoration-skip-ink: none; }
 
   .options-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
   @media(min-width: 768px) { .options-grid { grid-template-columns: 1fr 1fr; } }
