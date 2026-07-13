@@ -16,14 +16,28 @@ import Toast from '../../components/Toast.astro';
                     <h1 class="page-title">Absensi Kelas</h1>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button id="btnIzinLink" type="button" class="btn-icon" aria-label="Salin link izin murid" title="Salin link izin murid">
-                    <i class="fa-solid fa-link"></i>
-                </button>
-                <button id="btnIzinConfirm" type="button" class="chip relative" title="Konfirmasi izin murid">
-                    <i class="fa-solid fa-clipboard-check"></i> <span class="hidden sm:inline">Izin</span>
+            <div class="relative">
+                <button id="btnHeaderMenu" type="button" class="btn-icon relative" aria-label="Menu absensi" title="Menu">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
                     <span id="izinBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style="background:var(--danger);">0</span>
                 </button>
+                <div id="headerMenu" class="hidden absolute right-0 top-full mt-2 card w-60 z-[60] overflow-hidden" style="box-shadow:var(--shadow-pop);">
+                    <div class="p-2 space-y-0.5">
+                        <button id="btnIzinLink" type="button" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+                            <div class="icon-chip-sm" style="background:var(--info-soft);color:var(--info);"><i class="fa-solid fa-link"></i></div>
+                            <span class="caption font-semibold text-ink flex-1">Salin Link Absen</span>
+                        </button>
+                        <button id="btnIzinConfirm" type="button" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+                            <div class="icon-chip-sm" style="background:var(--accent-soft);color:var(--accent-strong);"><i class="fa-solid fa-clipboard-check"></i></div>
+                            <span class="caption font-semibold text-ink flex-1">Izin Absen</span>
+                            <span id="izinMenuBadge" class="hidden min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style="background:var(--danger);">0</span>
+                        </button>
+                        <button id="btnKalengMenu" type="button" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+                            <div class="icon-chip-sm" style="background:var(--accent-soft);color:var(--accent-strong);"><i class="fa-solid fa-jar"></i></div>
+                            <span class="caption font-semibold text-ink flex-1">Kaleng Infaq</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -143,6 +157,29 @@ import Toast from '../../components/Toast.astro';
             </div>
             <p class="caption mb-3">Terima = tercatat <strong class="text-ink">izin</strong>. Tolak = tercatat <strong class="text-ink">alpa</strong> di kehadiran hari ini.</p>
             <div id="izinList" class="flex-1 overflow-y-auto no-scrollbar space-y-2.5">
+                <p class="caption text-center py-6 animate-pulse">Memuat…</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ Modal Kaleng Infaq (shortcut) ============ -->
+    <div id="modalKaleng" class="modal-overlay hidden" style="z-index:80;">
+        <div class="modal-sheet modal-sheet-lg" style="max-height:88dvh; display:flex; flex-direction:column;">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="icon-chip" style="background:var(--accent-soft);color:var(--accent-strong);"><i class="fa-solid fa-jar"></i></div>
+                    <div class="min-w-0">
+                        <h3 class="section-title">Kaleng Infaq</h3>
+                        <p class="eyebrow text-accent mt-0.5">Tandai siapa yang sudah kembalikan</p>
+                    </div>
+                </div>
+                <button id="btnCloseKaleng" type="button" class="btn-icon flex-shrink-0" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="relative mb-3">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm" style="color:var(--ink-tertiary)"></i>
+                <input id="kalengSearch" type="text" inputmode="search" autocomplete="off" class="field field-sunken field-search text-sm py-2.5" placeholder="Cari nama anak...">
+            </div>
+            <div id="kalengList" class="flex-1 overflow-y-auto no-scrollbar space-y-2">
                 <p class="caption text-center py-6 animate-pulse">Memuat…</p>
             </div>
         </div>
@@ -608,12 +645,107 @@ import Toast from '../../components/Toast.astro';
     $iz('btnCloseIzin')?.addEventListener('click', closeIzin);
     modalIzin?.addEventListener('click', (e) => { if (e.target === modalIzin) closeIzin(); });
 
+    // ─── Menu titik-tiga di header ────────────────────────────
+    const headerMenu = $iz('headerMenu');
+    $iz('btnHeaderMenu')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = headerMenu.classList.contains('hidden');
+        headerMenu.classList.toggle('hidden');
+        if (willOpen) {
+            const close = (ev) => {
+                if (!headerMenu.contains(ev.target) && !ev.target.closest('#btnHeaderMenu')) {
+                    headerMenu.classList.add('hidden');
+                    document.removeEventListener('click', close);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', close), 10);
+        }
+    });
+    // Tutup menu setelah salah satu item dipilih
+    headerMenu?.addEventListener('click', () => headerMenu.classList.add('hidden'));
+
+    // ─── Kaleng Infaq (shortcut) ──────────────────────────────
+    const modalKaleng = $iz('modalKaleng');
+    let kalengStudents = [];
+    const openKaleng = () => { modalKaleng.classList.replace('hidden', 'flex'); loadKaleng(); };
+    const closeKaleng = () => modalKaleng.classList.replace('flex', 'hidden');
+    $iz('btnKalengMenu')?.addEventListener('click', openKaleng);
+    $iz('btnCloseKaleng')?.addEventListener('click', closeKaleng);
+    modalKaleng?.addEventListener('click', (e) => { if (e.target === modalKaleng) closeKaleng(); });
+
+    function renderKaleng(filter = '') {
+        const list = $iz('kalengList');
+        const q = filter.toLowerCase().trim();
+        const items = kalengStudents
+            .filter(s => (s.name || '').toLowerCase().includes(q))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
+        if (!items.length) { list.innerHTML = '<p class="caption text-center py-8">Tidak ada nama yang cocok.</p>'; return; }
+        list.innerHTML = '';
+        items.forEach(s => {
+            const on = !!s.has_infaq_can;
+            const row = document.createElement('div');
+            row.className = 'card card-pad flex items-center justify-between gap-3';
+            row.innerHTML = `
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="avatar w-10 h-10 text-sm capitalize flex-shrink-0">${escIz((s.name || '').substring(0, 2))}</div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-ink capitalize truncate">${escIz(s.name || 'Anak')}</p>
+                        <p class="kaleng-cap text-[10px] font-medium text-tertiary">${on ? 'Masih dipegang' : 'Sudah dikembalikan'}</p>
+                    </div>
+                </div>
+                <button type="button" role="switch" aria-checked="${on}" class="kaleng-btn kaleng-switch ${on ? 'is-on' : ''}" data-id="${s.id}" data-on="${on}" title="${on ? 'Masih dipegang — klik bila sudah dikembalikan' : 'Sudah dikembalikan — klik bila masih dipegang'}">
+                    <span class="ks-track"><span class="ks-thumb"></span></span>
+                </button>`;
+            list.appendChild(row);
+        });
+    }
+
+    async function loadKaleng() {
+        const list = $iz('kalengList');
+        list.innerHTML = '<p class="caption text-center py-6 animate-pulse">Memuat…</p>';
+        try {
+            const r = await fetch(`${IZIN_API}/api/students`, { headers: { Authorization: `Bearer ${izinTok}` } });
+            const j = await r.json();
+            kalengStudents = j.data || [];
+            renderKaleng($iz('kalengSearch').value);
+        } catch (e) { list.innerHTML = '<p class="caption text-center py-8">Gagal memuat.</p>'; }
+    }
+
+    $iz('kalengSearch')?.addEventListener('input', (e) => renderKaleng(e.target.value));
+
+    $iz('kalengList')?.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.kaleng-btn');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const newStatus = btn.dataset.on !== 'true';
+        btn.disabled = true; btn.classList.add('opacity-50');
+        try {
+            const res = await fetch(`${IZIN_API}/api/students/${id}/infaq-can`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${izinTok}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ has_infaq_can: newStatus })
+            });
+            if (!res.ok) throw new Error();
+            btn.dataset.on = newStatus ? 'true' : 'false';
+            btn.setAttribute('aria-checked', newStatus ? 'true' : 'false');
+            btn.classList.toggle('is-on', newStatus);
+            btn.title = newStatus ? 'Masih dipegang — klik bila sudah dikembalikan' : 'Sudah dikembalikan — klik bila masih dipegang';
+            const cap = btn.parentElement.querySelector('.kaleng-cap');
+            if (cap) cap.textContent = newStatus ? 'Masih dipegang' : 'Sudah dikembalikan';
+            const s = kalengStudents.find(x => x.id == id);
+            if (s) s.has_infaq_can = newStatus;
+        } catch (e) { window.showToast?.('danger', 'Error', 'Gagal update status kaleng.'); }
+        finally { btn.disabled = false; btn.classList.remove('opacity-50'); }
+    });
+
     async function refreshIzinBadge() {
         try {
             const r = await fetch(`${IZIN_API}/api/student/izin/pending`, { headers: { Authorization: `Bearer ${izinTok}` } });
             const j = await r.json(); const n = (j.data || []).length;
-            const b = $iz('izinBadge');
-            if (n > 0) { b.textContent = n; b.classList.remove('hidden'); } else b.classList.add('hidden');
+            [$iz('izinBadge'), $iz('izinMenuBadge')].forEach(b => {
+                if (!b) return;
+                if (n > 0) { b.textContent = n; b.classList.remove('hidden'); } else b.classList.add('hidden');
+            });
         } catch (e) {}
     }
     async function loadIzin() {
