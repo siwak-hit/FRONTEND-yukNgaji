@@ -441,7 +441,7 @@ import Toast from '../../components/Toast.astro';
                         <p class="text-[10px] font-black uppercase tracking-widest mb-1" style="color:var(--ink-secondary);">Alasan</p>
                         <p class="caption text-ink">${reason}</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div class="grid grid-cols-2 gap-2 mb-2">
                         <button onclick="openGrantExt('${r.id}', true, '${sName}', '${r.student_id}', '${r.subject}', ${r.week}, ${pct})" class="btn w-full text-xs !py-2.5" style="background-color: var(--warning-soft); color: var(--warning);">
                             <i class="fa-solid fa-scissors"></i> Potong ${pct}%
                         </button>
@@ -449,6 +449,9 @@ import Toast from '../../components/Toast.astro';
                             <i class="fa-solid fa-check"></i> Tanpa Potong
                         </button>
                     </div>
+                    <button onclick="rejectExt('${r.id}', '${sName}', this)" class="btn w-full text-xs !py-2.5 mb-3 disabled:opacity-60" style="background-color: var(--danger-soft); color: var(--danger);">
+                        <i class="fa-solid fa-xmark"></i> Tolak Perpanjangan
+                    </button>
                     ${total > 1 ? `
                     <div class="flex items-center justify-between pt-2 border-t" style="border-color:var(--hairline);">
                         <button onclick="extCardPrev()" ${hasPrev ? '' : 'disabled'} class="btn-icon !w-8 !h-8 text-xs" style="${!hasPrev ? 'opacity:0.3;' : ''}"><i class="fa-solid fa-chevron-left"></i></button>
@@ -503,6 +506,43 @@ import Toast from '../../components/Toast.astro';
     };
 
     window.closeGrantExt = () => document.getElementById('modalGrantExt').classList.replace('flex', 'hidden');
+
+    // [BARU] Tolak permintaan perpanjangan → status 'rejected' + push notif ke murid.
+    // Klik pertama = konfirmasi ringan, klik kedua (≤3 dtk) = eksekusi.
+    window.rejectExt = async (requestId, studentName, btnEl) => {
+        if (btnEl.disabled) return;
+        if (btnEl.dataset.confirming !== 'true') {
+            btnEl.dataset.confirming = 'true';
+            btnEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Yakin tolak? Klik lagi';
+            setTimeout(() => {
+                if (btnEl.isConnected && btnEl.dataset.confirming === 'true') {
+                    btnEl.dataset.confirming = 'false';
+                    btnEl.innerHTML = '<i class="fa-solid fa-xmark"></i> Tolak Perpanjangan';
+                }
+            }, 3000);
+            return;
+        }
+        btnEl.dataset.confirming = 'executing'; // batalkan timer reset konfirmasi
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menolak...';
+        try {
+            const res = await fetch(`${API_URL}/api/onboarding/pr-extension-reject`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_id: requestId })
+            });
+            const j = await res.json();
+            if (!res.ok) throw new Error(j.message || 'Gagal menolak permintaan.');
+            window.showToast?.('success', 'Ditolak', `Permintaan ${studentName || 'siswa'} ditolak. Siswa mendapat notifikasi.`);
+            extRequests = extRequests.filter(r => r.id !== requestId);
+            renderExtensionRequests();
+        } catch (e) {
+            window.showToast?.('danger', 'Error', e.message);
+            btnEl.disabled = false;
+            btnEl.dataset.confirming = 'false';
+            btnEl.innerHTML = '<i class="fa-solid fa-xmark"></i> Tolak Perpanjangan';
+        }
+    };
 
     window.copySendLink = async () => {
         const url = window.lastResumeLink || '';
@@ -733,7 +773,7 @@ import Toast from '../../components/Toast.astro';
                                 <option value="23:59" ${dTime==='23:59'?'selected':''}>23:59 Penuh</option>
                             </select>
                         </div>
-                        <button onclick="saveDeadlineConsul()" class="btn-soft w-full !py-2 text-xs"><i class="fa-solid fa-floppy-disk"></i> Simpan Deadline</button>
+                        <button onclick="saveDeadlineConsul(this)" class="btn-soft w-full !py-2 text-xs"><i class="fa-solid fa-floppy-disk"></i> Simpan Deadline</button>
                     </div>
                 </div>
                 <p id="prHintIdle" class="caption mt-1 ${isLocked?'hidden':''}">Aktifkan switch untuk membagikan pertemuan ini sebagai PR ke siswa.</p>
@@ -773,18 +813,32 @@ import Toast from '../../components/Toast.astro';
             .catch(() => prompt('Copy link ini:', link));
     };
 
-    window.saveDeadlineConsul = async () => {
+    window.saveDeadlineConsul = async (btnEl) => {
+        if (btnEl && btnEl.disabled) return; // cegah double-click
         const subject = STATE.subject, week = STATE.week;
         const days = parseInt(document.getElementById('prDeadlineDays').value);
         const [h, m] = document.getElementById('prDeadlineTime').value.split(':');
         const d = new Date(); d.setDate(d.getDate() + days); d.setHours(parseInt(h), parseInt(m), 0, 0);
         const pad = n => n.toString().padStart(2,'0');
         const fmt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00+07`;
+        const originalHTML = btnEl ? btnEl.innerHTML : '';
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.classList.add('opacity-60', 'cursor-not-allowed');
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+        }
         try {
             await fetch(`${API_URL}/api/onboarding/pr-lock`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body: JSON.stringify({ subject, week, is_locked:true, deadline_at: fmt })});
             prCache.detail[`${subject}-${week}`] = { deadline_at: fmt };
             window.showToast?.('success','Deadline Disimpan',`Batas pengerjaan: ${h}:${m} WIB`);
         } catch (e) { window.showToast?.('danger','Error','Gagal menyimpan deadline.'); }
+        finally {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.classList.remove('opacity-60', 'cursor-not-allowed');
+                btnEl.innerHTML = originalHTML;
+            }
+        }
     };
 
     window.copyResetLinkConsul = (studentId, studentName) => {

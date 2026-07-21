@@ -15,6 +15,32 @@
       <button id="closeModalKaleng" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p id="kalengMessage" class="body-text"></p>
+    <button id="btnOpenRemindInfaqModal" class="btn btn-secondary w-full mt-4">
+        <i class="fa-solid fa-bell"></i> Ingatkan Siswa
+    </button>
+  </div>
+</div>
+
+<!-- KIRIM PENGINGAT KALENG -->
+<div id="modalRemindInfaq" class="modal-overlay hidden" style="z-index: 55;">
+  <div class="modal-sheet">
+    <div class="sheet-grabber"></div>
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="section-title">Kirim Pengingat Kaleng</h3>
+      <button id="closeModalRemindInfaq" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p class="body-text mb-3">Kirim pengingat push notification ke siswa ini untuk mengembalikan kaleng infaq. Pesan akan dikirim ke perangkat yang sudah mengaktifkan notifikasi.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="field-label" for="infaqReminderMessage">Pesan (Opsional)</label>
+        <textarea id="infaqReminderMessage" class="field field-sunken text-sm" rows="3" placeholder="Contoh: Sepertinya kamu belum mengumpulkan kaleng, nak. Mohon segera dikembalikan ya."></textarea>
+        <p class="caption text-tertiary mt-1">Jika kosong, akan menggunakan pesan default.</p>
+      </div>
+      <button id="btnSendInfaqReminder" class="btn btn-primary w-full">
+        <i class="fa-solid fa-bell"></i> <span>Kirim Pengingat Sekarang</span>
+      </button>
+      <p id="infaqReminderStatus" class="caption text-tertiary text-center hidden"></p>
+    </div>
   </div>
 </div>
 

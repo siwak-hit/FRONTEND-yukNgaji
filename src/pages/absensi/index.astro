@@ -185,6 +185,28 @@ import Toast from '../../components/Toast.astro';
         </div>
     </div>
 
+    <!-- ============ Modal Kirim Pengingat Kaleng (push notif) ============ -->
+    <div id="modalRemindKaleng" class="modal-overlay hidden" style="z-index:90;">
+        <div class="modal-sheet">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="icon-chip" style="background:var(--accent-soft);color:var(--accent-strong);"><i class="fa-solid fa-bell"></i></div>
+                    <div class="min-w-0">
+                        <h3 class="section-title">Ingatkan Siswa</h3>
+                        <p id="remindKalengName" class="eyebrow text-accent mt-0.5">–</p>
+                    </div>
+                </div>
+                <button id="btnCloseRemindKaleng" type="button" class="btn-icon flex-shrink-0" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="body-text mb-3">Kirim push notification ke HP siswa untuk mengembalikan kaleng infaq. Hanya bisa 1x setiap 24 jam per siswa.</p>
+            <label class="field-label" for="remindKalengMsg">Pesan (Opsional)</label>
+            <textarea id="remindKalengMsg" class="field field-sunken text-sm" rows="3" placeholder="Kosongkan untuk pakai pesan default."></textarea>
+            <button id="btnSendRemindKaleng" type="button" class="btn btn-primary w-full mt-4">
+                <i class="fa-solid fa-paper-plane"></i> <span>Kirim Pengingat</span>
+            </button>
+        </div>
+    </div>
+
     <NavbarGuru activeMenu="home" />
     <Toast />
 </Layout>
@@ -683,6 +705,12 @@ import Toast from '../../components/Toast.astro';
         list.innerHTML = '';
         items.forEach(s => {
             const on = !!s.has_infaq_can;
+            // Batasan 24 jam dihitung kasar di FE biar tombol bisa disabled; BE tetap validasi.
+            let remindDisabled = false, remindTitle = 'Kirim push notif pengingat kaleng';
+            if (on && s.last_infaq_reminded_at) {
+                const hours = (Date.now() - new Date(s.last_infaq_reminded_at).getTime()) / 36e5;
+                if (hours < 24) { remindDisabled = true; remindTitle = `Sudah diingatkan. Bisa lagi ${Math.ceil(24 - hours)} jam lagi.`; }
+            }
             const row = document.createElement('div');
             row.className = 'card card-pad flex items-center justify-between gap-3';
             row.innerHTML = `
@@ -693,9 +721,12 @@ import Toast from '../../components/Toast.astro';
                         <p class="kaleng-cap text-[10px] font-medium text-tertiary">${on ? 'Masih dipegang' : 'Sudah dikembalikan'}</p>
                     </div>
                 </div>
-                <button type="button" role="switch" aria-checked="${on}" class="kaleng-btn kaleng-switch ${on ? 'is-on' : ''}" data-id="${s.id}" data-on="${on}" title="${on ? 'Masih dipegang — klik bila sudah dikembalikan' : 'Sudah dikembalikan — klik bila masih dipegang'}">
-                    <span class="ks-track"><span class="ks-thumb"></span></span>
-                </button>`;
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    ${on ? `<button type="button" class="kaleng-remind btn-icon !w-9 !h-9 ${remindDisabled ? 'opacity-40 cursor-not-allowed' : ''}" style="color:var(--accent-strong);" data-id="${s.id}" data-name="${escIz(s.name || 'Anak')}" ${remindDisabled ? 'disabled' : ''} title="${remindTitle}"><i class="fa-solid fa-bell text-xs"></i></button>` : ''}
+                    <button type="button" role="switch" aria-checked="${on}" class="kaleng-btn kaleng-switch ${on ? 'is-on' : ''}" data-id="${s.id}" data-on="${on}" title="${on ? 'Masih dipegang — klik bila sudah dikembalikan' : 'Sudah dikembalikan — klik bila masih dipegang'}">
+                        <span class="ks-track"><span class="ks-thumb"></span></span>
+                    </button>
+                </div>`;
             list.appendChild(row);
         });
     }
@@ -714,6 +745,16 @@ import Toast from '../../components/Toast.astro';
     $iz('kalengSearch')?.addEventListener('input', (e) => renderKaleng(e.target.value));
 
     $iz('kalengList')?.addEventListener('click', async (e) => {
+        // Tombol lonceng → buka modal pengingat push
+        const remindBtn = e.target.closest('.kaleng-remind');
+        if (remindBtn && !remindBtn.disabled) {
+            remindTargetId = remindBtn.dataset.id;
+            $iz('remindKalengName').textContent = remindBtn.dataset.name;
+            $iz('remindKalengMsg').value = '';
+            modalRemindKaleng.classList.replace('hidden', 'flex');
+            return;
+        }
+
         const btn = e.target.closest('.kaleng-btn');
         if (!btn) return;
         const id = btn.dataset.id;
@@ -736,6 +777,42 @@ import Toast from '../../components/Toast.astro';
             if (s) s.has_infaq_can = newStatus;
         } catch (e) { window.showToast?.('danger', 'Error', 'Gagal update status kaleng.'); }
         finally { btn.disabled = false; btn.classList.remove('opacity-50'); }
+    });
+
+    // ─── Kirim pengingat kaleng (push notif, 1x/24 jam) ───────
+    const modalRemindKaleng = $iz('modalRemindKaleng');
+    let remindTargetId = null;
+    const closeRemindKaleng = () => modalRemindKaleng.classList.replace('flex', 'hidden');
+    $iz('btnCloseRemindKaleng')?.addEventListener('click', closeRemindKaleng);
+    modalRemindKaleng?.addEventListener('click', (e) => { if (e.target === modalRemindKaleng) closeRemindKaleng(); });
+
+    $iz('btnSendRemindKaleng')?.addEventListener('click', async () => {
+        if (!remindTargetId) return;
+        const btn = $iz('btnSendRemindKaleng');
+        if (btn.disabled) return;
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Mengirim...</span>';
+        try {
+            const message = $iz('remindKalengMsg').value.trim();
+            const res = await fetch(`${IZIN_API}/api/students/${remindTargetId}/remind-infaq`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${izinTok}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message || undefined })
+            });
+            const j = await res.json();
+            if (!res.ok) throw new Error(j.message || 'Gagal mengirim notifikasi.');
+            const s = kalengStudents.find(x => x.id == remindTargetId);
+            if (s) s.last_infaq_reminded_at = new Date().toISOString();
+            renderKaleng($iz('kalengSearch').value);
+            closeRemindKaleng();
+            window.showToast?.('success', 'Terkirim', 'Pengingat kaleng berhasil dikirim ke HP siswa.');
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
     });
 
     async function refreshIzinBadge() {

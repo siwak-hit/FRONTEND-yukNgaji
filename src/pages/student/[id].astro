@@ -71,12 +71,48 @@ import StudentModals from '../../components/student/StudentModals.astro';
         const modal = document.getElementById('modalKaleng');
         const messageEl = document.getElementById('kalengMessage');
         messageEl.innerHTML = getKalengMessage();
+        // Tombol "Ingatkan Siswa" hanya relevan kalau kaleng masih dipegang
+        document.getElementById('btnOpenRemindInfaqModal')?.classList.toggle('hidden', !hasCan);
         modal.classList.remove('hidden');
     };
 
     // Pastikan tombol tutup modal kaleng tetap berfungsi
     document.getElementById('closeModalKaleng').addEventListener('click', () => {
         document.getElementById('modalKaleng').classList.add('hidden');
+    });
+
+    // ─── Pengingat kaleng via push notif ──────────────────────
+    document.getElementById('btnOpenRemindInfaqModal')?.addEventListener('click', () => {
+        document.getElementById('modalKaleng').classList.add('hidden');
+        document.getElementById('modalRemindInfaq').classList.remove('hidden');
+    });
+    document.getElementById('closeModalRemindInfaq')?.addEventListener('click', () => {
+        document.getElementById('modalRemindInfaq').classList.add('hidden');
+    });
+    document.getElementById('btnSendInfaqReminder')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (btn.disabled) return;
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Mengirim...</span>';
+        try {
+            const message = document.getElementById('infaqReminderMessage').value.trim();
+            const res = await fetch(`${API_URL}/api/students/${studentId}/remind-infaq`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message || undefined })
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal mengirim notifikasi.');
+            window.showToast?.('success', 'Terkirim', json.message || 'Pengingat kaleng berhasil dikirim.');
+            document.getElementById('modalRemindInfaq').classList.add('hidden');
+            document.getElementById('infaqReminderMessage').value = '';
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
     });
 
     window.renderConsultations = () => {

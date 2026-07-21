@@ -280,6 +280,28 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     
 
+    <!-- [BARU] MODAL INGATKAN SISWA (push notif ke yang belum ngerjain) -->
+    <div id="modalRemindPR" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
+            <div class="text-center mb-4">
+                <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-2 border border-emerald-100 shadow-inner">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <h3 class="font-black text-gray-800 text-lg leading-tight">Ingatkan Siswa</h3>
+                <p class="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-widest">Mapel <span id="remindPRMapel" class="text-emerald-600"></span> • Mg-<span id="remindPRWeek" class="text-emerald-600"></span></p>
+            </div>
+            <p class="text-xs text-gray-500 font-medium text-center mb-4 leading-relaxed">Push notif akan dikirim <b>hanya</b> ke siswa yang <b>belum mengerjakan</b> tugas ini dan sudah mengaktifkan notifikasi di HP-nya.</p>
+            <label class="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Pesan (Opsional)</label>
+            <textarea id="remindPRMsg" rows="3" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm resize-none" placeholder="Kosongkan untuk pakai pesan default."></textarea>
+            <button id="btnSendRemindPR" onclick="sendRemindPR(this)" class="w-full mt-4 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100">
+                <i class="fa-solid fa-paper-plane mr-1"></i> Kirim Pengingat
+            </button>
+            <button onclick="closeRemindPRModal()" class="w-full mt-2 py-3 bg-gray-100 text-gray-500 hover:bg-gray-200 font-bold rounded-2xl active:scale-95 transition-all text-sm">
+                Batal
+            </button>
+        </div>
+    </div>
+
     <!-- [BARU] MODAL DISPENSASI PR -->
     <div id="modalExtension" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300" id="modalExtensionBox">
@@ -1081,7 +1103,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                                         <option value="23:59" ${deadlineTime === '23:59' ? 'selected' : ''}>23:59 Penuh</option>
                                     </select>
                                 </div>
-                                <button onclick="savePRDeadline('${subject}', ${week})" class="w-full py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold rounded-lg transition-all text-[10px]">
+                                <button onclick="savePRDeadline('${subject}', ${week}, this)" class="w-full py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold rounded-lg transition-all text-[10px] disabled:opacity-60 disabled:cursor-not-allowed">
                                     <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Deadline & Durasi
                                 </button>
                             </div>
@@ -1108,7 +1130,8 @@ import ModalAlert from '../../components/ModalAlert.astro';
         }
     };
 
-    window.savePRDeadline = async (subject, week) => {
+    window.savePRDeadline = async (subject, week, btnEl) => {
+        if (btnEl && btnEl.disabled) return; // cegah double-click
         const daysToAdd = parseInt(document.getElementById(`deadlineDays-${week}-${subject}`).value);
         const timeString = document.getElementById(`deadlineTime-${week}-${subject}`).value;
 
@@ -1128,6 +1151,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
         const pad = (n) => n.toString().padStart(2, '0');
         const formattedDeadline = `${deadlineDate.getFullYear()}-${pad(deadlineDate.getMonth() + 1)}-${pad(deadlineDate.getDate())} ${pad(deadlineDate.getHours())}:${pad(deadlineDate.getMinutes())}:00+07`;
 
+        const originalBtnHTML = btnEl ? btnEl.innerHTML : '';
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        }
         try {
             const res = await fetch(`${API_URL}/api/onboarding/pr-lock`, {
                 method: 'POST',
@@ -1147,6 +1175,11 @@ import ModalAlert from '../../components/ModalAlert.astro';
             }
         } catch (error) {
             window.showToast?.('danger', 'Error', 'Gagal menyimpan deadline.');
+        } finally {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = originalBtnHTML;
+            }
         }
     };
 
@@ -2114,6 +2147,10 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <div class="py-3 text-center"><i class="fa-solid fa-spinner fa-spin text-tertiary"></i></div>
                 </div>
                 <div class="h-px my-1 mx-2" style="background-color: var(--divider);"></div>
+                <button onclick="closeViewerMenu(); openRemindPRModal();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
+                    <div class="icon-chip-sm" style="background-color: var(--accent-soft); color: var(--accent-strong);"><i class="fa-solid fa-bell"></i></div>
+                    <span class="caption font-semibold text-ink flex-1">Ingatkan Siswa</span>
+                </button>
                 <button onclick="closeViewerMenu(); openBulkModal();" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-[var(--surface-sunken)] transition-colors">
                     <div class="icon-chip-sm" style="background-color: var(--surface-sunken); color: var(--ink-secondary);"><i class="fa-solid fa-list-check"></i></div>
                     <span class="caption font-semibold text-ink flex-1">Hapus Massal</span>
@@ -2139,6 +2176,46 @@ import ModalAlert from '../../components/ModalAlert.astro';
         }
     };
     window.closeViewerMenu = () => document.getElementById('viewerMenu')?.classList.add('hidden');
+
+    // ---- Ingatkan Siswa (push notif ke yang belum ngerjain PR ini) ----
+    window.openRemindPRModal = () => {
+        if (!viewerSubject) return;
+        document.getElementById('remindPRMapel').textContent = (SUBJECT_LABEL[viewerSubject] || viewerSubject).toUpperCase();
+        document.getElementById('remindPRWeek').textContent = viewerWeek;
+        document.getElementById('remindPRMsg').value = '';
+        const m = document.getElementById('modalRemindPR');
+        m.classList.remove('hidden'); m.classList.add('flex');
+    };
+    window.closeRemindPRModal = () => {
+        const m = document.getElementById('modalRemindPR');
+        m.classList.add('hidden'); m.classList.remove('flex');
+    };
+    document.getElementById('modalRemindPR')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) window.closeRemindPRModal();
+    });
+    window.sendRemindPR = async (btnEl) => {
+        if (btnEl.disabled) return;
+        const originalHTML = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Mengirim...';
+        try {
+            const message = document.getElementById('remindPRMsg').value.trim();
+            const res = await fetch(`${API_URL}/api/onboarding/pr-remind`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject: viewerSubject, week: viewerWeek, message: message || undefined })
+            });
+            const j = await res.json();
+            if (!res.ok) throw new Error(j.message || 'Gagal mengirim pengingat.');
+            window.showToast?.(j.sent > 0 ? 'success' : 'info', j.sent > 0 ? 'Terkirim!' : 'Info', j.message);
+            window.closeRemindPRModal();
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalHTML;
+        }
+    };
 
     // Isi bagian Mode PR di dalam mini menu (switch + aksi PR, tanpa drawer)
     const loadViewerPR = async () => {
@@ -2306,7 +2383,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         <option value="23:59" ${dTime === '23:59' ? 'selected' : ''}>23:59 Penuh</option>
                     </select>
                 </div>
-                <button onclick="savePRDeadline('${subject}', ${week})" class="btn-soft w-full !py-2 text-xs"><i class="fa-solid fa-floppy-disk"></i> Simpan Deadline</button>
+                <button onclick="savePRDeadline('${subject}', ${week}, this)" class="btn-soft w-full !py-2 text-xs disabled:opacity-60 disabled:cursor-not-allowed"><i class="fa-solid fa-floppy-disk"></i> Simpan Deadline</button>
             </div>
             <button onclick="openExtensionModal('${subject}', ${week})" class="btn btn-secondary w-full !py-2.5 text-xs" style="border-style: dashed;"><i class="fa-solid fa-user-clock"></i> Beri Dispensasi (Telat)</button>
         </div>`;
