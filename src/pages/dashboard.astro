@@ -1506,6 +1506,38 @@ import NavbarGuru from '../components/NavbarGuru.astro';
         return (d.getMonth() + 1) >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
     };
 
+    window.resetStudentPassword = async (studentId, studentName) => {
+        const confirm = await window.showConfirmGlobal(
+            'Reset Password?',
+            `Yakin ingin mereset password untuk <strong>${studentName}</strong>? Password akan kembali ke default (nama depan + 123).`,
+            null,
+            true,
+            'danger'
+        );
+
+        if (!confirm) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message);
+
+            window.showToast('success', 'Berhasil', `Password untuk ${studentName} telah direset.`);
+
+            const student = enrichedStudents.find(s => s.id === studentId);
+            if (student) {
+                student.needs_password_reset = false;
+                renderStudentList();
+            }
+        } catch (e) {
+            window.showToast('danger', 'Error', e.message || 'Gagal mereset password.');
+        }
+    }
+
+
     const renderResetChecklist = () => {
         const wrap = document.getElementById('resetTableChecks');
         if (!wrap) return;

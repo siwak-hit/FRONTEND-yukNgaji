@@ -1321,6 +1321,70 @@ window.saveEditAbsensi = async () => {
     };
 
     window.closeRaportModal = () => document.getElementById('modalRaport').classList.replace('flex', 'hidden');
+
+// [BARU] Logika untuk modal input nilai manual
+window.openManualGradeModal = (subject) => {
+    document.getElementById('manualGradeSubject').value = subject;
+    const subjectLabel = subject.charAt(0).toUpperCase() + subject.slice(1);
+    document.getElementById('manualGradeSubjectLabel').textContent = subjectLabel;
+    document.getElementById('modalManualGrade').classList.replace('hidden', 'flex');
+    document.getElementById('manualGradeValue').focus();
+};
+
+window.closeManualGradeModal = () => {
+    document.getElementById('modalManualGrade').classList.replace('flex', 'hidden');
+    document.getElementById('formManualGrade').reset();
+};
+
+document.getElementById('formManualGrade').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const subject = document.getElementById('manualGradeSubject').value;
+    const score = document.getElementById('manualGradeValue').value;
+    const withPenalty = document.getElementById('manualGradePenalty').checked;
+
+    if (!score) return;
+
+    const btn = document.getElementById('btnSaveManualGrade');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Menyimpan...</span>';
+
+    try {
+        const res = await fetch(`${API_URL}/api/grades/manual`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                student_id: studentId,
+                subject: subject,
+                score: parseInt(score),
+                with_penalty: withPenalty
+            })
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || 'Gagal menyimpan nilai.');
+
+        window.showToast?.('success', 'Berhasil', `Nilai manual ${subject} berhasil disimpan.`);
+
+        // Update UI secara langsung
+        const finalScore = result.data.final_score;
+        const grade = convertToGrade(finalScore);
+        const subjectCap = subject.charAt(0).toUpperCase() + subject.slice(1);
+
+        document.getElementById(`rap${subjectCap}`).value = grade;
+        document.getElementById(`rapNum${subjectCap}Exam`).innerText = finalScore;
+        document.getElementById(`rapNum${subjectCap}Exam`).style.fontWeight = 'bold';
+
+
+        closeManualGradeModal();
+
+    } catch (error) {
+        window.showToast?.('danger', 'Error', error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+});
     const renderOralScores = () => {
         const setText = (id, value) => {
             const el = document.getElementById(id);

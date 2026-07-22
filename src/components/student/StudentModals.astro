@@ -117,6 +117,9 @@
                 Ls: <span id="rapNumTajwidOral" style="color: #8b5cf6;">-</span> (20%)
               </p>
               <input type="text" id="rapTajwid" disabled class="w-9 text-center rounded-[var(--r-sm)] font-bold text-xs border-none py-1.5" style="background-color: var(--info-soft); color: var(--info);">
+              <button type="button" onclick="openManualGradeModal('tajwid')" class="btn-icon !w-8 !h-8" title="Input Nilai Manual">
+                <i class="fa-solid fa-pen text-sm"></i>
+              </button>
             </div>
           </div>
           <div class="flex justify-between items-center card p-2">
@@ -128,6 +131,9 @@
                 Ls: <span id="rapNumFiqihOral" style="color: #8b5cf6;">-</span> (20%)
               </p>
               <input type="text" id="rapFiqih" disabled class="w-9 text-center rounded-[var(--r-sm)] font-bold text-xs border-none py-1.5" style="background-color: var(--info-soft); color: var(--info);">
+              <button type="button" onclick="openManualGradeModal('fiqih')" class="btn-icon !w-8 !h-8" title="Input Nilai Manual">
+                <i class="fa-solid fa-pen text-sm"></i>
+              </button>
             </div>
           </div>
           <div class="flex justify-between items-center card p-2">
@@ -139,6 +145,9 @@
                 Ls: <span id="rapNumTauhidOral" style="color: #8b5cf6;">-</span> (20%)
               </p>
               <input type="text" id="rapTauhid" disabled class="w-9 text-center rounded-[var(--r-sm)] font-bold text-xs border-none py-1.5" style="background-color: var(--info-soft); color: var(--info);">
+              <button type="button" onclick="openManualGradeModal('tauhid')" class="btn-icon !w-8 !h-8" title="Input Nilai Manual">
+                <i class="fa-solid fa-pen text-sm"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -408,3 +417,33 @@
 
 <!-- Canvas tersembunyi untuk konversi gambar URL → Base64 -->
 <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
+<!-- [BARU] MODAL INPUT NILAI MANUAL -->
+<div id="modalManualGrade" class="modal-overlay hidden" style="z-index: 100;">
+    <div class="modal-sheet">
+        <div class="sheet-grabber"></div>
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="section-title">Input Nilai Manual</h3>
+            <button onclick="closeManualGradeModal()" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="formManualGrade" class="space-y-4">
+            <input type="hidden" id="manualGradeSubject">
+            <div>
+                <label class="field-label">Nilai Angka untuk <span id="manualGradeSubjectLabel" class="font-bold"></span></label>
+                <input type="number" id="manualGradeValue" min="0" max="100" class="field field-sunken text-2xl font-bold text-center" placeholder="0-100" required>
+            </div>
+            <div class="rounded-[var(--r-lg)] p-3" style="background-color: var(--danger-soft);">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="manualGradePenalty" class="w-5 h-5 rounded mt-0.5 cursor-pointer" style="accent-color: var(--danger);">
+                    <div>
+                        <span class="font-semibold" style="color: var(--danger-strong);">Kurangi nilai karena telat?</span>
+                        <p class="text-[11px] mt-0.5" style="color: var(--danger);">Jika dicentang, nilai akhir akan dikurangi 10%.</p>
+                    </div>
+                </label>
+            </div>
+            <button type="submit" id="btnSaveManualGrade" class="btn w-full" style="background-color: var(--primary); color: #fff;">
+                <i class="fa-solid fa-save"></i> <span>Simpan Nilai</span>
+            </button>
+        </form>
+    </div>
+</div>

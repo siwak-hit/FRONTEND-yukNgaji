@@ -14,9 +14,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 <h1 class="page-title">Bank Soal</h1>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="btnOpenTemplate" onclick="openTemplateModal()" class="btn-icon" aria-label="Petunjuk & template" title="Petunjuk upload & template">
-                    <i class="fa-solid fa-download"></i>
-                </button>
+                <div class="relative">
+                    <button id="btnDownloadGroup" class="btn-icon" aria-label="Opsi download" title="Opsi download">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <div id="downloadMenu" class="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-100 p-2 z-20 hidden animate-fade-in-fast">
+                        <button onclick="openTemplateModal()" class="w-full text-left text-sm font-semibold text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-100 flex items-center gap-3"><i class="fa-solid fa-file-lines w-4 text-center"></i> Template</button>
+                        <button onclick="openCetakModal()" class="w-full text-left text-sm font-semibold text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-100 flex items-center gap-3"><i class="fa-solid fa-print w-4 text-center"></i> Cetak Soal</button>
+                    </div>
+                </div>
                 <button id="btnOpenUpload" class="fab" aria-label="Tambah soal">
                     <i class="fa-solid fa-plus text-lg"></i>
                 </button>
@@ -209,10 +215,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
                         <label class="text-[10px] font-bold text-gray-400 uppercase">Gambar / GIF (Opsional)</label>
                         <div class="flex items-center gap-2 mt-1">
                             <input type="text" id="editSoalImg" placeholder="https://... atau upload file" class="img-input flex-1 p-3 bg-gray-50 rounded-xl text-xs font-bold border border-gray-200 outline-none focus:ring-2 focus:ring-blue-400" oninput="previewEditImg(this.value)">
-                            <label class="shrink-0 w-10 h-10 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center cursor-pointer hover:bg-green-100 transition-colors" title="Upload gambar dari perangkat">
+                            <button type="button" onclick="openImgUploader(this)" data-edit-modal="1" class="shrink-0 w-10 h-10 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center cursor-pointer hover:bg-green-100 transition-colors" title="Upload / tempel / seret gambar">
                                 <i class="fa-solid fa-upload text-green-600 text-sm"></i>
-                                <input type="file" id="editSoalImgFile" accept="image/*,image/gif" class="hidden" onchange="handleEditImgUpload(this)">
-                            </label>
+                            </button>
                         </div>
                         <div id="editImgPreview" class="hidden mt-2">
                             <img id="editImgPreviewEl" src="" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="document.getElementById('editImgPreview').classList.add('hidden')">
@@ -259,6 +264,23 @@ import ModalAlert from '../../components/ModalAlert.astro';
             <button onclick="submitEditSoal()" class="shrink-0 w-full py-4 mt-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 active:scale-95 transition-all">
                 <i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Perubahan
             </button>
+        </div>
+    </div>
+
+    <!-- Modal upload gambar: paste clipboard / drag-drop / pilih file -->
+    <div id="modalImgUpload" class="fixed inset-0 bg-black/60 z-[110] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl relative animate-slide-up border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-black text-gray-800 text-base"><i class="fa-solid fa-image text-green-600 mr-2"></i>Tambah Gambar</h3>
+                <button type="button" onclick="closeImgUploader()" class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="imgDropZone" tabindex="0" class="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:border-green-400 hover:bg-green-50/40 transition-colors outline-none focus:border-green-500 focus:bg-green-50/40">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 mb-2"></i>
+                <p class="text-xs font-bold text-gray-600">Klik untuk pilih file</p>
+                <p class="text-[11px] text-gray-400 mt-1">atau <b>tempel (Ctrl+V)</b> / seret gambar ke sini</p>
+                <p class="text-[10px] text-gray-300 mt-2">Otomatis dikompres ke WebP · GIF tetap animasi</p>
+            </div>
+            <input type="file" id="imgUploadFileInput" accept="image/*,image/gif" class="hidden">
         </div>
     </div>
 
@@ -459,6 +481,83 @@ import ModalAlert from '../../components/ModalAlert.astro';
         </div>
     </div>
 
+    <!-- [BARU] MODAL CETAK SOAL -->
+    <div id="modalCetak" class="modal-overlay hidden" style="z-index: 70;">
+        <div class="modal-sheet">
+            <div class="sheet-grabber"></div>
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="section-title"><i class="fa-solid fa-print mr-2 text-primary"></i> Cetak Soal ke PDF</h3>
+                <button onclick="closeCetakModal()" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="formCetak" class="space-y-4">
+                <!-- Step 1: Pilih Mapel -->
+                <div id="cetakStep1">
+                    <label class="field-label">1. Mata Pelajaran</label>
+                    <select id="cetakMapel" class="field field-sunken">
+                        <option value="">— Pilih mapel —</option>
+                    </select>
+                </div>
+
+                <!-- Step 2: Pilih Pertemuan -->
+                <div id="cetakStep2" class="hidden animate-slide-up">
+                    <label class="field-label">2. Sumber Soal</label>
+                    <select id="cetakPertemuan" class="field field-sunken">
+                        <option value="">— Pilih pertemuan —</option>
+                    </select>
+                </div>
+
+                <!-- Step 3: Jumlah Soal & Kategori -->
+                <div id="cetakStep3" class="hidden animate-slide-up">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="field-label">3. Jumlah Soal</label>
+                            <select id="cetakJumlah" class="field field-sunken">
+                                <option value="10">10 soal</option>
+                                <option value="15">15 soal</option>
+                                <option value="20" selected>20 soal</option>
+                                <option value="30">30 soal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">4. Kategori</label>
+                            <select id="cetakKategori" class="field field-sunken">
+                                <option value="campuran" selected>Campuran</option>
+                                <option value="mudah">Mudah</option>
+                                <option value="sedang">Sedang</option>
+                                <option value="sulit">Sulit</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Opsi Tambahan -->
+                <div id="cetakStep4" class="hidden animate-slide-up pt-2">
+                    <label class="field-label">5. Opsi Tambahan</label>
+                     <div class="p-3 rounded-xl space-y-3" style="background-color: var(--surface-sunken);">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cetakSertakanGambar" checked class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--primary);">
+                            <span class="text-sm font-semibold text-primary-strong">Sertakan Gambar (jika ada)</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="cetakSertakanAkhlak" checked class="w-5 h-5 rounded cursor-pointer" style="accent-color: var(--primary);">
+                            <span class="text-sm font-semibold text-primary-strong">Sertakan Soal Akhlak & Adab</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Step 5: Tombol Aksi -->
+                <div id="cetakStep5" class="hidden animate-slide-up pt-2">
+                    <button id="btnCetakPreview" type="submit" class="btn btn-primary w-full flex items-center justify-center gap-2" disabled>
+                    <i class="fa-solid fa-eye icon"></i>
+                    <i class="fa-solid fa-spinner fa-spin spinner" style="display: none;"></i>
+                    <span class="btn-text">Preview & Cetak</span>
+                </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- LOADING OVERLAY (progress bar) -->
     <div id="loadingOverlay" class="modal-overlay hidden" style="z-index: 200; align-items: center; background-color: rgba(255,255,255,0.92); backdrop-filter: blur(4px);">
         <div class="w-full max-w-xs px-8 text-center">
@@ -504,6 +603,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
     let isSummaryCached = false; 
     let isDirty = false;
     let pendingCloseAction = null;
+
+    window.pendingImgUploads = 0; // Ganti jadi window scope biar bisa diakses dari mana saja
+
 
     document.addEventListener('input', (e) => {
         if (e.target.closest('.card-core-logic')) isDirty = true;
@@ -1271,6 +1373,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     window.submitEditSoal = async () => {
+        if (window.pendingImgUploads > 0) return window.showToast('warning', 'Tunggu Sebentar', 'Masih ada gambar yang sedang diupload.');
         const modal = document.getElementById('modalEditSoal');
         const id = document.getElementById('editSoalId').value;
         const payload = extractCardData(modal);
@@ -1313,6 +1416,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     document.getElementById('btnFinalSave').onclick = async () => {
+        if (window.pendingImgUploads > 0) return window.showToast('warning', 'Tunggu Sebentar', 'Masih ada gambar yang sedang diupload.');
         const cards   = document.querySelectorAll('#previewContent .soal-card');
         const subject = activeSubjectForUpload;
         const week    = parseInt(document.getElementById('targetWeek').value);
@@ -1575,10 +1679,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     <label class="field-label">Gambar / GIF (Opsional)</label>
                     <div class="flex items-center gap-2">
                         <input type="text" class="img-input field field-sunken flex-1 min-w-0 !py-2.5 text-xs" placeholder="https://domain.com/gambar.gif atau upload file" value="${item.image_url || ''}">
-                        <label class="btn-icon flex-shrink-0 cursor-pointer" style="background-color: var(--accent-soft); border-color: transparent; color: var(--accent-strong);" title="Upload gambar dari perangkat">
+                        <button type="button" onclick="openImgUploader(this)" class="btn-icon flex-shrink-0 cursor-pointer" style="background-color: var(--accent-soft); border-color: transparent; color: var(--accent-strong);" title="Upload / tempel / seret gambar">
                             <i class="fa-solid fa-upload text-sm"></i>
-                            <input type="file" accept="image/*,image/gif" class="img-file-input hidden" onchange="handleCardImgUpload(this)">
-                        </label>
+                        </button>
                     </div>
                     <div class="img-preview mt-2 ${item.image_url ? '' : 'hidden'}">
                         ${item.image_url ? `<img src="${item.image_url}" class="max-h-28 rounded-[var(--r-md)] border object-contain" style="border-color: var(--hairline);" onerror="this.closest('.img-preview').classList.add('hidden')">` : ''}
@@ -1673,38 +1776,138 @@ import ModalAlert from '../../components/ModalAlert.astro';
     window.closeEditSoal = () => {
         const doClose = () => {
             document.getElementById('modalEditSoal').classList.replace('flex', 'hidden');
-            document.getElementById('editSoalImgFile').value = '';
             document.getElementById('editImgPreview').classList.add('hidden');
         };
         if (isDirty) showConfirmBack(doClose);
         else doClose();
     };
 
-    window.handleCardImgUpload = async (fileInput) => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        const card = fileInput.closest('.card-core-logic');
-        const imgInput = card.querySelector('.img-input');
-        const previewWrap = card.querySelector('.img-preview');
-        imgInput.value = "Sedang mengupload...";
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            const res = await fetch(`${API_URL}/api/onboarding/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
-            const result = await res.json();
-            if (res.ok) {
-                const finalImageUrl = result.data.url;
-                imgInput.value = finalImageUrl;
-                if (previewWrap) {
-                    previewWrap.classList.remove('hidden');
-                    const existingImg = previewWrap.querySelector('img');
-                    if (existingImg) existingImg.src = finalImageUrl;
-                    else previewWrap.innerHTML = `<img src="${finalImageUrl}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.closest('.img-preview').classList.add('hidden')">`;
-                }
-                markDirty();
-            } else { window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); imgInput.value = ""; }
-        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan.'); imgInput.value = ""; }
+    // ================= IMAGE UPLOADER (kompres WebP + modal + progress) =================
+    window.pendingImgUploads = 0; // soal tak boleh disimpan selama > 0
+    let imgUploadTarget = null;   // { imgInput, previewWrap }
+
+    // Kompres ke WebP via canvas. GIF dilewati (biar tetap animasi). Return Blob + ext.
+    const compressToWebp = (file) => new Promise((resolve) => {
+        if (file.type === 'image/gif') return resolve({ blob: file, ext: 'gif' });
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const MAX = 1280; // ponytail: cap sisi terpanjang, naikkan kalau butuh detail
+            let { width: w, height: h } = img;
+            if (w > MAX || h > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            c.toBlob(b => b ? resolve({ blob: b, ext: 'webp' }) : resolve({ blob: file, ext: (file.name.split('.').pop() || 'png') }), 'image/webp', 0.82);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve({ blob: file, ext: (file.name.split('.').pop() || 'png') }); };
+        img.src = url;
+    });
+
+    // Upload pakai XHR biar dapat progress bar upload beneran.
+    const uploadWithProgress = (blob, ext, onProgress) => new Promise((resolve, reject) => {
+        const fd = new FormData();
+        fd.append('file', blob, `soal_${Date.now()}.${ext}`);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/api/onboarding/upload-image`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
+        xhr.onload = () => {
+            try { const r = JSON.parse(xhr.responseText); (xhr.status >= 200 && xhr.status < 300) ? resolve(r.data.url) : reject(new Error(r.message || 'Gagal upload')); }
+            catch { reject(new Error('Respons server tidak valid')); }
+        };
+        xhr.onerror = () => reject(new Error('Kesalahan jaringan'));
+        xhr.send(fd);
+    });
+
+    // Render preview + overlay blur/progress selagi upload; return handle {progress, done, fail}.
+    const showUploadingPreview = (previewWrap, localUrl) => {
+        previewWrap.classList.remove('hidden');
+        previewWrap.innerHTML = `
+            <div class="relative inline-block rounded-xl overflow-hidden border border-gray-200 max-w-full">
+                <img src="${localUrl}" class="max-h-28 object-contain block">
+                <div class="up-overlay absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center gap-1.5 px-3">
+                    <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="up-bar h-full bg-green-500 transition-all duration-200" style="width:0%"></div></div>
+                    <span class="up-label text-[10px] font-bold text-gray-600">Mengupload… 0%</span>
+                </div>
+            </div>`;
+        const bar = previewWrap.querySelector('.up-bar');
+        const label = previewWrap.querySelector('.up-label');
+        const overlay = previewWrap.querySelector('.up-overlay');
+        return {
+            progress: (p) => { bar.style.width = p + '%'; label.textContent = `Mengupload… ${p}%`; },
+            done: (finalUrl) => {
+                previewWrap.innerHTML = `<img src="${finalUrl}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.closest('.img-preview')?.classList.add('hidden')">`;
+            },
+            fail: (msg) => {
+                overlay.className = 'up-overlay absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center gap-1 px-3 text-center';
+                overlay.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i><span class="text-[10px] font-bold text-red-600">${msg}</span><span class="text-[9px] text-red-400">Coba upload ulang</span>`;
+            }
+        };
     };
+
+    // Dipanggil dari tombol upload di kartu / modal edit.
+    window.openImgUploader = (btn) => {
+        if (btn.dataset.editModal) {
+            imgUploadTarget = { imgInput: document.getElementById('editSoalImg'), previewWrap: document.getElementById('editImgPreview') };
+        } else {
+            const card = btn.closest('.card-core-logic') || btn.closest('.soal-card');
+            imgUploadTarget = { imgInput: card.querySelector('.img-input'), previewWrap: card.querySelector('.img-preview') };
+        }
+        const dz = document.getElementById('imgDropZone');
+        dz.classList.remove('border-green-500', 'bg-green-50/40');
+        document.getElementById('modalImgUpload').classList.replace('hidden', 'flex');
+        setTimeout(() => dz.focus(), 50);
+    };
+
+    window.closeImgUploader = () => {
+        document.getElementById('modalImgUpload').classList.replace('flex', 'hidden');
+        imgUploadTarget = null;
+    };
+
+    // Terima file dari sumber apa pun → tutup modal → kompres → upload async dgn overlay.
+    const startImageUpload = async (file) => {
+        if (!file || !imgUploadTarget) return;
+        if (!file.type.startsWith('image/')) { window.showToast?.('warning', 'Bukan Gambar', 'File yang dipilih bukan gambar.'); return; }
+        const { imgInput, previewWrap } = imgUploadTarget;
+        closeImgUploader();
+
+        const localUrl = URL.createObjectURL(file);
+        const ui = showUploadingPreview(previewWrap, localUrl);
+        window.pendingImgUploads++;
+        markDirty?.(); isDirty = true;
+        try {
+            const { blob, ext } = await compressToWebp(file);
+            const finalUrl = await uploadWithProgress(blob, ext, ui.progress);
+            imgInput.value = finalUrl;
+            ui.done(finalUrl);
+        } catch (err) {
+            imgInput.value = "";
+            ui.fail(err.message || 'Gagal upload');
+            window.showToast?.('danger', 'Gagal Upload', err.message || 'Terjadi kesalahan.');
+        } finally {
+            window.pendingImgUploads--;
+            URL.revokeObjectURL(localUrl);
+        }
+    };
+
+    // Sumber input: klik dropzone → file picker, drag-drop, paste clipboard.
+    (() => {
+        const dz = document.getElementById('imgDropZone');
+        const fileInput = document.getElementById('imgUploadFileInput');
+        if (!dz) return;
+        dz.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => { if (fileInput.files[0]) { startImageUpload(fileInput.files[0]); fileInput.value = ''; } });
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('border-green-500', 'bg-green-50/40'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('border-green-500', 'bg-green-50/40'));
+        dz.addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) startImageUpload(f); });
+        // Paste hanya saat modal terbuka
+        document.addEventListener('paste', (e) => {
+            if (document.getElementById('modalImgUpload').classList.contains('hidden')) return;
+            const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+            if (item) { e.preventDefault(); startImageUpload(item.getAsFile()); }
+        });
+    })();
 
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('img-input') && e.target.closest('.card-core-logic')) {
@@ -1721,26 +1924,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
             }
         }
     });
-
-    window.handleEditImgUpload = async (fileInput) => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        const imgInput = document.getElementById('editSoalImg');
-        imgInput.value = "Sedang mengupload...";
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            const res = await fetch(`${API_URL}/api/onboarding/upload-image`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
-            const result = await res.json();
-            if (res.ok) {
-                const finalImageUrl = result.data.url;
-                imgInput.value = finalImageUrl;
-                previewEditImg(finalImageUrl);
-                isDirty = true;
-            } else { window.showToast?.('danger', 'Error', 'Gagal upload gambar.'); imgInput.value = ""; }
-        } catch (err) { window.showToast?.('danger', 'Error', 'Terjadi kesalahan jaringan.'); imgInput.value = ""; }
-    };
 
     window.previewEditImg = (url) => {
         const previewWrap = document.getElementById('editImgPreview');
@@ -2499,9 +2682,666 @@ import ModalAlert from '../../components/ModalAlert.astro';
         }, { type: 'danger', confirmText: 'Hapus' });
     };
 
+
+    // =================================================================
+    // 5. LOGIC UPLOAD GAMBAR BARU (DRAG, PASTE, PROGRESS)
+    // =================================================================
+    window.closeImgUploader = () => {
+        document.getElementById('modalImgUpload').classList.replace('flex', 'hidden');
+        imgUploadTarget = null;
+    };
+
+    const handleImageFile = (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            window.showToast?.('warning', 'File tidak valid', 'Silakan pilih file gambar.');
+            return;
+        }
+        closeImgUploader();
+        uploadImageFile(file, imgUploadTarget.imgInput, imgUploadTarget.previewWrap);
+    };
+
+    const uploadImageFile = (file, targetInput, previewWrap) => {
+        if (!targetInput || !previewWrap) return;
+
+        pendingImgUploads++;
+        const btnFinalSave = document.getElementById('btnFinalSave');
+        const btnEditSave = document.querySelector('button[onclick="submitEditSoal()"]');
+        if(btnFinalSave) btnFinalSave.disabled = true;
+        if(btnEditSave) btnEditSave.disabled = true;
+
+        const tempUrl = URL.createObjectURL(file);
+        previewWrap.classList.remove('hidden');
+        const previewContainerId = `upload-preview-${Date.now()}`;
+        previewWrap.innerHTML = `
+            <div id="${previewContainerId}" class="relative w-full max-w-[200px]">
+                <img src="${tempUrl}" class="w-full h-auto object-contain rounded-lg border border-gray-200 blur-sm animate-pulse">
+                <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white rounded-lg p-2">
+                    <i class="fa-solid fa-spinner fa-spin text-xl"></i>
+                    <p class="text-xs font-bold mt-2">Mengupload...</p>
+                    <div class="w-full bg-gray-600/50 rounded-full h-1.5 mt-2">
+                        <div class="bg-white rounded-full h-1.5 progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        const progressBar = previewWrap.querySelector('.progress-bar');
+        const previewParent = document.getElementById(previewContainerId);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/api/onboarding/upload-image`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                if (progressBar) progressBar.style.width = `${percent}%`;
+            }
+        });
+
+        xhr.onload = () => {
+            URL.revokeObjectURL(tempUrl);
+            pendingImgUploads--;
+            if (pendingImgUploads <= 0) {
+                if(btnFinalSave) btnFinalSave.disabled = false;
+                if(btnEditSave) btnEditSave.disabled = false;
+            }
+
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                targetInput.value = res.data.url;
+                // Cek apakah elemen preview masih ada sebelum mengubahnya
+                if (document.getElementById(previewContainerId)) {
+                   previewWrap.innerHTML = `<img src="${res.data.url}" class="max-h-28 rounded-xl border border-gray-200 object-contain" onerror="this.parentElement.classList.add('hidden')">`;
+                }
+                window.showToast?.('success', 'Berhasil', 'Gambar telah diupload.');
+                isDirty = true;
+            } else {
+                 const errorMsg = JSON.parse(xhr.responseText).message || 'Gagal upload.';
+                 if (document.getElementById(previewContainerId)) {
+                    previewWrap.innerHTML = `<div class="text-xs text-red-500 p-2 bg-red-50 rounded-lg">Gagal: ${errorMsg}</div>`;
+                 }
+                window.showToast?.('danger', 'Error Upload', errorMsg);
+            }
+        };
+
+        xhr.onerror = () => {
+            URL.revokeObjectURL(tempUrl);
+            pendingImgUploads--;
+            if (pendingImgUploads <= 0) {
+                if(btnFinalSave) btnFinalSave.disabled = false;
+                if(btnEditSave) btnEditSave.disabled = false;
+            }
+            if (document.getElementById(previewContainerId)) {
+                previewWrap.innerHTML = `<div class="text-xs text-red-500 p-2 bg-red-50 rounded-lg">Error jaringan.</div>`;
+            }
+            window.showToast?.('danger', 'Error Jaringan', 'Periksa koneksi internet Anda.');
+        };
+
+        const formData = new FormData();
+        formData.append('file', file);
+        xhr.send(formData);
+    };
+
+    const setupImageUploader = () => {
+        const dropZone = document.getElementById('imgDropZone');
+        const fileInput = document.getElementById('imgUploadFileInput');
+
+        if (!dropZone || !fileInput) return;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleImageFile(e.target.files[0]);
+                e.target.value = ''; // Reset input
+            }
+        });
+
+        const preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('border-green-500', 'bg-green-50/40'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-green-500', 'bg-green-50/40'));
+
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('border-green-500', 'bg-green-50/40');
+            if (e.dataTransfer.files.length) {
+                handleImageFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Paste dari mana saja di window, tapi hanya jika modalnya terbuka
+        window.addEventListener('paste', (e) => {
+            const modal = document.getElementById('modalImgUpload');
+            if(modal.classList.contains('hidden')) return;
+
+            e.preventDefault();
+            const items = (e.clipboardData || window.clipboardData).items;
+            for (const item of items) {
+                if (item.kind === 'file') {
+                    handleImageFile(item.getAsFile());
+                    break;
+                }
+            }
+        });
+    };
+
     // INIT
-    fetchAccordion();
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchAccordion();
+        setupImageUploader();
+        // ... (sisa event listener jika ada)
+    });
+
+    // [BARU] Logika untuk menu dropdown cetak dan modal cetak
+    // =================================================================
+    const downloadBtn = document.getElementById('btnDownloadGroup');
+    const downloadMenu = document.getElementById('downloadMenu');
+
+    downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!downloadMenu.classList.contains('hidden') && !downloadBtn.contains(e.target)) {
+            downloadMenu.classList.add('hidden');
+        }
+    });
+
+    window.openCetakModal = () => {
+        downloadMenu.classList.add('hidden');
+        document.getElementById('modalCetak').classList.replace('hidden', 'flex');
+        populateCetakMapel();
+    };
+
+    window.closeCetakModal = () => {
+        document.getElementById('modalCetak').classList.replace('flex', 'hidden');
+    };
+
+    const cetakMapelEl = document.getElementById('cetakMapel');
+    const cetakPertemuanEl = document.getElementById('cetakPertemuan');
+    const formCetakEl = document.getElementById('formCetak');
+
+    const populateCetakMapel = () => {
+        if (Object.keys(accordionSummary).length > 0) {
+            const mapelSet = new Set();
+            Object.values(accordionSummary).forEach(weekData => {
+                Object.keys(weekData).forEach(subject => mapelSet.add(subject));
+            });
+
+            cetakMapelEl.innerHTML = '<option value="">— Pilih mapel —</option>';
+            Array.from(mapelSet).sort().forEach(mapel => {
+                const option = document.createElement('option');
+                option.value = mapel;
+                option.textContent = mapel.charAt(0).toUpperCase() + mapel.slice(1);
+                cetakMapelEl.appendChild(option);
+            });
+        }
+    };
+
+    const validateCetakForm = () => {
+        const mapelValue = cetakMapelEl.value;
+        const pertemuanValue = cetakPertemuanEl.value;
+        const btn = document.getElementById('btnCetakPreview');
+        const isFormValid = mapelValue && pertemuanValue;
+        btn.disabled = !isFormValid;
+    };
+
+    cetakMapelEl.addEventListener('change', function() {
+        const selectedMapel = this.value;
+        const step2 = document.getElementById('cetakStep2');
+        const step3 = document.getElementById('cetakStep3');
+        const step4 = document.getElementById('cetakStep4');
+        const step5 = document.getElementById('cetakStep5');
+
+        cetakPertemuanEl.value = ''; // Reset pertemuan
+
+        if (selectedMapel) {
+            const pertemuanSet = new Set();
+            Object.entries(accordionSummary).forEach(([week, weekData]) => {
+                if (weekData[selectedMapel]) {
+                    pertemuanSet.add(week);
+                }
+            });
+
+            cetakPertemuanEl.innerHTML = '<option value="">— Pilih sumber —</option><option value="gabungan">Gabungan Semua Pertemuan</option>';
+            Array.from(pertemuanSet).sort((a,b) => Number(a) - Number(b)).forEach(week => {
+                const option = document.createElement('option');
+                option.value = week;
+                option.textContent = `Pertemuan ${week}`;
+                cetakPertemuanEl.appendChild(option);
+            });
+            step2.classList.remove('hidden');
+        } else {
+            step2.classList.add('hidden');
+        }
+        step3.classList.add('hidden');
+        step4.classList.add('hidden');
+        step5.classList.add('hidden');
+        validateCetakForm();
+    });
+
+    const AKHLAK_ADAB_QUESTIONS = {
+        akhlak: [
+            { q: "Pas Kak Aziz lagi nerangin, apa yang kamu lakuin tadi?", opts: [{t: "Merhatiin Kok!", s: 100}, {t: "gak terlalu ( Bosen soalnya )", s: 50}, {t: "gak tau ah!", s: 0}] },
+            { q: "Jujur, kadang kamu suka lupa salim ke guru gak pas datang?", opts: [{t: "Selalu salim ke semua nya", s: 100}, {t: "Ke pa Idris doang", s: 50}, {t: "Sering lupa", s: 0}] },
+            { q: "Kalau kamu ditegur guru karena salah, perasaan kamu gimana?", opts: [{t: "Biasa aja", s: 100}, {t: "Agak bete", s: 50}, {t: "curhat ke temen pas udah pulang ngaji", s: 0}] }
+        ],
+        disiplin: [
+            { q: "Misalkan kak Aziz nyuruh sesuatu, Apa yang kamu lakukan?", opts: [{t: "Gak mau ah", s: 0}, {t: "Mau, tapi...", s: 50}, {t: "Mau", s: 100}] },
+            { q: "Habis ngaji, kamu langsung pulang atau bantu beresin meja?", opts: [{t: "Bantuin beresin", s: 100}, {t: "biasanya sih langsung pulang", s: 0}] },
+            { q: "Kalau ada PR ngaji tapi kamu belum ngerjain, itu salah siapa?", opts: [{t: "Salahku sendiri", s: 100}, {t: "Salah temen gak ngingetin", s: 0}, {t:"salah kak Aziz bikin tugas susah banget", s:0}] }
+        ],
+        aktif: [
+            { q: "Pas guru nanya ke kelas, kamu biasanya ngapain?", opts: [{t: "Langsung jawab dong!", s: 100}, {t: "Mau jawab tapi malu", s: 50}, {t: "Diem aja nunggu temen yang jawab", s: 0}] },
+            { q: "Kalau ada temen yang sering nanya ke guru, menurutmu dia...", opts: [{t: "Hebat dan pintar", s: 100}, {t: "Caper banget", s: 0}, {t: "HEBAT BANGET!!! KEREN!", s: 20}] },
+            { q: "Apa yang bikin kamu kadang gak mau nanya pelajaran?", opts: [{t: "Aku suka nanya kok", s: 100}, {t: "Takut salah / diketawain", s: 50}, {t: "Gak tau apa yang mau ditanya", s: 0}] }
+        ]
+    };
+
+    cetakPertemuanEl.addEventListener('change', async function() {
+        const step3 = document.getElementById('cetakStep3');
+        const step4 = document.getElementById('cetakStep4');
+        const step5 = document.getElementById('cetakStep5');
+        const jumlahEl = document.getElementById('cetakJumlah');
+
+        if (this.value) {
+            step3.classList.remove('hidden');
+            step4.classList.remove('hidden');
+            step5.classList.remove('hidden');
+
+            const subject = cetakMapelEl.value;
+            const week = this.value;
+            let totalSoal = 0;
+
+            try {
+                if (week === 'gabungan') {
+                    const weeks = Array.from(this.options).map(o => o.value).filter(v => v && v !== 'gabungan');
+                    const promises = weeks.map(w => fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${w}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()));
+                    const results = await Promise.all(promises);
+                    totalSoal = results.reduce((sum, r) => sum + (r.data?.length || 0), 0);
+                } else {
+                    const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const result = await res.json();
+                    totalSoal = result.data?.length || 0;
+                }
+            } catch (e) { console.error("Gagal fetch jumlah soal"); }
+
+            jumlahEl.innerHTML = '';
+            const steps = [10, 20, 30, 40, 50];
+            steps.forEach(s => {
+                if (s <= totalSoal) {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = `${s} soal`;
+                    jumlahEl.appendChild(opt);
+                }
+            });
+            if (totalSoal > 0 && !steps.includes(totalSoal)) {
+                 const opt = document.createElement('option');
+                 opt.value = totalSoal;
+                 opt.textContent = `${totalSoal} soal (Semua)`;
+                 jumlahEl.appendChild(opt);
+            }
+            if (jumlahEl.options.length > 0) jumlahEl.value = jumlahEl.options[jumlahEl.options.length-1].value;
+
+
+        } else {
+            step3.classList.add('hidden');
+            step4.classList.add('hidden');
+            step5.classList.add('hidden');
+        }
+        validateCetakForm();
+    });
+
+    formCetakEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnCetakPreview');
+        const originalHtml = btn.innerHTML;
+        const spinnerHtml = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        btn.disabled = true;
+        btn.innerHTML = spinnerHtml;
+
+        try {
+            await generatePdf();
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            window.showToast?.('danger', 'Error', 'Gagal membuat PDF. Cek konsol untuk detail.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            // Pastikan spinner di versi original disembunyikan lagi
+            const spinnerInOriginal = btn.querySelector('.spinner');
+            if (spinnerInOriginal) spinnerInOriginal.style.display = 'none';
+        }
+    });
+
+
+    // Muat script eksternal sekali saja (di-cache per-src)
+    const _scriptCache = {};
+    const loadScript = (src) => _scriptCache[src] || (_scriptCache[src] = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Gagal memuat ' + src));
+        document.head.appendChild(s);
+    }));
+
+    // Cache respons soal cetak per-URL biar gak ngehit endpoint berkali-kali
+    const printQuestionCache = new Map();
+
+    const generatePdf = async () => {
+        const subject = document.getElementById('cetakMapel').value;
+        const week = document.getElementById('cetakPertemuan').value;
+        const limit = document.getElementById('cetakJumlah').value;
+        const category = document.getElementById('cetakKategori').value;
+        const includeImages = document.getElementById('cetakSertakanGambar').checked;
+        const includeAkhlak = document.getElementById('cetakSertakanAkhlak').checked;
+
+        // Ambil SEMUA soal (pool) sekali, cache tanpa limit -> tiap cetak bisa di-random ulang
+        let url = `${API_URL}/api/exams/questions-for-print?subject=${subject}&limit=999&category=${category}&includeImages=${includeImages}`;
+        if (week !== 'gabungan') url += `&week=${week}`;
+
+        let raw = printQuestionCache.get(url);
+        if (!raw) {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!res.ok) throw new Error('Gagal mengambil data soal akademis');
+            raw = await res.json() || [];
+            printQuestionCache.set(url, raw);
+        }
+
+        // Shuffle (Fisher-Yates) + ambil sejumlah limit -> tiap download beda soal & beda urutan
+        const shuffle = (arr) => {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        };
+        // Salin (jangan mutasi cache). Tipe 'drag'/blank dibiarkan -> nanti jadi soal essai.
+        let questions = shuffle(raw.map(q => ({ ...q }))).slice(0, Number(limit) || raw.length);
+
+        if (includeAkhlak) {
+            const akhlakQs = [
+                ...AKHLAK_ADAB_QUESTIONS.akhlak,
+                ...AKHLAK_ADAB_QUESTIONS.disiplin,
+                ...AKHLAK_ADAB_QUESTIONS.aktif
+            ];
+            const shuffledAkhlak = akhlakQs.sort(() => 0.5 - Math.random()).slice(0, 5); // Ambil 5 soal akhlak acak
+
+            const formattedAkhlak = shuffledAkhlak.map(q => ({
+                ...q,
+                type: 'pilgan',
+                options: q.opts.reduce((acc, opt, i) => {
+                    acc[String.fromCharCode(65 + i)] = opt.t;
+                    return acc;
+                }, {}),
+                isAkhlak: true
+            }));
+            questions.push(...formattedAkhlak);
+        }
+
+        if (questions.length === 0) {
+            window.showToast?.('warning', 'Tidak Ditemukan', 'Tidak ada soal yang cocok dengan kriteria Anda.');
+            return;
+        }
+
+        // --- Normalisasi jadi daftar item (section + soal), penomoran berurutan ---
+        const stripHtml = (s) => {
+            const d = document.createElement('div');
+            d.innerHTML = s ?? '';
+            return (d.textContent || '').replace(/\s+/g, ' ').trim();
+        };
+        const normOpts = (o) => Object.entries(o || {}).map(([k, v]) => [k, stripHtml(v)]);
+        const isEssay = (q) => q.type === 'drag' || q.type === 'essay' || /\[BLANK\]/i.test(q.question || '');
+
+        const academicQuestions = questions.filter(q => !q.isAkhlak);
+        const akhlakQuestions = questions.filter(q => q.isAkhlak);
+        // Soal blank/drag -> essai, dikumpulkan di bawah pilgan & true/false
+        const academicPilgan = academicQuestions.filter(q => !isEssay(q));
+        const academicEssay = academicQuestions.filter(q => isEssay(q));
+
+        const items = [];
+        if (academicQuestions.length > 0) {
+            items.push({ type: 'section', title: 'Soal Akademis' });
+            academicPilgan.forEach(q => items.push({
+                type: 'q', text: stripHtml(q.question), options: normOpts(q.options),
+                image_url: includeImages ? q.image_url : null,
+            }));
+            academicEssay.forEach(q => items.push({
+                type: 'essay', text: stripHtml(q.question).replace(/\[BLANK\]/gi, '________'),
+                image_url: includeImages ? q.image_url : null,
+            }));
+        }
+        if (akhlakQuestions.length > 0) {
+            items.push({ type: 'section', title: 'Soal Kepribadian (Akhlak & Adab)' });
+            akhlakQuestions.forEach(q => items.push({
+                type: 'q', text: stripHtml(q.q), options: normOpts(q.options), image_url: null,
+            }));
+        }
+        const totalSoal = items.filter(i => i.type === 'q' || i.type === 'essay').length;
+
+        // Teks Arab tidak bisa dirender font vektor jsPDF -> render sbagian Arab jadi gambar
+        // kecil via html2canvas (browser yg bentuk hurufnya), sisanya tetap teks vektor.
+        const NUMW = 9;                 // lebar kolom nomor (tetap, biar lebar gambar bisa dihitung)
+        const hasArabic = (s) => /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.test(s || '');
+        const needArabic = items.some(i => (i.type === 'q' || i.type === 'essay') &&
+            (hasArabic(i.text) || (i.options || []).some(([, v]) => hasArabic(v))));
+
+        if (needArabic) {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+            const snapshot = async (host, widthMm) => {
+                host.style.position = 'absolute'; host.style.left = '-99999px'; host.style.top = '0';
+                host.style.width = (widthMm / 25.4 * 96) + 'px';
+                document.body.appendChild(host);
+                // bg putih WAJIB: JPEG tak punya alpha, transparan -> jadi hitam pekat
+                const canvas = await html2canvas(host, { scale: 2, backgroundColor: '#ffffff' });
+                document.body.removeChild(host);
+                return { data: canvas.toDataURL('image/jpeg', 0.9), wMm: widthMm, hMm: (canvas.height / 2) / 96 * 25.4 };
+            };
+            // Times New Roman -> punya glyph Arab di Windows, fallback aman
+            const ARFONT = "'Times New Roman','Traditional Arabic','Amiri',serif";
+            // Soal ber-Arab dirender UTUH (pertanyaan + opsi) jadi 1 gambar TNR,
+            // biar gak kepotong / gak belang antara teks vektor & gambar.
+            const soalDiv = (it) => {
+                const d = document.createElement('div');
+                d.style.cssText = `font-family:${ARFONT};font-size:13pt;line-height:1.6;color:#000;background:#fff;padding:1px 2px;`;
+                const q = document.createElement('div');
+                q.textContent = it.text;
+                d.appendChild(q);
+                if (it.type !== 'essay' && (it.options || []).length) {
+                    const g = document.createElement('div');
+                    g.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:6px;';
+                    it.options.forEach(([k, v]) => { const c = document.createElement('div'); c.textContent = `${k}. ${v}`; g.appendChild(c); });
+                    d.appendChild(g);
+                }
+                return d;
+            };
+            const bodyW = 210 - 2 * 15 - NUMW; // 180mm - kolom nomor
+            for (const it of items) {
+                if (it.type !== 'q' && it.type !== 'essay') continue;
+                if (hasArabic(it.text) || (it.options || []).some(([, v]) => hasArabic(v))) {
+                    it.fullImg = await snapshot(soalDiv(it), bodyW);
+                }
+            }
+        }
+
+        // Preload gambar -> dataURL JPEG (re-encode biar file kecil, hindari 40MB PNG)
+        const imgMap = new Map();
+        await Promise.all(items.filter(i => i.image_url).map(i => new Promise(res => {
+            const im = new Image();
+            im.crossOrigin = 'anonymous';
+            im.onload = () => {
+                try {
+                    const cv = document.createElement('canvas');
+                    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+                    cv.getContext('2d').drawImage(im, 0, 0);
+                    imgMap.set(i.image_url, { data: cv.toDataURL('image/jpeg', 0.72), ratio: im.naturalHeight / im.naturalWidth });
+                } catch (e) { /* tainted / CORS -> lewati gambar */ }
+                res();
+            };
+            im.onerror = () => res();
+            im.src = i.image_url;
+        })));
+
+        // --- Render PDF vektor via jsPDF (teks bisa diseleksi, ukuran KB) ---
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+        const M = 15, PW = 210, PH = 297, CW = PW - 2 * M;
+        const lineH = 5.2, BASE = 3.8, gap = 8; // gap = ruang antar soal
+        let y = M;
+        let pageStartNum = 1, lastNum = 0;
+
+        const footer = () => {
+            doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(130);
+            doc.text(`Soal ${pageStartNum}–${Math.max(lastNum, pageStartNum)} dari ${totalSoal}`, PW / 2, PH - 9, { align: 'center' });
+            doc.setTextColor(0);
+        };
+        const newPage = () => { footer(); doc.addPage(); y = M; pageStartNum = lastNum + 1; };
+        const ensureSpace = (h) => { if (y + h > PH - 16) newPage(); };
+
+        // Header (hanya halaman 1)
+        doc.setFont('helvetica', 'bold').setFontSize(16);
+        doc.text(`SOAL ${subject.toUpperCase()}`, PW / 2, y + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal').setFontSize(11);
+        doc.text('Pengajian Mushola Nurul Hidayah', PW / 2, y + 11, { align: 'center' });
+        y += 15;
+        doc.setLineWidth(0.4); doc.line(M, y, PW - M, y);
+        y += 8;
+
+        // Baris: Nama : ...   Tanggal : ...   [ Nilai : ... ]
+        const boxW = 42, boxH = 12, boxX = PW - M - boxW, rowY = y;
+        doc.setDrawColor(0); doc.setLineWidth(0.4);
+        doc.roundedRect(boxX, rowY - 6, boxW, boxH, 1.5, 1.5);
+        doc.setFont('helvetica', 'bold').setFontSize(11);
+        doc.text('Nilai :', boxX + 3, rowY + 1.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Nama    : ...............................', M, rowY + 1);
+        doc.text('Tanggal : ..................', M + 75, rowY + 1);
+        y = rowY + boxH;
+
+        doc.setFont('helvetica', 'bold').setFontSize(10.5);
+        const instr = doc.splitTextToSize('Silahkan kerjakan soal di bawah ini dengan memberikan tanda silang (X) pada jawaban yang paling benar!', CW);
+        instr.forEach((ln, i) => doc.text(ln, M, y + BASE + i * lineH));
+        y += instr.length * lineH + 4;
+
+        let num = 0;
+        for (const it of items) {
+            if (it.type === 'section') {
+                ensureSpace(lineH + 6);
+                doc.setFont('helvetica', 'bold').setFontSize(12.5);
+                doc.text(it.title, M, y + BASE);
+                doc.setLineWidth(0.2); doc.setDrawColor(180);
+                doc.line(M, y + lineH, PW - M, y + lineH);
+                doc.setDrawColor(0);
+                y += lineH + 4;
+                continue;
+            }
+            num++;
+            const isEssayItem = it.type === 'essay';
+
+            const numStr = `${num}.`;
+            const textX = M + NUMW;
+            const textW = CW - NUMW;
+
+            const img = imgMap.get(it.image_url);
+            const imgW = img ? Math.min(56, textW) : 0; // 80% dari 70mm
+            const imgH = img ? imgW * img.ratio : 0;
+
+            // Soal ber-gambar (jalur vektor): teks+opsi di KIRI, gambar di KANAN
+            const sideImg = img && !it.fullImg;
+            const bodyW = sideImg ? textW - imgW - 6 : textW;
+            const colW = bodyW / 2;
+            const optEntries = isEssayItem ? [] : it.options;
+
+            let bodyH;
+            if (it.fullImg) {
+                bodyH = it.fullImg.hMm;
+            } else {
+                doc.setFont('helvetica', 'normal').setFontSize(11);
+                var qLines = doc.splitTextToSize(it.text, bodyW);
+                let optH = 0;
+                for (let r = 0; r < optEntries.length; r += 2) {
+                    const l = doc.splitTextToSize(`${optEntries[r][0]}. ${optEntries[r][1]}`, colW - 3);
+                    const rt = optEntries[r + 1] ? doc.splitTextToSize(`${optEntries[r + 1][0]}. ${optEntries[r + 1][1]}`, colW - 3) : [];
+                    optH += Math.max(l.length, rt.length) * lineH;
+                }
+                bodyH = qLines.length * lineH + 2 + optH;
+            }
+            const answerH = isEssayItem ? 3 + 8 : 0; // essai: 1 baris jawaban (jarak 8mm)
+            const contentH = bodyH + answerH;
+            const blockH = sideImg ? Math.max(contentH, imgH) : contentH + (img ? imgH + 4 : 0);
+
+            ensureSpace(blockH);
+            const blockTop = y;
+
+            // Nomor besar & tebal -> mencolok
+            doc.setFont('helvetica', 'bold').setFontSize(14);
+            doc.text(numStr, M, y + BASE + 0.6);
+
+            // Gambar kanan (sejajar soal)
+            if (sideImg) {
+                const ix = textX + bodyW + 6;
+                try { doc.addImage(img.data, 'JPEG', ix, blockTop, imgW, imgH); } catch (e) { /* skip */ }
+                doc.setDrawColor(160); doc.setLineWidth(0.3);
+                doc.rect(ix, blockTop, imgW, imgH);
+                doc.setDrawColor(0);
+            }
+
+            if (it.fullImg) {
+                try { doc.addImage(it.fullImg.data, 'JPEG', textX, y, it.fullImg.wMm, it.fullImg.hMm); } catch (e) { /* skip */ }
+                y += it.fullImg.hMm;
+            } else {
+                // Pertanyaan (teks vektor)
+                doc.setFont('helvetica', 'normal').setFontSize(11);
+                qLines.forEach((ln, i) => doc.text(ln, textX, y + BASE + i * lineH));
+                y += qLines.length * lineH;
+                // Opsi 2 kolom
+                y += 2;
+                for (let r = 0; r < optEntries.length; r += 2) {
+                    const l = doc.splitTextToSize(`${optEntries[r][0]}. ${optEntries[r][1]}`, colW - 3);
+                    const rt = optEntries[r + 1] ? doc.splitTextToSize(`${optEntries[r + 1][0]}. ${optEntries[r + 1][1]}`, colW - 3) : [];
+                    l.forEach((ln, i) => doc.text(ln, textX, y + BASE + i * lineH));
+                    rt.forEach((ln, i) => doc.text(ln, textX + colW, y + BASE + i * lineH));
+                    y += Math.max(l.length, rt.length) * lineH;
+                }
+            }
+
+            // Gambar bawah (hanya jalur fullImg/Arab yang gak sejajar)
+            if (img && !sideImg) {
+                y += 2;
+                try { doc.addImage(img.data, 'JPEG', textX, y, imgW, imgH); } catch (e) { /* skip */ }
+                doc.setDrawColor(160); doc.setLineWidth(0.3);
+                doc.rect(textX, y, imgW, imgH);
+                doc.setDrawColor(0);
+                y += imgH + 2;
+            }
+
+            // Baris jawaban essai
+            if (isEssayItem) {
+                y += 3;
+                doc.setDrawColor(150); doc.setLineWidth(0.2);
+                y += 8; doc.line(textX, y, (sideImg ? textX + bodyW : PW - M), y);
+                doc.setDrawColor(0);
+            }
+
+            // Kalau gambar kanan lebih tinggi dari konten, dorong y biar gak ketiban
+            if (sideImg) y = Math.max(y, blockTop + imgH);
+
+            lastNum = num;
+            y += gap; // ruang antar soal
+        }
+        footer();
+
+        window.open(doc.output('bloburl'), '_blank');
+    };
+
 </script>
+
 
 <style>
     .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
