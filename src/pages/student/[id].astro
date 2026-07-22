@@ -2270,9 +2270,15 @@ doc.setFontSize(10);
                 <div class="bg-white rounded-xl p-3 border border-amber-100">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs font-black text-amber-700 uppercase">${SUBJECT_LABEL[subject]}</span>
-                        <span class="text-[9px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                            Kelas: Mg-${classWeek} | Anak: Mg-${studentWeek || '0'}
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                                Kelas: Mg-${classWeek} | Anak: Mg-${studentWeek || '0'}
+                            </span>
+                            <button onclick="openBulkTugasModal('${subject}', ${JSON.stringify(missedWeeks)})"
+                                class="btn-bulk-mapel hidden badge badge-info active:scale-95 transition-all">
+                                <i class="fa-solid fa-print text-[9px]"></i>
+                            </button>
+                        </div>
                     </div>
                     <p class="text-[10px] text-gray-600 leading-relaxed">
                         Belum ujian pertemuan: <b class="text-amber-700">${missedLabel}${moreCount}</b>
@@ -2282,9 +2288,15 @@ doc.setFontSize(10);
         }).join('');
 
         banner.innerHTML = `
-            <div class="flex items-center gap-2 mb-1">
-                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
-                <p class="text-xs font-black text-amber-800 uppercase tracking-wide">Anak Ini Tertinggal!</p>
+            <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                    <p class="text-xs font-black text-amber-800 uppercase tracking-wide">Anak Ini Tertinggal!</p>
+                </div>
+                <button onclick="toggleBulkTugasMode()" id="btnBulkTugas"
+                    class="badge badge-warning active:scale-95 transition-all">
+                    <i class="fa-solid fa-print"></i> Tandai via Cetak
+                </button>
             </div>
             ${itemsHtml}`;
 
@@ -2567,6 +2579,149 @@ doc.setFontSize(10);
     };
 
     fetchData(); // Pastikan ini tetap ada di paling bawah
+
+    // ================================================================
+    // FITUR 3b: TOGGLE BULK MODE di banner tertinggal
+    // ================================================================
+    let bulkTugasModeActive = false;
+    window.toggleBulkTugasMode = () => {
+        bulkTugasModeActive = !bulkTugasModeActive;
+        document.querySelectorAll('.btn-bulk-mapel').forEach(btn => {
+            btn.classList.toggle('hidden', !bulkTugasModeActive);
+        });
+        const btnMain = document.getElementById('btnBulkTugas');
+        if (btnMain) {
+            btnMain.innerHTML = bulkTugasModeActive
+                ? '<i class="fa-solid fa-xmark"></i> Batal'
+                : '<i class="fa-solid fa-print"></i> Tandai via Cetak';
+        }
+    };
+
+    // ================================================================
+    // FITUR 4: MODAL PASSWORD
+    // ================================================================
+    window.openPasswordModal = () => {
+        document.getElementById('modalPassword').classList.replace('hidden', 'flex');
+        switchPassTab('ganti');
+    };
+    window.closePasswordModal = () => {
+        document.getElementById('modalPassword').classList.replace('flex', 'hidden');
+        document.getElementById('formGantiPass').reset();
+    };
+    window.switchPassTab = (tab) => {
+        const isGanti = tab === 'ganti';
+        document.getElementById('tabGantiPass').className = isGanti ? 'seg-btn is-active' : 'seg-btn';
+        document.getElementById('tabResetPass').className = !isGanti ? 'seg-btn is-active' : 'seg-btn';
+        document.getElementById('sectionGantiPass').classList.toggle('hidden', !isGanti);
+        document.getElementById('sectionResetPass').classList.toggle('hidden', isGanti);
+    };
+    window.copyAndOpenWA = () => {
+        const name = document.getElementById('studentName').innerText;
+        const msg = `Assalamu'alaikum Ustadz, mohon bantuannya untuk mereset password akun anak saya: *${name}*. Terima kasih 🙏`;
+        navigator.clipboard.writeText(msg).catch(() => {});
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+    document.getElementById('formGantiPass').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSavePassword');
+        const old = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const res = await fetch(`${API_URL}/api/students/${studentId}/change-password`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    old_password: document.getElementById('oldPassword').value,
+                    new_password: document.getElementById('newPassword').value
+                })
+            });
+            const j = await res.json();
+            if (!res.ok) throw new Error(j.message || 'Gagal ganti password.');
+            window.showToast?.('success', 'Berhasil', 'Password berhasil diubah.');
+            closePasswordModal();
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally {
+            btn.disabled = false; btn.innerHTML = old;
+        }
+    });
+
+    // ================================================================
+    // FITUR 3: BULK ACTION TUGAS CETAK di banner "Anak Tertinggal"
+    // ================================================================
+    let bulkTugasSubject = '';
+    let bulkTugasMissedWeeks = [];
+
+    window.openBulkTugasModal = (subject, missedWeeks) => {
+        bulkTugasSubject = subject;
+        bulkTugasMissedWeeks = missedWeeks;
+        const SUBJECT_LABEL = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
+        document.getElementById('bulkTugasSubjectInfo').textContent =
+            `${SUBJECT_LABEL[subject]} — ${missedWeeks.length} pertemuan tertunggak`;
+        const list = document.getElementById('bulkTugasChecklist');
+        list.innerHTML = missedWeeks.map(w => `
+            <label class="flex items-center gap-3 p-3 card cursor-pointer">
+                <input type="checkbox" class="bulk-tugas-item w-4 h-4 rounded" style="accent-color:var(--primary);" value="${w}" onchange="onBulkTugasChange()">
+                <span class="caption font-semibold text-ink">Pertemuan ${w}</span>
+            </label>`).join('');
+        document.getElementById('bulkTugasNilaiSection').classList.add('hidden');
+        document.getElementById('btnSubmitBulkTugas').disabled = true;
+        document.getElementById('modalBulkTugas').classList.replace('hidden', 'flex');
+    };
+    window.closeBulkTugasModal = () =>
+        document.getElementById('modalBulkTugas').classList.replace('flex', 'hidden');
+
+    window.onBulkTugasChange = () => {
+        const checked = [...document.querySelectorAll('.bulk-tugas-item:checked')];
+        const nilaiSec = document.getElementById('bulkTugasNilaiSection');
+        const btn = document.getElementById('btnSubmitBulkTugas');
+        btn.disabled = checked.length === 0;
+        if (checked.length > 0) {
+            nilaiSec.classList.remove('hidden');
+            const label = document.getElementById('bulkTugasNilaiLabel');
+            const hint = document.getElementById('bulkTugasNilaiHint');
+            if (checked.length === 1) {
+                label.textContent = `Nilai untuk Pertemuan ${checked[0].value} (0-100)`;
+                hint.textContent = 'Nilai akan langsung masuk ke pertemuan tersebut.';
+            } else {
+                label.textContent = `Nilai Gabungan ${checked.length} Pertemuan (0-100)`;
+                hint.textContent = `Setiap pertemuan mendapat nilai = N% dari N (misal 90 → tiap pert. dapat 81).`;
+            }
+        } else {
+            nilaiSec.classList.add('hidden');
+        }
+    };
+
+    window.submitBulkTugas = async () => {
+        const checked = [...document.querySelectorAll('.bulk-tugas-item:checked')].map(c => parseInt(c.value));
+        const nilaiRaw = parseInt(document.getElementById('bulkTugasNilai').value);
+        if (!checked.length || isNaN(nilaiRaw)) return;
+
+        const btn = document.getElementById('btnSubmitBulkTugas');
+        const old = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+
+        // Hitung nilai per pertemuan
+        const getScore = (base, count) => count === 1 ? base : Math.round((base / 100) * base);
+
+        try {
+            const score = getScore(nilaiRaw, checked.length);
+            await Promise.all(checked.map(week =>
+                fetch(`${API_URL}/api/grades/manual`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId, subject: bulkTugasSubject, week, score, with_penalty: false, mark_completed: true })
+                })
+            ));
+            window.showToast?.('success', 'Berhasil', `${checked.length} pertemuan ditandai selesai.`);
+            closeBulkTugasModal();
+            fetchData();
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message || 'Terjadi kesalahan.');
+        } finally {
+            btn.disabled = false; btn.innerHTML = old;
+        }
+    };
 </script>
 
 <style>

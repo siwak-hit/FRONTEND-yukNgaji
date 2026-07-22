@@ -415,6 +415,67 @@
   </div>
 </div>
 
+<!-- GANTI / RESET PASSWORD -->
+<div id="modalPassword" class="modal-overlay hidden" style="z-index: 100;">
+  <div class="modal-sheet">
+    <div class="sheet-grabber"></div>
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="section-title"><i class="fa-solid fa-key mr-2" style="color:var(--warning);"></i>Kata Sandi</h3>
+      <button onclick="closePasswordModal()" class="btn-icon !w-9 !h-9"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="seg mb-4">
+      <button id="tabGantiPass" class="seg-btn is-active" onclick="switchPassTab('ganti')">Ganti Password</button>
+      <button id="tabResetPass" class="seg-btn" onclick="switchPassTab('reset')">Reset Password</button>
+    </div>
+    <div id="sectionGantiPass">
+      <form id="formGantiPass" class="space-y-3">
+        <div>
+          <label class="field-label">Password Lama</label>
+          <input type="password" id="oldPassword" class="field field-sunken" required placeholder="••••••••">
+        </div>
+        <div>
+          <label class="field-label">Password Baru</label>
+          <input type="password" id="newPassword" class="field field-sunken" required placeholder="Min. 6 karakter">
+        </div>
+        <button type="submit" id="btnSavePassword" class="btn btn-primary w-full"><i class="fa-solid fa-floppy-disk"></i> <span>Simpan Password</span></button>
+      </form>
+    </div>
+    <div id="sectionResetPass" class="hidden space-y-4">
+      <div class="rounded-[var(--r-lg)] p-4" style="background-color:var(--warning-soft);">
+        <p class="caption font-semibold" style="color:var(--warning);">Pesan reset password akan disalin otomatis. Kirimkan ke Ustadz Wakhid via WhatsApp untuk diproses.</p>
+      </div>
+      <button onclick="copyAndOpenWA()" class="btn w-full" style="background-color:#25d366;color:#fff;border-radius:var(--r-pill);"><i class="fa-brands fa-whatsapp mr-2"></i>Salin Pesan &amp; Buka WA</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK ACTION TUGAS CETAK -->
+<div id="modalBulkTugas" class="modal-overlay hidden" style="z-index: 100;">
+  <div class="modal-sheet modal-sheet-lg">
+    <div class="sheet-grabber"></div>
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h3 class="section-title"><i class="fa-solid fa-print mr-2" style="color:var(--info);"></i>Tandai Tugas Selesai</h3>
+        <p class="caption mt-0.5">Tugas yang dikerjakan via soal cetak</p>
+      </div>
+      <button onclick="closeBulkTugasModal()" class="btn-icon !w-9 !h-9"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="bulkTugasSubjectInfo" class="rounded-[var(--r-md)] p-3 mb-4 caption font-semibold" style="background-color:var(--info-soft);color:var(--info);"></div>
+    <p class="field-label mb-2">Pilih pertemuan yang sudah diselesaikan:</p>
+    <div id="bulkTugasChecklist" class="space-y-2 mb-4 max-h-48 overflow-y-auto no-scrollbar"></div>
+    <div id="bulkTugasNilaiSection" class="hidden space-y-3 mb-4">
+      <div class="rounded-[var(--r-lg)] p-3" style="background-color:var(--surface-sunken);">
+        <label class="field-label" id="bulkTugasNilaiLabel">Nilai (0-100)</label>
+        <input type="number" id="bulkTugasNilai" min="0" max="100" class="field field-sunken text-2xl font-bold text-center" placeholder="0-100">
+        <p id="bulkTugasNilaiHint" class="text-[10px] text-tertiary mt-1 text-center"></p>
+      </div>
+    </div>
+    <button onclick="submitBulkTugas()" id="btnSubmitBulkTugas" class="btn btn-primary w-full" disabled>
+      <i class="fa-solid fa-check-double"></i> <span>Tandai Selesai</span>
+    </button>
+  </div>
+</div>
+
 <!-- Canvas tersembunyi untuk konversi gambar URL → Base64 -->
 <canvas id="hiddenCanvas" style="display:none;"></canvas>
 

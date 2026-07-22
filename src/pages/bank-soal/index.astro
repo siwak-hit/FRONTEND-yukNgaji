@@ -499,12 +499,25 @@ import ModalAlert from '../../components/ModalAlert.astro';
                     </select>
                 </div>
 
-                <!-- Step 2: Pilih Pertemuan -->
+                <!-- Step 2: Pilih Siswa -->
                 <div id="cetakStep2" class="hidden animate-slide-up">
-                    <label class="field-label">2. Sumber Soal</label>
-                    <select id="cetakPertemuan" class="field field-sunken">
-                        <option value="">— Pilih pertemuan —</option>
+                    <label class="field-label">2. Nama Siswa <span style="color:var(--danger);">*</span></label>
+                    <select id="cetakSiswa" class="field field-sunken" onchange="onCetakSiswaChange()" required>
+                        <option value="">— Pilih siswa —</option>
                     </select>
+                    <p class="text-[10px] text-tertiary mt-1">Hanya siswa yang tertunggak ≥3 pertemuan di mapel ini yang ditampilkan.</p>
+                </div>
+
+                <!-- Step 2b: Pilih Pertemuan (checkbox) -->
+                <div id="cetakStep2b" class="hidden animate-slide-up">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="field-label !mb-0">3. Sumber Soal (Pertemuan)</label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="cetakPilihSemua" onchange="togglePilihSemuaPertemuan(this.checked)" class="w-4 h-4 rounded" style="accent-color:var(--primary);">
+                            <span class="text-[10px] font-semibold text-secondary">Pilih Semua</span>
+                        </label>
+                    </div>
+                    <div id="cetakPertemuanChecklist" class="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar p-1"></div>
                 </div>
 
                 <!-- Step 3: Jumlah Soal & Kategori -->
@@ -555,6 +568,22 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- CONFIRM CETAK MODAL -->
+    <div id="modalConfirmCetak" class="modal-overlay hidden" style="z-index: 80;">
+        <div class="modal-sheet text-center">
+            <div class="sheet-grabber"></div>
+            <div class="icon-chip mx-auto mb-4" style="width:4rem;height:4rem;font-size:1.75rem;background-color:var(--warning-soft);color:var(--warning);">
+                <i class="fa-solid fa-print"></i>
+            </div>
+            <h3 class="section-title mb-2">Konfirmasi Cetak Soal</h3>
+            <p class="body-text mb-6" id="confirmCetakMsg"></p>
+            <div class="flex gap-3">
+                <button id="btnConfirmCetakBatal" class="btn btn-soft flex-1">Batal</button>
+                <button id="btnConfirmCetakYa" class="btn flex-1" style="background-color:var(--warning);color:#fff;border-radius:var(--r-pill);">Iya, Saya Tahu</button>
+            </div>
         </div>
     </div>
 
@@ -2862,7 +2891,6 @@ import ModalAlert from '../../components/ModalAlert.astro';
     };
 
     const cetakMapelEl = document.getElementById('cetakMapel');
-    const cetakPertemuanEl = document.getElementById('cetakPertemuan');
     const formCetakEl = document.getElementById('formCetak');
 
     const populateCetakMapel = () => {
@@ -2884,45 +2912,148 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     const validateCetakForm = () => {
         const mapelValue = cetakMapelEl.value;
-        const pertemuanValue = cetakPertemuanEl.value;
+        const siswaValue = document.getElementById('cetakSiswa').value;
+        const checked = document.querySelectorAll('.cetak-pert-item:checked');
         const btn = document.getElementById('btnCetakPreview');
-        const isFormValid = mapelValue && pertemuanValue;
-        btn.disabled = !isFormValid;
+        btn.disabled = !(mapelValue && siswaValue && checked.length > 0);
     };
 
-    cetakMapelEl.addEventListener('change', function() {
+    // Load siswa yang tertunggak ≥3 pertemuan saat mapel dipilih
+    let cetakAllStudents = [];
+    cetakMapelEl.addEventListener('change', async function() {
         const selectedMapel = this.value;
         const step2 = document.getElementById('cetakStep2');
+        const step2b = document.getElementById('cetakStep2b');
         const step3 = document.getElementById('cetakStep3');
         const step4 = document.getElementById('cetakStep4');
         const step5 = document.getElementById('cetakStep5');
 
-        cetakPertemuanEl.value = ''; // Reset pertemuan
+        [step2b, step3, step4, step5].forEach(s => s.classList.add('hidden'));
 
-        if (selectedMapel) {
-            const pertemuanSet = new Set();
-            Object.entries(accordionSummary).forEach(([week, weekData]) => {
-                if (weekData[selectedMapel]) {
-                    pertemuanSet.add(week);
-                }
+        if (!selectedMapel) { step2.classList.add('hidden'); validateCetakForm(); return; }
+
+        step2.classList.remove('hidden');
+
+        // Load semua siswa + lag-status mereka, filter yang tertunggak ≥3 di mapel ini
+        const sel = document.getElementById('cetakSiswa');
+        sel.innerHTML = '<option value="">⏳ Memuat siswa...</option>';
+        sel.disabled = true;
+
+        try {
+            if (cetakAllStudents.length === 0) {
+                const r = await fetch(`${API_URL}/api/students`, { headers: { 'Authorization': `Bearer ${token}` } });
+                cetakAllStudents = (await r.json()).data || [];
+            }
+
+            // Ambil lag-status semua siswa secara paralel
+            const lagResults = await Promise.all(cetakAllStudents.map(s =>
+                fetch(`${API_URL}/api/students/${s.id}/lag-status`, { headers: { 'Authorization': `Bearer ${token}` } })
+                    .then(r => r.json()).catch(() => ({ data: {} }))
+            ));
+
+            const eligible = cetakAllStudents.filter((s, i) => {
+                const missed = lagResults[i]?.data?.[selectedMapel]?.missedWeeks || [];
+                return missed.length >= 3;
             });
 
-            cetakPertemuanEl.innerHTML = '<option value="">— Pilih sumber —</option><option value="gabungan">Gabungan Semua Pertemuan</option>';
-            Array.from(pertemuanSet).sort((a,b) => Number(a) - Number(b)).forEach(week => {
-                const option = document.createElement('option');
-                option.value = week;
-                option.textContent = `Pertemuan ${week}`;
-                cetakPertemuanEl.appendChild(option);
-            });
-            step2.classList.remove('hidden');
-        } else {
-            step2.classList.add('hidden');
+            sel.innerHTML = '<option value="">— Pilih siswa —</option>' +
+                eligible.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join('');
+            sel.disabled = false;
+
+            if (eligible.length === 0) {
+                sel.innerHTML = '<option value="">Tidak ada siswa tertunggak ≥3 pertemuan</option>';
+            }
+        } catch (e) {
+            sel.innerHTML = '<option value="">Gagal memuat siswa</option>';
+            sel.disabled = false;
         }
+
+        validateCetakForm();
+    });
+
+    window.onCetakSiswaChange = async () => {
+        const step2b = document.getElementById('cetakStep2b');
+        const step3 = document.getElementById('cetakStep3');
+        const step4 = document.getElementById('cetakStep4');
+        const step5 = document.getElementById('cetakStep5');
+        const mapel = cetakMapelEl.value;
+        const siswaId = document.getElementById('cetakSiswa').value;
+
+        // Kumpulkan semua pertemuan yang ada untuk mapel ini
+        const allWeeks = Object.keys(accordionSummary)
+            .filter(w => accordionSummary[w][mapel])
+            .map(Number).sort((a, b) => a - b);
+
+        let pendingWeeks = allWeeks;
+
+        // Jika siswa dipilih, filter hanya yang belum dikerjakan
+        if (siswaId) {
+            try {
+                const r = await fetch(`${API_URL}/api/students/${siswaId}/lag-status`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const d = await r.json();
+                const missed = d.data?.[mapel]?.missedWeeks || [];
+                if (missed.length > 0) pendingWeeks = missed.filter(w => allWeeks.includes(w));
+            } catch (e) {}
+        }
+
+        const checklist = document.getElementById('cetakPertemuanChecklist');
+        checklist.innerHTML = pendingWeeks.map(w => `
+            <label class="flex items-center gap-3 p-2.5 card cursor-pointer">
+                <input type="checkbox" class="cetak-pert-item w-4 h-4 rounded" style="accent-color:var(--primary);" value="${w}" onchange="onCetakPertChange()">
+                <span class="caption font-semibold text-ink">Pertemuan ${w}</span>
+            </label>`).join('') || '<p class="caption text-tertiary text-center py-2">Semua pertemuan sudah dikerjakan.</p>';
+
+        document.getElementById('cetakPilihSemua').checked = false;
+        step2b.classList.remove('hidden');
         step3.classList.add('hidden');
         step4.classList.add('hidden');
         step5.classList.add('hidden');
         validateCetakForm();
-    });
+    };
+
+    window.togglePilihSemuaPertemuan = (checked) => {
+        document.querySelectorAll('.cetak-pert-item').forEach(cb => cb.checked = checked);
+        onCetakPertChange();
+    };
+
+    window.onCetakPertChange = async () => {
+        const checked = [...document.querySelectorAll('.cetak-pert-item:checked')];
+        const step3 = document.getElementById('cetakStep3');
+        const step4 = document.getElementById('cetakStep4');
+        const step5 = document.getElementById('cetakStep5');
+        const allCbs = document.querySelectorAll('.cetak-pert-item');
+        document.getElementById('cetakPilihSemua').checked = checked.length === allCbs.length && allCbs.length > 0;
+
+        if (checked.length === 0) {
+            [step3, step4, step5].forEach(s => s.classList.add('hidden'));
+            validateCetakForm(); return;
+        }
+
+        // Hitung total soal dari pertemuan yang dipilih
+        const mapel = cetakMapelEl.value;
+        let totalSoal = 0;
+        try {
+            const results = await Promise.all(checked.map(cb =>
+                fetch(`${API_URL}/api/onboarding/questions/${mapel}?week=${cb.value}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
+            ));
+            totalSoal = results.reduce((s, r) => s + (r.data?.length || 0), 0);
+        } catch (e) {}
+
+        const jumlahEl = document.getElementById('cetakJumlah');
+        jumlahEl.innerHTML = '';
+        [10, 20, 30, 40, 50].filter(s => s <= totalSoal).forEach(s => {
+            const o = document.createElement('option'); o.value = s; o.textContent = `${s} soal`; jumlahEl.appendChild(o);
+        });
+        if (totalSoal > 0 && ![10,20,30,40,50].includes(totalSoal)) {
+            const o = document.createElement('option'); o.value = totalSoal; o.textContent = `${totalSoal} soal (Semua)`; jumlahEl.appendChild(o);
+        }
+        if (jumlahEl.options.length > 0) jumlahEl.value = jumlahEl.options[jumlahEl.options.length - 1].value;
+
+        step3.classList.remove('hidden');
+        step4.classList.remove('hidden');
+        step5.classList.remove('hidden');
+        validateCetakForm();
+    };
 
     const AKHLAK_ADAB_QUESTIONS = {
         akhlak: [
@@ -2942,70 +3073,35 @@ import ModalAlert from '../../components/ModalAlert.astro';
         ]
     };
 
-    cetakPertemuanEl.addEventListener('change', async function() {
-        const step3 = document.getElementById('cetakStep3');
-        const step4 = document.getElementById('cetakStep4');
-        const step5 = document.getElementById('cetakStep5');
-        const jumlahEl = document.getElementById('cetakJumlah');
-
-        if (this.value) {
-            step3.classList.remove('hidden');
-            step4.classList.remove('hidden');
-            step5.classList.remove('hidden');
-
-            const subject = cetakMapelEl.value;
-            const week = this.value;
-            let totalSoal = 0;
-
-            try {
-                if (week === 'gabungan') {
-                    const weeks = Array.from(this.options).map(o => o.value).filter(v => v && v !== 'gabungan');
-                    const promises = weeks.map(w => fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${w}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()));
-                    const results = await Promise.all(promises);
-                    totalSoal = results.reduce((sum, r) => sum + (r.data?.length || 0), 0);
-                } else {
-                    const res = await fetch(`${API_URL}/api/onboarding/questions/${subject}?week=${week}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                    const result = await res.json();
-                    totalSoal = result.data?.length || 0;
-                }
-            } catch (e) { console.error("Gagal fetch jumlah soal"); }
-
-            jumlahEl.innerHTML = '';
-            const steps = [10, 20, 30, 40, 50];
-            steps.forEach(s => {
-                if (s <= totalSoal) {
-                    const opt = document.createElement('option');
-                    opt.value = s;
-                    opt.textContent = `${s} soal`;
-                    jumlahEl.appendChild(opt);
-                }
-            });
-            if (totalSoal > 0 && !steps.includes(totalSoal)) {
-                 const opt = document.createElement('option');
-                 opt.value = totalSoal;
-                 opt.textContent = `${totalSoal} soal (Semua)`;
-                 jumlahEl.appendChild(opt);
-            }
-            if (jumlahEl.options.length > 0) jumlahEl.value = jumlahEl.options[jumlahEl.options.length-1].value;
-
-
-        } else {
-            step3.classList.add('hidden');
-            step4.classList.add('hidden');
-            step5.classList.add('hidden');
-        }
-        validateCetakForm();
-    });
-
     formCetakEl.addEventListener('submit', async (e) => {
         e.preventDefault();
+        // Tampilkan confirm modal dulu
+        const siswaEl = document.getElementById('cetakSiswa');
+        const siswaName = siswaEl.options[siswaEl.selectedIndex]?.dataset.name || '';
+        const checkedWeeks = [...document.querySelectorAll('.cetak-pert-item:checked')].map(c => c.value);
+        const mapel = cetakMapelEl.value;
+
+        if (siswaName && checkedWeeks.length > 0) {
+            document.getElementById('confirmCetakMsg').innerHTML =
+                `Dengan membuat soal cetak ini, <b>${siswaName}</b> akan dianggap telah menyelesaikan tugas <b>${mapel.toUpperCase()}</b> di pertemuan <b>${checkedWeeks.map(w => `Mg-${w}`).join(', ')}</b>.`;
+            document.getElementById('modalConfirmCetak').classList.replace('hidden', 'flex');
+        } else {
+            await doGeneratePdf();
+        }
+    });
+
+    document.getElementById('btnConfirmCetakYa').onclick = async () => {
+        document.getElementById('modalConfirmCetak').classList.replace('flex', 'hidden');
+        await doGeneratePdf();
+    };
+    document.getElementById('btnConfirmCetakBatal').onclick = () =>
+        document.getElementById('modalConfirmCetak').classList.replace('flex', 'hidden');
+
+    const doGeneratePdf = async () => {
         const btn = document.getElementById('btnCetakPreview');
         const originalHtml = btn.innerHTML;
-        const spinnerHtml = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
         btn.disabled = true;
-        btn.innerHTML = spinnerHtml;
-
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             await generatePdf();
         } catch (error) {
@@ -3014,11 +3110,9 @@ import ModalAlert from '../../components/ModalAlert.astro';
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
-            // Pastikan spinner di versi original disembunyikan lagi
-            const spinnerInOriginal = btn.querySelector('.spinner');
-            if (spinnerInOriginal) spinnerInOriginal.style.display = 'none';
+            btn.querySelector('.spinner')?.style && (btn.querySelector('.spinner').style.display = 'none');
         }
-    });
+    };
 
 
     // Muat script eksternal sekali saja (di-cache per-src)
@@ -3034,22 +3128,27 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
     const generatePdf = async () => {
         const subject = document.getElementById('cetakMapel').value;
-        const week = document.getElementById('cetakPertemuan').value;
+        const checkedWeeks = [...document.querySelectorAll('.cetak-pert-item:checked')].map(c => c.value);
         const limit = document.getElementById('cetakJumlah').value;
         const category = document.getElementById('cetakKategori').value;
         const includeImages = document.getElementById('cetakSertakanGambar').checked;
         const includeAkhlak = document.getElementById('cetakSertakanAkhlak').checked;
+        const siswaEl = document.getElementById('cetakSiswa');
+        const siswaName = siswaEl.options[siswaEl.selectedIndex]?.dataset.name || '';
+        const siswaId = siswaEl.value;
 
-        // Ambil SEMUA soal (pool) sekali, cache tanpa limit -> tiap cetak bisa di-random ulang
-        let url = `${API_URL}/api/exams/questions-for-print?subject=${subject}&limit=999&category=${category}&includeImages=${includeImages}`;
-        if (week !== 'gabungan') url += `&week=${week}`;
-
-        let raw = printQuestionCache.get(url);
-        if (!raw) {
-            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!res.ok) throw new Error('Gagal mengambil data soal akademis');
-            raw = await res.json() || [];
-            printQuestionCache.set(url, raw);
+        // Ambil soal dari semua pertemuan yang dipilih, gabungkan
+        let raw = [];
+        for (const week of checkedWeeks) {
+            const url = `${API_URL}/api/exams/questions-for-print?subject=${subject}&limit=999&category=${category}&includeImages=${includeImages}&week=${week}`;
+            let cached = printQuestionCache.get(url);
+            if (!cached) {
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error('Gagal mengambil data soal akademis');
+                cached = await res.json() || [];
+                printQuestionCache.set(url, cached);
+            }
+            raw = raw.concat(cached);
         }
 
         // Shuffle (Fisher-Yates) + ambil sejumlah limit -> tiap download beda soal & beda urutan
@@ -3220,7 +3319,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
         doc.setFont('helvetica', 'bold').setFontSize(11);
         doc.text('Nilai :', boxX + 3, rowY + 1.5);
         doc.setFont('helvetica', 'normal');
-        doc.text('Nama    : ...............................', M, rowY + 1);
+        doc.text(`Nama    : ${siswaName || '...............................'}`, M, rowY + 1);
         doc.text('Tanggal : ..................', M + 75, rowY + 1);
         y = rowY + boxH;
 
@@ -3338,6 +3437,19 @@ import ModalAlert from '../../components/ModalAlert.astro';
         footer();
 
         window.open(doc.output('bloburl'), '_blank');
+
+        // Mark pertemuan selesai untuk siswa yang dipilih
+        if (siswaId && checkedWeeks.length > 0) {
+            const subject = document.getElementById('cetakMapel').value;
+            const nilaiDefault = 80; // nilai default untuk tugas cetak
+            await Promise.all(checkedWeeks.map(week =>
+                fetch(`${API_URL}/api/grades/manual`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: siswaId, subject, week: parseInt(week), score: nilaiDefault, with_penalty: false, mark_completed: true })
+                })
+            ));
+        }
     };
 
 </script>
