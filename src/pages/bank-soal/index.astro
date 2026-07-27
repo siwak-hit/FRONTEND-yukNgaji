@@ -3083,7 +3083,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
         if (siswaName && checkedWeeks.length > 0) {
             document.getElementById('confirmCetakMsg').innerHTML =
-                `Dengan membuat soal cetak ini, <b>${siswaName}</b> akan dianggap telah menyelesaikan tugas <b>${mapel.toUpperCase()}</b> di pertemuan <b>${checkedWeeks.map(w => `Mg-${w}`).join(', ')}</b>.`;
+                `Dengan membuat soal cetak ini, tugas <b>${mapel.toUpperCase()}</b> pertemuan <b>${checkedWeeks.map(w => `Mg-${w}`).join(', ')}</b> untuk <b>${siswaName}</b> akan ditandai <b>sudah dikerjakan (belum dinilai)</b>. Input nilainya nanti di halaman detail siswa.`;
             document.getElementById('modalConfirmCetak').classList.replace('hidden', 'flex');
         } else {
             await doGeneratePdf();
@@ -3438,15 +3438,15 @@ import ModalAlert from '../../components/ModalAlert.astro';
 
         window.open(doc.output('bloburl'), '_blank');
 
-        // Mark pertemuan selesai untuk siswa yang dipilih
+        // Mark pertemuan "sudah dicetak" (belum dinilai) untuk siswa yang dipilih.
+        // is_graded:false → tetap muncul di detail siswa sbg "belum dinilai" sampai guru input nilai.
         if (siswaId && checkedWeeks.length > 0) {
             const subject = document.getElementById('cetakMapel').value;
-            const nilaiDefault = 80; // nilai default untuk tugas cetak
             await Promise.all(checkedWeeks.map(week =>
                 fetch(`${API_URL}/api/grades/manual`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: siswaId, subject, week: parseInt(week), score: nilaiDefault, with_penalty: false, mark_completed: true })
+                    body: JSON.stringify({ student_id: siswaId, subject, week: parseInt(week), score: 0, with_penalty: false, mark_completed: true, is_graded: false })
                 })
             ));
         }
