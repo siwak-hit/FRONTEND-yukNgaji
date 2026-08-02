@@ -1,0 +1,311 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+import ModalAlert from '../../components/ModalAlert.astro';
+import Loading from '../../components/Loading.astro';
+---
+
+<Layout title="Bank Perintah - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen">
+        <header class="flex items-start justify-between gap-3 mb-5">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/ujian-hafalan" class="btn-icon flex-shrink-0" aria-label="Kembali"><i class="fa-solid fa-chevron-left"></i></a>
+                <div class="min-w-0">
+                    <p class="eyebrow">Ujian Lisan</p>
+                    <h1 class="page-title">Bank Perintah</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button id="btnSelect" class="btn-icon" aria-label="Pilih beberapa" title="Pilih beberapa"><i class="fa-solid fa-list-check text-sm"></i></button>
+                <button id="btnAdd" class="fab" aria-label="Tambah perintah"><i class="fa-solid fa-plus text-lg"></i></button>
+            </div>
+        </header>
+
+        <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+            <button class="subj-filter chip is-active" data-subj="all">Semua</button>
+            <button class="subj-filter chip" data-subj="tajwid">Tajwid</button>
+            <button class="subj-filter chip" data-subj="fiqih">Fiqih</button>
+            <button class="subj-filter chip" data-subj="tauhid">Tauhid</button>
+        </div>
+
+        <main id="promptList" class="space-y-3">
+            <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-accent text-2xl"></i></div>
+        </main>
+
+        <nav id="pager" class="hidden items-center justify-center gap-4 mt-5">
+            <button id="pagePrev" class="btn-icon" aria-label="Sebelumnya"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+            <p id="pageInfo" class="caption font-bold"></p>
+            <button id="pageNext" class="btn-icon" aria-label="Berikutnya"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+        </nav>
+    </div>
+
+    <!-- MODAL FORM PERINTAH -->
+    <div id="modalPrompt" class="modal-overlay hidden" style="z-index: 110;">
+        <div class="modal-sheet">
+            <div class="sheet-grabber"></div>
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="modalPromptTitle" class="section-title">Perintah Baru</h3>
+                <button id="btnCloseModal" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formPrompt" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label">Mata Pelajaran</label>
+                        <select id="fSubject" required class="field field-sunken">
+                            <option value="tajwid">Tajwid</option>
+                            <option value="fiqih">Fiqih</option>
+                            <option value="tauhid">Tauhid</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Durasi (detik)</label>
+                        <input type="number" id="fDuration" required min="5" max="600" value="30" class="field field-sunken">
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Kategori</label>
+                    <select id="fCategory" required class="field field-sunken capitalize"></select>
+                </div>
+                <div>
+                    <label class="field-label">Teks Perintah</label>
+                    <textarea id="fTitle" rows="2" required placeholder="Contoh: Sebutkan malaikat dan tugasnya" class="field field-sunken text-sm"></textarea>
+                </div>
+                <button type="submit" id="btnSave" class="btn btn-primary w-full mt-1"><i class="fa-solid fa-check"></i> Simpan Perintah</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bar aksi massal (muncul saat mode pilih) -->
+    <div id="bulkBar" class="hidden fixed inset-x-0 bottom-0 z-40 px-6 py-4" style="background: var(--canvas); border-top: 1px solid var(--hairline);">
+        <div class="max-w-2xl mx-auto flex items-center gap-4">
+            <button id="bulkAll" class="caption font-bold whitespace-nowrap" style="color: var(--accent-strong);">Pilih semua</button>
+            <p id="bulkCount" class="caption font-bold flex-1 text-center whitespace-nowrap">0 dipilih</p>
+            <button id="bulkDelete" class="btn !py-2.5 !px-5 text-xs whitespace-nowrap" style="background-color: var(--danger); color:#fff; border-radius: var(--r-pill);" disabled>
+                <i class="fa-solid fa-trash"></i> Hapus
+            </button>
+        </div>
+    </div>
+
+    <Toast />
+    <ModalAlert />
+    <Loading />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+    const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    const SUBJ = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
+    const KATEGORI = ['sebutkan', 'jelaskan', 'bacakan'];
+    const PER_PAGE = 10;
+    const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    let prompts = [];
+    let filter = 'all';
+    let editingId = null;
+    let page = 1;
+    let selectMode = false;
+    const selected = new Set();
+
+    const listEl = document.getElementById('promptList');
+    const pagerEl = document.getElementById('pager');
+
+    const filtered = () => prompts.filter(p => filter === 'all' || p.subject === filter);
+
+    const render = () => {
+        const data = filtered();
+        const maxPage = Math.max(1, Math.ceil(data.length / PER_PAGE));
+        if (page > maxPage) page = maxPage;
+
+        if (!data.length) {
+            pagerEl.classList.add('hidden');
+            pagerEl.classList.remove('flex');
+            listEl.innerHTML = `<div class="empty-state card"><div class="empty-icon"><i class="fa-solid fa-list-ul text-2xl"></i></div>
+                <p class="caption font-semibold">Belum ada perintah${filter === 'all' ? '' : ' untuk ' + SUBJ[filter]}.</p>
+                <p class="text-[11px] text-tertiary mt-1">Tambah lewat tombol + di kanan atas.</p></div>`;
+            return;
+        }
+
+        listEl.innerHTML = data.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(p => {
+            const on = selected.has(p.id);
+            const aksi = selectMode
+                ? `<i class="fa-solid ${on ? 'fa-square-check' : 'fa-square'} text-xl" style="color:${on ? 'var(--accent)' : 'var(--hairline)'}"></i>`
+                : `<button data-edit="${p.id}" class="btn-icon !w-9 !h-9" style="color: var(--info);" title="Ubah"><i class="fa-solid fa-pen text-xs"></i></button>
+                   <button data-del="${p.id}" class="btn-icon !w-9 !h-9" style="color: var(--danger);" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>`;
+            return `
+            <div class="card card-pad ${selectMode ? 'cursor-pointer' : ''} ${on ? 'is-selected' : ''}" ${selectMode ? `data-pick="${p.id}"` : ''}>
+                <div class="flex items-center justify-between gap-3 mb-2.5">
+                    <div class="flex items-center gap-2 flex-wrap min-w-0">
+                        <span class="badge badge-info uppercase">${SUBJ[p.subject] || p.subject}</span>
+                        <span class="badge badge-warning capitalize">${esc(p.category)}</span>
+                        <span class="caption font-bold whitespace-nowrap"><i class="fa-regular fa-clock"></i> ${p.duration_seconds} dtk</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">${aksi}</div>
+                </div>
+                <p class="body-text leading-relaxed">${esc(p.title)}</p>
+            </div>`;
+        }).join('');
+        listEl.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openModal(b.dataset.edit)));
+        listEl.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => hapus(b.dataset.del, b)));
+        listEl.querySelectorAll('[data-pick]').forEach(c => c.addEventListener('click', () => {
+            const id = c.dataset.pick;
+            selected.has(id) ? selected.delete(id) : selected.add(id);
+            render();
+        }));
+
+        // Pager cuma muncul kalau memang lebih dari 1 halaman.
+        pagerEl.classList.toggle('hidden', maxPage <= 1);
+        pagerEl.classList.toggle('flex', maxPage > 1);
+        document.getElementById('pageInfo').textContent = `${page} / ${maxPage} hal.`;
+        document.getElementById('pagePrev').disabled = page <= 1;
+        document.getElementById('pageNext').disabled = page >= maxPage;
+        refreshBulkBar();
+    };
+
+    // ---- Mode pilih & hapus massal ----
+    const refreshBulkBar = () => {
+        const bar = document.getElementById('bulkBar');
+        bar.classList.toggle('hidden', !selectMode);
+        if (!selectMode) return;
+        const total = filtered().length;
+        document.getElementById('bulkCount').textContent = `${selected.size} dipilih`;
+        document.getElementById('bulkDelete').disabled = selected.size === 0;
+        document.getElementById('bulkAll').textContent = selected.size === total && total ? 'Kosongkan' : 'Pilih semua';
+    };
+
+    // Keluar mode pilih lewat tombol header yang berubah jadi ✕ (tak perlu tombol Batal di bar).
+    const setSelectMode = (on) => {
+        if (on && !filtered().length) return;   // tak ada yang bisa dipilih
+        selectMode = on;
+        if (!on) selected.clear();
+        const btn = document.getElementById('btnSelect');
+        btn.innerHTML = `<i class="fa-solid ${on ? 'fa-xmark' : 'fa-list-check'} text-sm"></i>`;
+        btn.title = on ? 'Selesai memilih' : 'Pilih beberapa';
+        btn.style.color = on ? 'var(--accent)' : '';
+        document.body.style.paddingBottom = on ? '5.5rem' : '';
+        render();
+    };
+
+    document.getElementById('btnSelect').addEventListener('click', () => setSelectMode(!selectMode));
+    document.getElementById('bulkAll').addEventListener('click', () => {
+        const ids = filtered().map(p => p.id);
+        if (selected.size === ids.length) selected.clear();
+        else ids.forEach(id => selected.add(id));
+        render();
+    });
+
+    document.getElementById('bulkDelete').addEventListener('click', () => {
+        const ids = [...selected];
+        window.showConfirm('Hapus Perintah Terpilih?', `${ids.length} perintah akan dihapus permanen.`, async () => {
+            const restore = window.btnBusy(document.getElementById('bulkDelete'), 'Menghapus...');
+            try {
+                const res = await fetch(`${API_URL}/api/oral/prompts/bulk-delete`, { method: 'POST', headers: H, body: JSON.stringify({ ids }) });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.message || 'Gagal menghapus.');
+                prompts = prompts.filter(p => !selected.has(p.id));
+                setSelectMode(false);
+                window.showToast?.('success', 'Terhapus', json.message);
+            } catch (e) {
+                restore();
+                window.showToast?.('danger', 'Gagal', e.message);
+            }
+        });
+    });
+
+    document.getElementById('pagePrev').addEventListener('click', () => { if (page > 1) { page--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    document.getElementById('pageNext').addEventListener('click', () => { page++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+    const load = async () => {
+        window.boxBusy(listEl, 'Memuat perintah...');
+        try {
+            const res = await fetch(`${API_URL}/api/oral/prompts`, { headers: H });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal memuat perintah.');
+            prompts = json.data || [];
+            render();
+        } catch (e) {
+            listEl.innerHTML = `<div class="empty-state card"><p class="caption" style="color:var(--danger)">${esc(e.message)}</p></div>`;
+        }
+    };
+
+    document.querySelectorAll('.subj-filter').forEach(btn => btn.addEventListener('click', () => {
+        filter = btn.dataset.subj;
+        page = 1;
+        document.querySelectorAll('.subj-filter').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        render();
+    }));
+
+    const modal = document.getElementById('modalPrompt');
+    // Dropdown kategori: daftar tetap + kategori lama yang sudah terlanjur dipakai (biar edit tak berubah diam-diam).
+    const fillCategories = (current) => {
+        const opts = [...new Set([...KATEGORI, ...prompts.map(p => p.category), ...(current ? [current] : [])])];
+        document.getElementById('fCategory').innerHTML =
+            opts.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+    };
+    const openModal = (id) => {
+        editingId = id || null;
+        const p = id ? prompts.find(x => x.id === id) : null;
+        document.getElementById('modalPromptTitle').textContent = p ? 'Ubah Perintah' : 'Perintah Baru';
+        document.getElementById('fSubject').value = p ? p.subject : (filter === 'all' ? 'tajwid' : filter);
+        fillCategories(p ? p.category : null);
+        document.getElementById('fCategory').value = p ? p.category : KATEGORI[0];
+        document.getElementById('fTitle').value = p ? p.title : '';
+        document.getElementById('fDuration').value = p ? p.duration_seconds : 30;
+        modal.classList.replace('hidden', 'flex');
+    };
+    const closeModal = () => modal.classList.replace('flex', 'hidden');
+    document.getElementById('btnAdd').addEventListener('click', () => openModal(null));
+    document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+
+    document.getElementById('formPrompt').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const restore = window.btnBusy(document.getElementById('btnSave'), 'Menyimpan...');
+        const payload = {
+            subject: document.getElementById('fSubject').value,
+            category: document.getElementById('fCategory').value.trim(),
+            title: document.getElementById('fTitle').value.trim(),
+            duration_seconds: parseInt(document.getElementById('fDuration').value),
+        };
+        try {
+            const res = await fetch(`${API_URL}/api/oral/prompts${editingId ? '/' + editingId : ''}`, {
+                method: editingId ? 'PUT' : 'POST', headers: H, body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal menyimpan.');
+            if (editingId) prompts = prompts.map(p => p.id === editingId ? json.data : p);
+            else { prompts = [json.data, ...prompts]; page = 1; }   // yang baru ada di halaman 1
+            render(); closeModal();
+            window.showToast?.('success', 'Tersimpan', 'Perintah berhasil disimpan.');
+        } catch (err) {
+            window.showToast?.('danger', 'Gagal', err.message);
+        } finally { restore(); }
+    });
+
+    const hapus = (id, btn) => {
+        const p = prompts.find(x => x.id === id);
+        window.showConfirm('Hapus Perintah?', `"${p?.title || ''}" akan dihapus dari bank perintah.`, async () => {
+            const restore = window.btnBusy(btn);
+            try {
+                const res = await fetch(`${API_URL}/api/oral/prompts/${id}`, { method: 'DELETE', headers: H });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Gagal menghapus.');
+                prompts = prompts.filter(x => x.id !== id);
+                render();
+                window.showToast?.('success', 'Terhapus', 'Perintah dihapus.');
+            } catch (e) {
+                restore();
+                window.showToast?.('danger', 'Gagal', e.message);
+            }
+        });
+    };
+
+    load();
+</script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .is-selected { border-color: var(--accent) !important; background-color: var(--accent-soft); }
+</style>

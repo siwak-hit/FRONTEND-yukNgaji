@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import NavbarGuru from '../../components/NavbarGuru.astro';
 import Toast from '../../components/Toast.astro';
 import ModalAlert from '../../components/ModalAlert.astro';
+import Loading from '../../components/Loading.astro';
 ---
 
 <Layout title="Bank Ujian - yukNgaji">
@@ -211,6 +212,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
     <NavbarGuru activeMenu="exams" />
     <Toast />
     <ModalAlert />
+    <Loading />
 </Layout>
 
 <script>
@@ -303,7 +305,7 @@ import ModalAlert from '../../components/ModalAlert.astro';
                 <div class="flex items-center gap-1.5 px-4 py-2.5 border-t" style="border-color: var(--divider); background-color: var(--pearl);">
                     <button onclick="openExtModal('${exam.id}', '${safeTitle}')" class="btn-icon !w-8 !h-8" style="color: var(--warning);" title="Perpanjang waktu (dispensasi)"><i class="fa-solid fa-stopwatch text-xs"></i></button>
                     <button onclick="openEditModal('${exam.id}')" class="btn-icon !w-8 !h-8" style="color: var(--info);" title="Pengaturan"><i class="fa-solid fa-gear text-xs"></i></button>
-                    <button onclick="confirmDelete('${exam.id}', '${safeTitle}')" class="btn-icon !w-8 !h-8" style="color: var(--danger);" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <button onclick="confirmDelete('${exam.id}', '${safeTitle}', this)" class="btn-icon !w-8 !h-8" style="color: var(--danger);" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
                     <a href="/exams/${exam.id}" class="btn-soft !py-1.5 !px-3 text-xs ml-auto">Buka <i class="fa-solid fa-arrow-right ml-1"></i></a>
                 </div>
             </div>`;
@@ -608,19 +610,25 @@ window.copyExamLink = () => {
     };
 
     // --- LOGIKA HAPUS UJIAN ---
-    window.confirmDelete = (id, title) => {
+    window.confirmDelete = (id, title, btn) => {
         window.showConfirm('Hapus Ujian?', `Ujian "${title}" beserta semua soalnya akan dihapus permanen.`, async () => {
+            const restore = window.btnBusy(btn);
             try {
                 const res = await fetch(`${API_URL}/api/exams/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
-                if(res.ok) {
-                    window.showToast?.('success', 'Terhapus', 'Ujian berhasil dihapus.');
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Gagal menghapus ujian.');
+                window.showToast?.('success', 'Terhapus', 'Ujian berhasil dihapus.');
 
-                    // Bersihkan ujian yang dihapus dari Cache
-                    delete cachedExamDetails[id];
+                // Bersihkan ujian yang dihapus dari Cache
+                delete cachedExamDetails[id];
 
-                    fetchExams();
-                }
-            } catch(e) { window.showToast?.('danger', 'Error', 'Gagal menghapus ujian.'); }
+                // Hilang dari UI seketika, lalu sinkron ulang ke server.
+                allExams = allExams.filter(e => e.id !== id);
+                renderExamDrawer();
+                fetchExams();
+            } catch(e) {
+                restore();
+                window.showToast?.('danger', 'Error', e.message || 'Gagal menghapus ujian.');
+            }
         });
     };
 

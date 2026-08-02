@@ -799,7 +799,7 @@ window.saveEditAbsensi = async () => {
                 fetch(`${API_URL}/api/students/${studentId}/attendance`, { headers }),
                 fetch(`${API_URL}/api/students/${studentId}/lag-status`, { headers }),
                 fetch(`${API_URL}/api/exams/student/${studentId}/results`, { headers }),
-                fetch(`${API_URL}/api/oral-exams/student/${studentId}/summary`, { headers }) // <--- [BARU] Fetch Oral Summary
+                fetch(`${API_URL}/api/oral/summary/${studentId}`, { headers }) // Nilai ujian lisan (v2)
             ]);
 
             const examData = await examRes.json();
@@ -1212,13 +1212,17 @@ window.saveEditAbsensi = async () => {
         let finalScore = 0;
         let formula = '';
 
+        // Nilai lisan = BONUS untuk nilai ujian tulis: +20% dari nilai lisan, dibatasi maks 100.
+        const examWithBonus = hasExamScore
+            ? Math.min(100, Math.round(examScore + (hasOralScore ? oralScore * 0.2 : 0)))
+            : null;
+
         if (hasExamScore && hasOralScore) {
             finalScore = Math.round(
                 (weeklyScore * 0.3) +
-                (examScore * 0.5) +
-                (oralScore * 0.2)
+                (examWithBonus * 0.7)
             );
-            formula = '30% tugas + 50% ujian + 20% lisan';
+            formula = `30% tugas + 70% ujian (${examScore} + bonus lisan ${Math.round(oralScore * 0.2)} = ${examWithBonus})`;
         } else if (hasExamScore) {
             finalScore = Math.round(
                 (weeklyScore * 0.3) +
@@ -1240,7 +1244,8 @@ window.saveEditAbsensi = async () => {
 
         return {
             weekly: weeklyScore,
-            exam: hasExamScore ? examScore : null,
+            exam: hasExamScore ? examWithBonus : null,   // nilai ujian yang sudah dapat bonus lisan
+            exam_raw: hasExamScore ? examScore : null,
             oral: hasOralScore ? oralScore : null,
             final_score: finalScore,
             grade,

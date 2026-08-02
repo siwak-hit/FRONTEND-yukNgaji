@@ -43,6 +43,13 @@
 .icon-chip, .icon-chip-sm, .btn-icon, .fab, .avatar, .empty-icon {
   line-height: 1;
 }
+/* display-nya ditegaskan di sini (tanpa @layer) karena versi di @layer components
+   kalah cascade — akibatnya .fab pada <a> jadi block & ikonnya lari ke atas. */
+.icon-chip, .icon-chip-sm, .btn-icon, .fab, .avatar, .empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .icon-chip > i, .icon-chip-sm > i, .btn-icon > i, .fab > i, .avatar > i {
   line-height: 1;
   display: block;

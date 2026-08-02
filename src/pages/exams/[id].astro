@@ -121,23 +121,33 @@ import Toast from '../../components/Toast.astro';
                 <button onclick="closeUploadTemplate()" class="btn-icon !w-9 !h-9" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <div class="rounded-[var(--r-lg)] p-3 mb-3" style="background-color: var(--surface-sunken);">
+            <div class="flex gap-2 mb-3">
+                <button type="button" onclick="downloadExamTemplate()" class="btn btn-soft flex-1 text-xs"><i class="fa-solid fa-download"></i> Unduh Template</button>
+                <button type="button" onclick="toggleTemplateInfo()" class="btn btn-soft flex-1 text-xs"><i class="fa-solid fa-circle-info"></i> Info Format</button>
+            </div>
+
+            <div id="templateInfoBox" class="hidden rounded-[var(--r-lg)] p-3 mb-3" style="background-color: var(--surface-sunken);">
+                <p class="caption font-semibold text-ink mb-1.5">Cara mengisi template</p>
                 <p class="caption leading-relaxed">
-                    Format per soal (dipisah <b>baris kosong</b>):<br>
-                    <code class="text-[11px]">TIPE: pilgan | tf | isian</code><br>
-                    <code class="text-[11px]">Q: pertanyaan</code> · untuk <b>pilgan</b> isi <code>A:</code>–<code>D:</code> &amp; <code>KUNCI: A</code> · untuk <b>tf</b> cukup <code>KUNCI: A</code> (Benar) / <code>B</code> (Salah) · untuk <b>isian</b> <code>KUNCI: jawaban1, jawaban2</code> (tiap kolom) · <code>CLUE:</code> opsional.
+                    Satu soal = satu blok, antar soal dipisah <b>baris kosong</b>.<br>
+                    <code class="text-[11px]">TIPE:</code> <code class="text-[11px]">pilgan</code> / <code class="text-[11px]">tf</code> / <code class="text-[11px]">isian</code><br>
+                    <code class="text-[11px]">Q:</code> teks pertanyaan<br>
+                    <b>pilgan</b> → isi <code class="text-[11px]">A:</code>–<code class="text-[11px]">D:</code> lalu <code class="text-[11px]">KUNCI: A</code><br>
+                    <b>tf</b> → <code class="text-[11px]">KUNCI: A</code> (Benar) atau <code class="text-[11px]">B</code> (Salah)<br>
+                    <b>isian</b> → <code class="text-[11px]">KUNCI: jawaban1, jawaban2</code> (satu kunci per kolom)<br>
+                    <code class="text-[11px]">CLUE:</code> opsional, jadi bantuan buat siswa.
                 </p>
             </div>
 
-            <button type="button" onclick="downloadExamTemplate()" class="btn btn-soft w-full mb-3 text-xs"><i class="fa-solid fa-download"></i> Unduh Contoh Template</button>
-
-            <textarea id="templatePasteArea" rows="9" class="field field-sunken text-xs font-mono" placeholder="Tempel isi template di sini..."></textarea>
+            <label id="templateDrop" for="templateFile" class="block text-center cursor-pointer rounded-[var(--r-lg)] px-4 py-8 transition-colors"
+                   style="border: 2px dashed var(--hairline); background-color: var(--surface-sunken);">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl" style="color: var(--ink-tertiary);"></i>
+                <p class="caption font-semibold text-ink mt-2">Tarik file ke sini atau ketuk untuk pilih</p>
+                <p class="caption mt-0.5">File teks (.txt) hasil unduh template</p>
+            </label>
+            <input type="file" id="templateFile" accept=".txt,text/plain" class="hidden">
 
             <p id="templateParseHint" class="caption mt-2 text-center hidden"></p>
-
-            <button id="btnParseTemplate" onclick="parseAndAddTemplate()" class="btn btn-primary w-full mt-3">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Proses &amp; Tambahkan Soal
-            </button>
         </div>
     </div>
 
@@ -359,11 +369,13 @@ import Toast from '../../components/Toast.astro';
 
     // --- UPLOAD VIA TEMPLATE ---
     window.openUploadTemplate = () => {
-        document.getElementById('templatePasteArea').value = '';
+        document.getElementById('templateFile').value = '';
         document.getElementById('templateParseHint').classList.add('hidden');
+        document.getElementById('templateInfoBox').classList.add('hidden');
         document.getElementById('modalUploadTemplate').classList.remove('hidden');
     };
     window.closeUploadTemplate = () => document.getElementById('modalUploadTemplate').classList.add('hidden');
+    window.toggleTemplateInfo = () => document.getElementById('templateInfoBox').classList.toggle('hidden');
 
     window.downloadExamTemplate = () => {
         const sample = `TIPE: pilgan
@@ -430,16 +442,13 @@ CLUE: Diawali takbir.`;
         return result;
     };
 
-    window.parseAndAddTemplate = () => {
-        const raw = document.getElementById('templatePasteArea').value.trim();
+    const addParsedTemplate = (raw) => {
         const hintEl = document.getElementById('templateParseHint');
-        if (!raw) { window.showToast?.('warning', 'Kosong', 'Tempel dulu isi templatenya.'); return; }
-
         let parsed = [];
-        try { parsed = parseExamTemplate(raw); } catch (e) { parsed = []; }
+        try { parsed = parseExamTemplate((raw || '').trim()); } catch (e) { parsed = []; }
 
         if (!parsed.length) {
-            hintEl.textContent = 'Tidak ada soal valid terbaca. Cek format (TIPE/Q/KUNCI).';
+            hintEl.textContent = 'Tidak ada soal valid terbaca. Cek format lewat tombol Info Format.';
             hintEl.style.color = 'var(--danger)';
             hintEl.classList.remove('hidden');
             return;
@@ -452,6 +461,36 @@ CLUE: Diawali takbir.`;
         closeUploadTemplate();
         window.showToast?.('success', 'Berhasil', `${parsed.length} soal ditambahkan dari template. Cek lalu simpan.`);
     };
+
+    const readTemplateFile = (file) => {
+        if (!file) return;
+        const hintEl = document.getElementById('templateParseHint');
+        hintEl.textContent = `Membaca ${file.name}...`;
+        hintEl.style.color = 'var(--ink-secondary)';
+        hintEl.classList.remove('hidden');
+        const reader = new FileReader();
+        reader.onload = () => addParsedTemplate(String(reader.result || ''));
+        reader.onerror = () => {
+            hintEl.textContent = 'Gagal membaca file. Pastikan file teks (.txt).';
+            hintEl.style.color = 'var(--danger)';
+        };
+        reader.readAsText(file);
+    };
+
+    document.getElementById('templateFile').addEventListener('change', (e) => readTemplateFile(e.target.files[0]));
+
+    const templateDrop = document.getElementById('templateDrop');
+    ['dragenter', 'dragover'].forEach(ev => templateDrop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        templateDrop.style.borderColor = 'var(--accent)';
+        templateDrop.style.backgroundColor = 'var(--accent-soft)';
+    }));
+    ['dragleave', 'drop'].forEach(ev => templateDrop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        templateDrop.style.borderColor = 'var(--hairline)';
+        templateDrop.style.backgroundColor = 'var(--surface-sunken)';
+    }));
+    templateDrop.addEventListener('drop', (e) => readTemplateFile(e.dataTransfer.files[0]));
 
     // --- NAVIGASI VIEWER (prev/next/jump) ---
     window.qPrev = () => { if (currentQIndex > 0) { currentQIndex--; renderAllQuestions(); } };

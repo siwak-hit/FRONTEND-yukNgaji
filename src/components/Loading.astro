@@ -1,0 +1,23 @@
+---
+---
+<!-- Helper spinner (tanpa overlay layar penuh).
+     - window.btnBusy(btn, 'Menyimpan...')  → tombol jadi spinner+teks & non-aktif, balikin fungsi restore()
+     - window.boxBusy(el, 'Memuat data...') → isi kontainer diganti spinner tengah -->
+<script is:inline>
+    window.btnBusy = (btn, text) => {
+        if (!btn) return () => {};
+        const original = btn.innerHTML;
+        const wasDisabled = btn.disabled;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>${text ? ' ' + text : ''}`;
+        return () => { btn.innerHTML = original; btn.disabled = wasDisabled; };
+    };
+
+    window.boxBusy = (el, text) => {
+        if (!el) return;
+        el.innerHTML = `<div class="flex flex-col items-center justify-center gap-2 py-10">
+            <i class="fa-solid fa-spinner fa-spin text-2xl" style="color: var(--accent);"></i>
+            <p class="caption font-semibold">${text || 'Memuat...'}</p>
+        </div>`;
+    };
+</script>

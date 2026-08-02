@@ -1,114 +1,213 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Toast from '../../components/Toast.astro';
+import ModalAlert from '../../components/ModalAlert.astro';
+import Loading from '../../components/Loading.astro';
 ---
 
-<Layout title="Ujian Hafalan - yukNgaji">
-    <div class="px-6 py-8 min-h-screen">
-        <header class="flex items-center gap-3 mb-6">
-            <a href="/exams" class="btn-icon flex-shrink-0" aria-label="Kembali">
-                <i class="fa-solid fa-chevron-left"></i>
-            </a>
-            <div class="min-w-0">
-                <p class="eyebrow">Evaluasi Lisan</p>
-                <h1 class="page-title">Ujian Hafalan</h1>
+<Layout title="Ujian Lisan - yukNgaji">
+    <div class="px-6 py-8 pb-32 min-h-screen">
+        <header class="flex items-start justify-between gap-3 mb-6">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/exams" class="btn-icon flex-shrink-0" aria-label="Kembali"><i class="fa-solid fa-chevron-left"></i></a>
+                <div class="min-w-0">
+                    <p class="eyebrow">Evaluasi Lisan</p>
+                    <h1 class="page-title">Ujian Lisan</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button id="btnSelect" class="btn-icon" aria-label="Pilih beberapa" title="Pilih beberapa"><i class="fa-solid fa-list-check text-sm"></i></button>
+                <a href="/ujian-hafalan/sesi/baru" class="fab" aria-label="Buat sesi"><i class="fa-solid fa-plus text-lg"></i></a>
             </div>
         </header>
 
-        <main id="oralExamList" class="space-y-4">
-            <div class="text-center py-10">
-                <i class="fa-solid fa-spinner fa-spin text-accent text-2xl"></i>
+        <a href="/ujian-hafalan/perintah" class="card card-interactive card-pad mb-5 flex items-center gap-3">
+            <div class="icon-chip" style="background-color: var(--info-soft); color: var(--info);"><i class="fa-solid fa-list-ul text-lg"></i></div>
+            <div class="flex-1 min-w-0">
+                <h3 class="section-title">Bank Perintah</h3>
+                <p class="caption mt-0.5">Buat &amp; atur perintah beserta durasinya</p>
             </div>
+            <i class="fa-solid fa-chevron-right text-tertiary text-xs"></i>
+        </a>
+
+        <p class="field-label mb-2">Sesi Ujian</p>
+        <main id="sessionList" class="space-y-3">
+            <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-accent text-2xl"></i></div>
         </main>
     </div>
 
+    <!-- Bar aksi massal (muncul saat mode pilih) -->
+    <div id="bulkBar" class="hidden fixed inset-x-0 bottom-0 z-40 px-6 py-4" style="background: var(--canvas); border-top: 1px solid var(--hairline);">
+        <div class="max-w-2xl mx-auto flex items-center gap-4">
+            <button id="bulkAll" class="caption font-bold whitespace-nowrap" style="color: var(--accent-strong);">Pilih semua</button>
+            <p id="bulkCount" class="caption font-bold flex-1 text-center whitespace-nowrap">0 dipilih</p>
+            <button id="bulkDelete" class="btn !py-2.5 !px-5 text-xs whitespace-nowrap" style="background-color: var(--danger); color:#fff; border-radius: var(--r-pill);" disabled>
+                <i class="fa-solid fa-trash"></i> Hapus
+            </button>
+        </div>
+    </div>
+
     <Toast />
+    <ModalAlert />
+    <Loading />
 </Layout>
 
 <script>
     const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
 
-    const SUBJECT_STYLE = {
-        tajwid: { icon: 'fa-book-quran',        badge: 'TAJWID', chipBg: 'var(--accent-soft)', chipText: 'var(--accent-strong)' },
-        fiqih:  { icon: 'fa-person-praying',    badge: 'FIQIH',  chipBg: 'var(--info-soft)',   chipText: 'var(--info)' },
-        tauhid: { icon: 'fa-star-and-crescent', badge: 'TAUHID', chipBg: '#f3eafe',            chipText: '#8b5cf6' },
+    const SUBJ = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
+    const STATUS = {
+        draft:   { label: 'Belum dimulai', cls: 'badge-warning' },
+        ongoing: { label: 'Berjalan',      cls: 'badge-info' },
+        done:    { label: 'Selesai',       cls: 'badge-accent' },
+    };
+    const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mmss = (sec) => `${Math.floor(sec / 60)} menit${sec % 60 ? ' ' + (sec % 60) + ' dtk' : ''}`;
+
+    const render = (data) => {
+        const el = document.getElementById('sessionList');
+        if (!data.length) {
+            el.innerHTML = `<div class="empty-state card"><div class="empty-icon"><i class="fa-solid fa-microphone-lines text-2xl"></i></div>
+                <p class="caption font-semibold">Belum ada sesi.</p>
+                <p class="text-[11px] text-tertiary mt-1">Buat perintah dulu di Bank Perintah, lalu susun sesinya lewat tombol +.</p></div>`;
+            return;
+        }
+        el.innerHTML = data.map(s => {
+            const st = STATUS[s.status] || STATUS.draft;
+            const tgl = new Date(s.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            const judul = s.title || `Sesi ${SUBJ[s.subject] || s.subject}`;
+            // Label pertemuan: urutan sesi mapel ini (mis. "Tajwid - 1").
+            const pertemuan = `${SUBJ[s.subject] || s.subject} - ${s.meeting_no || 1}`;
+            const on = selected.has(s.id);
+            const isi = `
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <span class="badge badge-info uppercase">${SUBJ[s.subject] || s.subject}</span>
+                    <span class="badge ${st.cls}">${st.label}</span>
+                    <span class="badge ml-auto" style="background: var(--surface-sunken); color: var(--ink-secondary);"><i class="fa-solid fa-hashtag"></i> ${esc(pertemuan)}</span>
+                </div>
+                <h3 class="section-title">${esc(judul)}</h3>
+                <div class="flex items-center gap-4 caption mt-2 flex-wrap">
+                    <span><i class="fa-solid fa-users mr-1"></i> ${s.done_students}/${s.total_students} murid</span>
+                    <span><i class="fa-regular fa-clock mr-1"></i> ${mmss(s.per_student_seconds)}/anak</span>
+                    <span><i class="fa-regular fa-calendar mr-1"></i> ${tgl}</span>
+                    ${s.avg_score !== null ? `<span style="color:var(--accent-strong);font-weight:700"><i class="fa-solid fa-star mr-1"></i> rata-rata ${s.avg_score}</span>` : ''}
+                </div>`;
+
+            if (selectMode) {
+                return `<div class="card card-pad cursor-pointer ${on ? 'is-selected' : ''}" data-pick="${s.id}">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid ${on ? 'fa-square-check' : 'fa-square'} text-xl mt-0.5 flex-shrink-0" style="color:${on ? 'var(--accent)' : 'var(--hairline)'}"></i>
+                        <div class="min-w-0 flex-1">${isi}</div>
+                    </div>
+                </div>`;
+            }
+            return `
+            <div class="card overflow-hidden">
+                <a href="/ujian-hafalan/sesi/${s.id}" class="block card-interactive card-pad !pb-3">${isi}</a>
+                <div class="flex items-center gap-1.5 px-4 py-2.5 border-t" style="border-color: var(--divider); background-color: var(--pearl);">
+                    <button data-del="${s.id}" data-title="${esc(judul)}" class="btn-icon !w-8 !h-8" style="color: var(--danger);" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
+                    <a href="/ujian-hafalan/sesi/${s.id}" class="btn-soft !py-1.5 !px-3 text-xs ml-auto">${s.status === 'done' ? 'Lihat Hasil' : 'Mulai Ujian'} <i class="fa-solid fa-arrow-right ml-1"></i></a>
+                </div>
+            </div>`;
+        }).join('');
+        el.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => hapusSesi(b.dataset.del, b.dataset.title, b)));
+        el.querySelectorAll('[data-pick]').forEach(c => c.addEventListener('click', () => {
+            const id = c.dataset.pick;
+            selected.has(id) ? selected.delete(id) : selected.add(id);
+            render(sessions);
+        }));
+        refreshBulkBar();
     };
 
-    const fetchOralExams = async () => {
-        const container = document.getElementById('oralExamList');
+    // ---- Mode pilih & hapus massal ----
+    let selectMode = false;
+    const selected = new Set();
 
+    const refreshBulkBar = () => {
+        const bar = document.getElementById('bulkBar');
+        bar.classList.toggle('hidden', !selectMode);
+        if (!selectMode) return;
+        document.getElementById('bulkCount').textContent = `${selected.size} dipilih`;
+        document.getElementById('bulkDelete').disabled = selected.size === 0;
+        document.getElementById('bulkAll').textContent = selected.size === sessions.length && sessions.length ? 'Kosongkan' : 'Pilih semua';
+    };
+
+    // Keluar mode pilih lewat tombol header yang berubah jadi ✕ (tak perlu tombol Batal di bar).
+    const setSelectMode = (on) => {
+        if (on && !sessions.length) return;   // tak ada yang bisa dipilih
+        selectMode = on;
+        if (!on) selected.clear();
+        const btn = document.getElementById('btnSelect');
+        btn.innerHTML = `<i class="fa-solid ${on ? 'fa-xmark' : 'fa-list-check'} text-sm"></i>`;
+        btn.title = on ? 'Selesai memilih' : 'Pilih beberapa';
+        btn.style.color = on ? 'var(--accent)' : '';
+        document.body.style.paddingBottom = on ? '5.5rem' : '';
+        render(sessions);
+    };
+
+    document.getElementById('btnSelect').addEventListener('click', () => setSelectMode(!selectMode));
+    document.getElementById('bulkAll').addEventListener('click', () => {
+        if (selected.size === sessions.length) selected.clear();
+        else sessions.forEach(s => selected.add(s.id));
+        render(sessions);
+    });
+
+    document.getElementById('bulkDelete').addEventListener('click', () => {
+        const ids = [...selected];
+        window.showConfirm('Hapus Sesi Terpilih?', `${ids.length} sesi beserta hasil nilainya akan dihapus.`, async () => {
+            const restore = window.btnBusy(document.getElementById('bulkDelete'), 'Menghapus...');
+            try {
+                const res = await fetch(`${API_URL}/api/oral/sessions/bulk-delete`, {
+                    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids }),
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.message || 'Gagal menghapus.');
+                sessions = sessions.filter(s => !selected.has(s.id));
+                setSelectMode(false);
+                window.showToast?.('success', 'Terhapus', json.message);
+            } catch (e) {
+                restore();
+                window.showToast?.('danger', 'Gagal', e.message);
+            }
+        });
+    });
+
+    let sessions = [];
+    const load = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/oral-exams`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            const result = await res.json();
-
-            if (!res.ok || result.status !== 'success') {
-                throw new Error(result.message || 'Gagal memuat ujian hafalan.');
-            }
-
-            const subjectOrder = ['tajwid', 'fiqih', 'tauhid'];
-
-            const data = (result.data || []).sort((a, b) => {
-                return subjectOrder.indexOf(a.subject) - subjectOrder.indexOf(b.subject);
-            });
-
-            if (data.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state card">
-                        <div class="empty-icon text-2xl">📖</div>
-                        <p class="caption font-semibold">Belum ada template ujian hafalan.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = data.map(item => {
-                const style = SUBJECT_STYLE[item.subject] || SUBJECT_STYLE.tajwid;
-
-                return `
-                    <div class="card card-pad">
-                        <div class="flex items-start gap-4">
-                            <div class="icon-chip" style="width:3.5rem;height:3.5rem;font-size:1.5rem;background-color:${style.chipBg};color:${style.chipText};">
-                                <i class="fa-solid ${style.icon}"></i>
-                            </div>
-
-                            <div class="flex-1 min-w-0">
-                                <p class="eyebrow" style="color:${style.chipText};">${style.badge}</p>
-                                <h2 class="section-title mt-0.5">${item.title}</h2>
-                                <p class="caption mt-1 leading-relaxed">${item.description || 'Evaluasi hafalan dan pemahaman siswa.'}</p>
-
-                                <div class="grid grid-cols-2 gap-2 mt-4">
-                                    <div class="rounded-[var(--r-md)] p-3 text-center" style="background-color: var(--surface-sunken);">
-                                        <p class="eyebrow">Per Sesi</p>
-                                        <p class="text-sm font-bold text-ink mt-0.5">${item.max_students_per_session || 5} Siswa</p>
-                                    </div>
-                                    <div class="rounded-[var(--r-md)] p-3 text-center" style="background-color: var(--surface-sunken);">
-                                        <p class="eyebrow">Durasi</p>
-                                        <p class="text-sm font-bold text-ink mt-0.5">${item.target_session_minutes || 10} Menit</p>
-                                    </div>
-                                </div>
-
-                                <a href="/ujian-hafalan/${item.id}" class="btn btn-primary w-full mt-4 text-sm">
-                                    Buka Evaluasi <i class="fa-solid fa-arrow-right"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error(error);
-            container.innerHTML = `
-                <div class="empty-state card" style="border-color: var(--danger-soft);">
-                    <div class="empty-icon" style="background-color: var(--danger-soft); color: var(--danger);"><i class="fa-solid fa-triangle-exclamation text-2xl"></i></div>
-                    <p class="caption font-semibold" style="color: var(--danger);">${error.message}</p>
-                </div>
-            `;
+            const res = await fetch(`${API_URL}/api/oral/sessions`, { headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal memuat sesi.');
+            sessions = json.data || [];
+            render(sessions);
+        } catch (e) {
+            document.getElementById('sessionList').innerHTML =
+                `<div class="empty-state card"><p class="caption" style="color:var(--danger)">${esc(e.message)}</p></div>`;
         }
     };
 
-    fetchOralExams();
+    const hapusSesi = (id, title, btn) => {
+        window.showConfirm('Hapus Sesi?', `"${title}" beserta hasil nilainya akan dihapus.`, async () => {
+            const restore = window.btnBusy(btn);
+            try {
+                const res = await fetch(`${API_URL}/api/oral/sessions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Gagal menghapus.');
+                sessions = sessions.filter(s => s.id !== id);
+                render(sessions);
+                window.showToast?.('success', 'Terhapus', 'Sesi berhasil dihapus.');
+            } catch (e) {
+                restore();
+                window.showToast?.('danger', 'Gagal', e.message);
+            }
+        });
+    };
+
+    load();
 </script>
+
+<style>
+    .is-selected { border-color: var(--accent) !important; background-color: var(--accent-soft); }
+</style>

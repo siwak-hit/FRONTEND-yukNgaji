@@ -1,0 +1,309 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Toast from '../../../components/Toast.astro';
+import ModalAlert from '../../../components/ModalAlert.astro';
+import Loading from '../../../components/Loading.astro';
+---
+
+<Layout title="Buat Sesi Lisan - yukNgaji">
+    <div class="px-6 py-8 pb-40 min-h-screen">
+        <header class="flex items-center gap-3 mb-6">
+            <a href="/ujian-hafalan" class="btn-icon flex-shrink-0" aria-label="Kembali"><i class="fa-solid fa-chevron-left"></i></a>
+            <div class="min-w-0">
+                <p class="eyebrow">Ujian Lisan</p>
+                <h1 class="page-title">Buat Sesi</h1>
+            </div>
+        </header>
+
+        <!-- LANGKAH 1 -->
+        <section id="step1" class="space-y-4">
+            <div class="card card-pad space-y-4">
+                <!-- Di HP labelnya kepanjangan kalau 2 kolom → tumpuk dulu, baru 2 kolom di layar lebar. -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label">Mata Pelajaran</label>
+                        <select id="sSubject" class="field field-sunken">
+                            <option value="tajwid">Tajwid</option>
+                            <option value="fiqih">Fiqih</option>
+                            <option value="tauhid">Tauhid</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Waktu / anak (menit)</label>
+                        <input type="number" id="sMinutes" min="1" max="60" value="5" class="field field-sunken">
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Nama Sesi (opsional)</label>
+                    <input type="text" id="sTitle" placeholder="Contoh: Lisan Tauhid Pekan 5" class="field field-sunken">
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="field-label !mb-0">Pilih Murid</p>
+                    <button id="btnAllStudents" class="caption font-bold" style="color: var(--accent-strong);">Pilih semua</button>
+                </div>
+                <div class="relative mb-3">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-tertiary text-sm pointer-events-none"></i>
+                    <input type="text" id="studentSearch" class="field field-search" placeholder="Cari nama murid...">
+                </div>
+                <div id="studentList" class="space-y-2">
+                    <div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-accent text-xl"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LANGKAH 2 -->
+        <section id="step2" class="hidden space-y-4">
+            <button id="btnBackStep1" class="caption text-secondary inline-flex items-center gap-1.5"><i class="fa-solid fa-arrow-left"></i> Ubah murid &amp; waktu</button>
+
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1" id="studentTabs"></div>
+
+            <div class="card card-pad !py-3">
+                <div class="flex items-center justify-between mb-1.5">
+                    <p class="caption font-bold text-ink" id="quotaLabel">0 / 300 detik</p>
+                    <span class="caption" id="quotaCount">0 perintah</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden" style="background: var(--surface-sunken);">
+                    <div id="quotaBar" class="h-full transition-all" style="width:0%; background: var(--accent);"></div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button id="btnAuto" class="btn btn-soft flex-1 text-xs"><i class="fa-solid fa-shuffle"></i> Isi Otomatis</button>
+                    <button id="btnCopyAll" class="btn btn-soft flex-1 text-xs"><i class="fa-solid fa-copy"></i> Samakan Semua</button>
+                    <button id="btnClear" class="btn btn-soft !px-3 text-xs" title="Kosongkan"><i class="fa-solid fa-eraser"></i></button>
+                </div>
+            </div>
+
+            <div id="promptPicker" class="space-y-2"></div>
+        </section>
+    </div>
+
+    <!-- Aksi bawah -->
+    <div class="fixed inset-x-0 bottom-0 z-40 px-6 py-4" style="background: var(--canvas); border-top: 1px solid var(--hairline);">
+        <div class="max-w-2xl mx-auto flex items-center gap-3">
+            <p id="footerHint" class="caption flex-1">Pilih murid dulu.</p>
+            <button id="btnNext" class="btn btn-primary !px-6" disabled>Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <Toast />
+    <ModalAlert />
+    <Loading />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+    const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    let students = [];          // semua murid
+    let prompts = [];           // bank perintah (semua mapel, difilter saat dipakai)
+    let picked = [];            // [{student_id, name, prompt_ids:[]}] urut antrian
+    let activeIdx = 0;
+    let step = 1;
+
+    const quota = () => (parseInt(document.getElementById('sMinutes').value) || 5) * 60;
+    const subject = () => document.getElementById('sSubject').value;
+    const subjectPrompts = () => prompts.filter(p => p.subject === subject() && p.is_active !== false);
+    const durOf = (id) => prompts.find(p => p.id === id)?.duration_seconds || 0;
+    const usedOf = (row) => row.prompt_ids.reduce((s, id) => s + durOf(id), 0);
+
+    // ---- LANGKAH 1: daftar murid ----
+    const renderStudents = () => {
+        const q = (document.getElementById('studentSearch').value || '').toLowerCase();
+        const el = document.getElementById('studentList');
+        const data = students.filter(s => (s.name || '').toLowerCase().includes(q));
+        if (!data.length) { el.innerHTML = `<p class="caption text-center py-6">Murid tidak ditemukan.</p>`; return; }
+        el.innerHTML = data.map(s => {
+            const on = picked.some(p => p.student_id === s.id);
+            return `<button data-pick="${s.id}" class="card card-pad !py-2.5 w-full flex items-center gap-3 text-left ${on ? 'is-picked' : ''}">
+                <div class="avatar w-9 h-9 text-xs flex-shrink-0">${esc((s.name || '?').substring(0, 2).toUpperCase())}</div>
+                <div class="min-w-0 flex-1">
+                    <p class="caption font-semibold text-ink truncate capitalize">${esc(s.name)}</p>
+                    <p class="text-[10px] text-tertiary font-medium">${esc(s.grade || '-')}</p>
+                </div>
+                <i class="fa-solid ${on ? 'fa-circle-check' : 'fa-circle'} text-lg" style="color:${on ? 'var(--accent)' : 'var(--hairline)'}"></i>
+            </button>`;
+        }).join('');
+        el.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => togglePick(b.dataset.pick)));
+    };
+
+    const togglePick = (id) => {
+        const i = picked.findIndex(p => p.student_id === id);
+        if (i >= 0) picked.splice(i, 1);
+        else {
+            const s = students.find(x => x.id === id);
+            picked.push({ student_id: id, name: s?.name || 'Murid', prompt_ids: [] });
+        }
+        renderStudents(); refreshFooter();
+    };
+
+    document.getElementById('studentSearch').addEventListener('input', renderStudents);
+    document.getElementById('btnAllStudents').addEventListener('click', () => {
+        if (picked.length === students.length) picked = [];
+        else picked = students.map(s => ({ student_id: s.id, name: s.name, prompt_ids: [] }));
+        renderStudents(); refreshFooter();
+    });
+
+    // ---- LANGKAH 2: pilih perintah per murid ----
+    const renderTabs = () => {
+        document.getElementById('studentTabs').innerHTML = picked.map((p, i) => {
+            const used = usedOf(p);
+            const ok = p.prompt_ids.length > 0;
+            return `<button data-tab="${i}" class="chip ${i === activeIdx ? 'is-active' : ''} flex-shrink-0">
+                ${esc(p.name)} <span style="opacity:.7">${ok ? used + 'd' : '–'}</span></button>`;
+        }).join('');
+        document.getElementById('studentTabs').querySelectorAll('[data-tab]').forEach(b =>
+            b.addEventListener('click', () => { activeIdx = parseInt(b.dataset.tab); renderStep2(); }));
+    };
+
+    const renderQuota = () => {
+        const row = picked[activeIdx];
+        const used = usedOf(row), max = quota();
+        document.getElementById('quotaLabel').textContent = `${used} / ${max} detik`;
+        document.getElementById('quotaCount').textContent = `${row.prompt_ids.length} perintah`;
+        const bar = document.getElementById('quotaBar');
+        bar.style.width = `${Math.min(100, (used / max) * 100)}%`;
+        bar.style.background = used > max ? 'var(--danger)' : 'var(--accent)';
+    };
+
+    const renderPicker = () => {
+        const row = picked[activeIdx];
+        const used = usedOf(row), max = quota();
+        const list = subjectPrompts();
+        const el = document.getElementById('promptPicker');
+        if (!list.length) {
+            el.innerHTML = `<div class="empty-state card"><p class="caption font-semibold">Belum ada perintah untuk mapel ini.</p>
+                <a href="/ujian-hafalan/perintah" class="btn btn-soft mt-3 text-xs">Buka Bank Perintah</a></div>`;
+            return;
+        }
+        el.innerHTML = list.map(p => {
+            const on = row.prompt_ids.includes(p.id);
+            const muat = on || used + p.duration_seconds <= max;
+            return `<button data-toggle="${p.id}" ${muat ? '' : 'disabled'}
+                class="card card-pad !py-2.5 w-full flex items-center gap-3 text-left ${muat ? '' : 'opacity-40'}">
+                <i class="fa-solid ${on ? 'fa-square-check' : 'fa-square'} text-lg flex-shrink-0" style="color:${on ? 'var(--accent)' : 'var(--hairline)'}"></i>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="badge badge-warning capitalize">${esc(p.category)}</span>
+                        <span class="caption font-bold">${p.duration_seconds} dtk</span>
+                    </div>
+                    <p class="caption text-ink">${esc(p.title)}</p>
+                </div>
+            </button>`;
+        }).join('');
+        el.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+            const id = b.dataset.toggle;
+            const r = picked[activeIdx];
+            const i = r.prompt_ids.indexOf(id);
+            if (i >= 0) r.prompt_ids.splice(i, 1); else r.prompt_ids.push(id);
+            renderStep2();
+        }));
+    };
+
+    const renderStep2 = () => { renderTabs(); renderQuota(); renderPicker(); refreshFooter(); };
+
+    document.getElementById('btnAuto').addEventListener('click', () => {
+        const row = picked[activeIdx];
+        const max = quota();
+        const pool = subjectPrompts().slice().sort(() => Math.random() - 0.5);
+        row.prompt_ids = [];
+        let used = 0;
+        pool.forEach(p => { if (used + p.duration_seconds <= max) { row.prompt_ids.push(p.id); used += p.duration_seconds; } });
+        renderStep2();
+    });
+    document.getElementById('btnClear').addEventListener('click', () => { picked[activeIdx].prompt_ids = []; renderStep2(); });
+    document.getElementById('btnCopyAll').addEventListener('click', () => {
+        const src = picked[activeIdx].prompt_ids.slice();
+        picked.forEach(p => { p.prompt_ids = src.slice(); });
+        renderStep2();
+        window.showToast?.('success', 'Disamakan', 'Semua murid memakai daftar perintah yang sama.');
+    });
+
+    // ---- Navigasi & submit ----
+    const refreshFooter = () => {
+        const hint = document.getElementById('footerHint');
+        const btn = document.getElementById('btnNext');
+        if (step === 1) {
+            btn.innerHTML = 'Lanjut <i class="fa-solid fa-arrow-right"></i>';
+            btn.disabled = picked.length === 0;
+            hint.textContent = picked.length ? `${picked.length} murid dipilih` : 'Pilih murid dulu.';
+        } else {
+            const kosong = picked.filter(p => !p.prompt_ids.length).length;
+            const lebih = picked.filter(p => usedOf(p) > quota()).length;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Buat Sesi';
+            btn.disabled = kosong > 0 || lebih > 0;
+            hint.textContent = lebih ? `${lebih} murid melebihi jatah waktu` :
+                kosong ? `${kosong} murid belum dipilihkan perintah` : `Siap: ${picked.length} murid`;
+        }
+    };
+
+    document.getElementById('btnBackStep1').addEventListener('click', () => {
+        step = 1;
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('step1').classList.remove('hidden');
+        refreshFooter();
+    });
+
+    document.getElementById('btnNext').addEventListener('click', async () => {
+        if (step === 1) {
+            step = 2; activeIdx = 0;
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            renderStep2();
+            return;
+        }
+        const btn = document.getElementById('btnNext');
+        window.btnBusy(btn, 'Membuat sesi...');
+        try {
+            const res = await fetch(`${API_URL}/api/oral/sessions`, {
+                method: 'POST', headers: H,
+                body: JSON.stringify({
+                    subject: subject(),
+                    title: document.getElementById('sTitle').value.trim(),
+                    per_student_seconds: quota(),
+                    students: picked.map(p => ({ student_id: p.student_id, prompt_ids: p.prompt_ids })),
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal membuat sesi.');
+            window.btnBusy(btn, 'Membuka sesi...');   // biarkan spinner sampai halaman berikutnya kebuka
+            window.location.href = `/ujian-hafalan/sesi/${json.data.id}`;
+        } catch (e) {
+            window.showToast?.('danger', 'Gagal', e.message);
+            btn.disabled = false; refreshFooter();
+        }
+    });
+
+    // Ganti mapel = daftar perintah beda → bersihkan pilihan biar tak campur mapel.
+    document.getElementById('sSubject').addEventListener('change', () => {
+        picked.forEach(p => { p.prompt_ids = []; });
+        if (step === 2) renderStep2();
+    });
+    document.getElementById('sMinutes').addEventListener('change', () => { if (step === 2) renderStep2(); });
+
+    (async () => {
+        window.boxBusy(document.getElementById('studentList'), 'Memuat murid & perintah...');
+        try {
+            const [sRes, pRes] = await Promise.all([
+                fetch(`${API_URL}/api/students`, { headers: H }).then(r => r.json()),
+                fetch(`${API_URL}/api/oral/prompts`, { headers: H }).then(r => r.json()),
+            ]);
+            students = (sRes.data || []).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+            prompts = pRes.data || [];
+            renderStudents(); refreshFooter();
+        } catch (e) {
+            document.getElementById('studentList').innerHTML = `<p class="caption text-center py-6" style="color:var(--danger)">Gagal memuat data murid.</p>`;
+        }
+    })();
+</script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .is-picked { border-color: var(--accent) !important; background-color: var(--accent-soft); }
+</style>

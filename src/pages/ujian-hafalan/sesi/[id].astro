@@ -1,0 +1,357 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Toast from '../../../components/Toast.astro';
+import ModalAlert from '../../../components/ModalAlert.astro';
+import Loading from '../../../components/Loading.astro';
+---
+
+<Layout title="Sesi Ujian Lisan - yukNgaji">
+    <!-- ============ ANTRIAN ============ -->
+    <div id="queueView" class="px-6 py-8 pb-32 min-h-screen">
+        <header class="flex items-center gap-3 mb-5">
+            <a href="/ujian-hafalan" class="btn-icon flex-shrink-0" aria-label="Kembali"><i class="fa-solid fa-chevron-left"></i></a>
+            <div class="min-w-0">
+                <p id="qEyebrow" class="eyebrow">Ujian Lisan</p>
+                <h1 id="qTitle" class="page-title truncate">Memuat...</h1>
+            </div>
+        </header>
+
+        <div class="card card-pad mb-4">
+            <div class="flex items-center justify-between mb-1.5">
+                <p class="caption font-bold text-ink"><span id="qDone">0</span>/<span id="qTotal">0</span> murid selesai</p>
+                <p class="caption" id="qAvg">—</p>
+            </div>
+            <div class="h-2 rounded-full overflow-hidden" style="background: var(--surface-sunken);">
+                <div id="qBar" class="h-full transition-all" style="width:0%; background: var(--accent);"></div>
+            </div>
+        </div>
+
+        <div class="card card-pad !py-3 mb-5 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <p class="caption font-bold text-ink">Jeda antar perintah</p>
+                <p class="text-[11px] text-tertiary">Waktu buat membacakan perintah berikutnya</p>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+                <button class="gap-btn chip" data-gap="3">3 dtk</button>
+                <button class="gap-btn chip" data-gap="5">5 dtk</button>
+            </div>
+        </div>
+
+        <div id="queueList" class="space-y-2.5">
+            <div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-accent text-2xl"></i></div>
+        </div>
+    </div>
+
+    <!-- ============ MODE UJIAN ============ -->
+    <div id="playView" class="hidden fixed inset-0 z-50 flex flex-col" style="background: var(--canvas);">
+        <header class="flex items-center gap-3 px-5 py-3 border-b" style="border-color: var(--hairline);">
+            <button id="btnQuit" class="btn-icon !w-9 !h-9" aria-label="Keluar"><i class="fa-solid fa-xmark"></i></button>
+            <div class="min-w-0 flex-1">
+                <p class="eyebrow">Sedang diuji</p>
+                <p id="pName" class="section-title truncate capitalize">-</p>
+            </div>
+            <span id="pProgress" class="badge badge-info flex-shrink-0">1/1</span>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center justify-center text-center px-7">
+            <span id="pCategory" class="badge badge-warning capitalize mb-4">kategori</span>
+            <h2 id="pPrompt" class="text-2xl font-bold leading-snug" style="color: var(--ink); letter-spacing: var(--tracking-tight);">-</h2>
+
+            <div class="relative my-8" style="width:190px;height:190px;">
+                <svg viewBox="0 0 120 120" class="absolute inset-0 -rotate-90" style="width:100%;height:100%;">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-sunken)" stroke-width="10"></circle>
+                    <circle id="pRing" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="10"
+                            stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span id="pTimer" class="font-black leading-none" style="font-size:3.4rem; color: var(--ink);">0</span>
+                    <span class="caption mt-1">detik</span>
+                </div>
+            </div>
+
+            <p id="pNext" class="caption">Perintah terakhir</p>
+        </main>
+
+        <footer class="px-6 pb-8 pt-3">
+            <button id="btnEnough" class="btn btn-primary w-full !py-4 text-base"><i class="fa-solid fa-check"></i> Cukup</button>
+            <p class="caption text-center mt-2">Tekan kalau anak sudah selesai sebelum waktunya.</p>
+        </footer>
+
+        <!-- Jeda: perintah berikutnya ditampilkan BESAR biar guru sempat membacakannya
+             sambil murid lihat hitung mundur → begitu mulai, anak tinggal jawab. -->
+        <div id="countdown" class="hidden absolute inset-0 z-20 flex flex-col items-center justify-center px-7 text-center" style="background: var(--canvas);">
+            <p id="cdName" class="eyebrow mb-3">Bersiap...</p>
+            <span id="cdCategory" class="badge badge-warning capitalize mb-3">kategori</span>
+            <h2 id="cdPrompt" class="text-2xl font-bold leading-snug" style="color: var(--ink); letter-spacing: var(--tracking-tight);"></h2>
+            <p class="caption mt-3"><i class="fa-solid fa-bullhorn"></i> Bacakan perintah ini sekarang</p>
+            <div id="cdNum" class="font-black leading-none mt-6" style="font-size:5rem; color: var(--accent);">3</div>
+            <p class="caption mt-1">timer mulai setelah hitungan selesai</p>
+        </div>
+
+        <!-- konfirmasi saat waktu habis -->
+        <div id="modalTimeUp" class="hidden absolute inset-0 z-30 flex items-center justify-center px-8" style="background: rgba(0,0,0,.45);">
+            <div class="card card-pad text-center" style="max-width:20rem;">
+                <div class="icon-chip mx-auto mb-3" style="width:3.2rem;height:3.2rem;font-size:1.3rem;background-color: var(--warning-soft); color: var(--warning);">
+                    <i class="fa-solid fa-hourglass-end"></i>
+                </div>
+                <h3 class="section-title mb-1">Waktu habis</h3>
+                <p class="body-text mb-5">Apakah <b id="tuName">anak</b> sudah selesai menyetorkannya?</p>
+                <div class="flex gap-3">
+                    <button id="btnTuNo" class="btn btn-soft flex-1" style="background-color: var(--surface-sunken); color: var(--ink-secondary);">Belum</button>
+                    <button id="btnTuYes" class="btn btn-primary flex-1">Sudah</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REKAP NILAI ============ -->
+    <div id="resultView" class="hidden fixed inset-0 z-50 overflow-y-auto px-6 py-8" style="background: var(--canvas);">
+        <div class="max-w-md mx-auto text-center">
+            <p class="eyebrow">Hasil Ujian Lisan</p>
+            <h2 id="rName" class="page-title capitalize mb-4">-</h2>
+            <div class="card card-pad mb-5">
+                <div id="rScore" class="font-black leading-none" style="font-size:4rem; color: var(--accent);">0</div>
+                <p class="caption mt-1">nilai akhir</p>
+                <p id="rBonus" class="caption mt-2"></p>
+            </div>
+            <p class="field-label text-left mb-2">Rincian</p>
+            <div id="rDetail" class="space-y-2 text-left"></div>
+            <button id="btnResultNext" class="btn btn-primary w-full mt-6">Kembali ke Antrian</button>
+        </div>
+    </div>
+
+    <Toast />
+    <ModalAlert />
+    <Loading />
+</Layout>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/');
+    const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const sessionId = window.location.pathname.split('/').pop();
+
+    const SUBJ = { tajwid: 'Tajwid', fiqih: 'Fiqih', tauhid: 'Tauhid' };
+    const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const $ = (id) => document.getElementById(id);
+    const RING = 2 * Math.PI * 52;
+
+    // Sesi dimuat SEKALI (sesi + antrian + perintah lengkap), sisanya jalan di memori.
+    let session = null;
+    let row = null;             // murid yang sedang diuji
+    let plan = [];              // perintah anak ini, sudah diacak
+    let step = 0;
+    let items = [];             // hasil mentah: {prompt_id, used_seconds, outcome}
+    let timerId = null, countdownId = null, endAt = 0, startedAt = 0;
+    // Jeda antar perintah: preferensi guru, diingat browser (bukan data sesi — bisa diubah kapan saja).
+    const GAP_KEY = 'oral_gap_seconds';
+    let gapSeconds = 3;
+
+    const setGap = (n, save) => {
+        gapSeconds = [3, 5].includes(n) ? n : 3;
+        if (save) localStorage.setItem(GAP_KEY, String(gapSeconds));
+        document.querySelectorAll('.gap-btn').forEach(b => b.classList.toggle('is-active', parseInt(b.dataset.gap) === gapSeconds));
+    };
+    document.querySelectorAll('.gap-btn').forEach(b => b.addEventListener('click', () => setGap(parseInt(b.dataset.gap), true)));
+    setGap(parseInt(localStorage.getItem(GAP_KEY)) || 3);
+
+    // ---------------- ANTRIAN ----------------
+    const renderQueue = () => {
+        $('qTitle').textContent = session.title || `Sesi ${SUBJ[session.subject] || session.subject}`;
+        $('qEyebrow').textContent = `${SUBJ[session.subject] || session.subject} · ${Math.round(session.per_student_seconds / 60)} menit/anak`;
+
+        const done = session.queue.filter(q => q.status === 'done');
+        $('qDone').textContent = done.length;
+        $('qTotal').textContent = session.queue.length;
+        $('qBar').style.width = `${session.queue.length ? (done.length / session.queue.length) * 100 : 0}%`;
+        $('qAvg').textContent = done.length
+            ? `rata-rata ${Math.round(done.reduce((a, b) => a + (b.final_score || 0), 0) / done.length)}`
+            : '—';
+
+        $('queueList').innerHTML = session.queue.map((q, i) => {
+            const total = q.prompts.reduce((s, p) => s + p.duration_seconds, 0);
+            const isDone = q.status === 'done';
+            return `
+            <div class="card card-pad !py-3 flex items-center gap-3">
+                <div class="avatar w-10 h-10 text-xs flex-shrink-0">${esc((q.name || '?').substring(0, 2).toUpperCase())}</div>
+                <div class="min-w-0 flex-1">
+                    <p class="caption font-semibold text-ink truncate capitalize">${i + 1}. ${esc(q.name)}</p>
+                    <p class="text-[10px] text-tertiary font-medium">${q.prompts.length} perintah · ${total} detik</p>
+                </div>
+                ${isDone
+                    ? `<div class="text-right flex-shrink-0">
+                         <p class="text-lg font-black leading-none" style="color: var(--accent-strong);">${q.final_score}</p>
+                         <button data-detail="${q.student_id}" class="text-[10px] font-bold" style="color: var(--info);">lihat rincian</button>
+                       </div>`
+                    : `<button data-start="${q.student_id}" class="btn btn-primary !py-2 !px-4 text-xs flex-shrink-0">Panggil <i class="fa-solid fa-play ml-1"></i></button>`}
+            </div>`;
+        }).join('');
+        $('queueList').querySelectorAll('[data-start]').forEach(b => b.addEventListener('click', () => startStudent(b.dataset.start)));
+        $('queueList').querySelectorAll('[data-detail]').forEach(b => b.addEventListener('click', () => {
+            const q = session.queue.find(x => x.student_id === b.dataset.detail);
+            showResult(q.name, q.final_score, q.details || []);
+        }));
+    };
+
+    const load = async () => {
+        window.boxBusy($('queueList'), 'Memuat antrian...');
+        try {
+            const res = await fetch(`${API_URL}/api/oral/sessions/${sessionId}`, { headers: H });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal memuat sesi.');
+            session = json.data;
+            renderQueue();
+        } catch (e) {
+            $('queueList').innerHTML = `<div class="empty-state card"><p class="caption" style="color:var(--danger)">${esc(e.message)}</p></div>`;
+        }
+    };
+
+    // ---------------- MODE UJIAN ----------------
+    const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+    const startStudent = (studentId) => {
+        row = session.queue.find(q => q.student_id === studentId);
+        if (!row || !row.prompts.length) { window.showToast?.('warning', 'Kosong', 'Murid ini belum punya perintah.'); return; }
+        plan = shuffle(row.prompts);       // urutan diacak tiap sesi main
+        step = 0; items = [];
+        $('pName').textContent = row.name;
+        $('queueView').classList.add('hidden');
+        $('playView').classList.remove('hidden');
+        runCountdown();
+    };
+
+    const runCountdown = () => {
+        const p = plan[step];
+        $('cdName').textContent = step === 0 ? `Giliran ${row.name} · perintah pertama` : `Perintah ${step + 1} dari ${plan.length}`;
+        $('cdCategory').textContent = p.category;
+        $('cdPrompt').textContent = p.title;
+        $('countdown').classList.remove('hidden');
+        let n = gapSeconds;
+        $('cdNum').textContent = n;
+        clearInterval(countdownId);
+        countdownId = setInterval(() => {
+            n--;
+            if (n <= 0) {
+                clearInterval(countdownId);
+                $('countdown').classList.add('hidden');
+                startPrompt();
+            } else {
+                $('cdNum').textContent = n;
+            }
+        }, 1000);
+    };
+
+    const startPrompt = () => {
+        const p = plan[step];
+        $('pCategory').textContent = p.category;
+        $('pPrompt').textContent = p.title;
+        $('pProgress').textContent = `${step + 1}/${plan.length}`;
+        $('pNext').textContent = plan[step + 1] ? `Berikutnya: ${plan[step + 1].title}` : 'Ini perintah terakhir';
+        $('btnEnough').innerHTML = '<i class="fa-solid fa-check"></i> Cukup';
+        $('btnEnough').disabled = false;
+
+        startedAt = Date.now();
+        endAt = startedAt + p.duration_seconds * 1000;
+        paintTimer(p.duration_seconds, p.duration_seconds);
+        clearInterval(timerId);
+        timerId = setInterval(() => {
+            const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+            paintTimer(left, p.duration_seconds);
+            if (left <= 0) { clearInterval(timerId); askTimeUp(); }
+        }, 200);
+    };
+
+    const paintTimer = (left, total) => {
+        $('pTimer').textContent = left;
+        const ring = $('pRing');
+        ring.style.strokeDashoffset = String(RING * (1 - left / total));
+        const warn = left <= Math.max(3, total * 0.2);
+        ring.setAttribute('stroke', warn ? 'var(--danger)' : 'var(--accent)');
+        $('pTimer').style.color = warn ? 'var(--danger)' : 'var(--ink)';
+    };
+
+    const askTimeUp = () => {
+        $('btnEnough').disabled = true;
+        $('tuName').textContent = row.name;
+        $('modalTimeUp').classList.remove('hidden');
+    };
+
+    const record = (outcome) => {
+        const p = plan[step];
+        const used = Math.min(p.duration_seconds, Math.round((Date.now() - startedAt) / 1000));
+        items.push({ prompt_id: p.id, used_seconds: outcome === 'early' ? used : p.duration_seconds, outcome });
+        step++;
+        if (step < plan.length) runCountdown();
+        else submitResult();
+    };
+
+    $('btnEnough').addEventListener('click', () => { clearInterval(timerId); record('early'); });
+    $('btnTuYes').addEventListener('click', () => { $('modalTimeUp').classList.add('hidden'); record('timeout_done'); });
+    $('btnTuNo').addEventListener('click', () => { $('modalTimeUp').classList.add('hidden'); record('timeout_undone'); });
+
+    $('btnQuit').addEventListener('click', () => {
+        window.showConfirm('Hentikan ujian?', `Hasil ${row?.name || 'murid ini'} belum tersimpan dan harus diulang dari awal.`, () => {
+            clearInterval(timerId); clearInterval(countdownId);
+            $('modalTimeUp').classList.add('hidden');
+            $('countdown').classList.add('hidden');
+            $('playView').classList.add('hidden');
+            $('queueView').classList.remove('hidden');
+        });
+    });
+
+    // ---------------- HASIL ----------------
+    const submitResult = async () => {
+        clearInterval(timerId);
+        window.btnBusy($('btnEnough'), 'Menyimpan nilai...');
+        $('pPrompt').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan nilai...';
+        try {
+            const res = await fetch(`${API_URL}/api/oral/sessions/${sessionId}/students/${row.student_id}/result`, {
+                method: 'POST', headers: H, body: JSON.stringify({ items }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Gagal menyimpan nilai.');
+
+            // Perbarui state lokal — tak perlu fetch ulang sesi.
+            row.status = 'done';
+            row.final_score = json.data.final_score;
+            row.details = json.data.details;
+            $('playView').classList.add('hidden');
+            renderQueue();
+            showResult(row.name, row.final_score, row.details);
+        } catch (e) {
+            window.showToast?.('danger', 'Gagal', e.message);
+            $('playView').classList.add('hidden');
+            $('queueView').classList.remove('hidden');
+        }
+    };
+
+    const OUTCOME_COLOR = { early: 'var(--accent-strong)', timeout_done: 'var(--warning)', timeout_undone: 'var(--danger)' };
+
+    const showResult = (name, score, details) => {
+        $('rName').textContent = name;
+        $('rScore').textContent = score;
+        // Bonus ke nilai ujian tulis: +20% dari nilai lisan, dibatasi 100.
+        $('rBonus').innerHTML = `Menambah nilai ujian tulis <b>+${Math.round(score * 0.2)}</b> poin (maks 100).`;
+        $('rDetail').innerHTML = (details || []).map(d => `
+            <div class="card card-pad !py-2.5 flex items-center gap-3">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="badge badge-warning capitalize">${esc(d.category)}</span>
+                        <span class="caption">${d.used}/${d.duration} dtk</span>
+                    </div>
+                    <p class="caption text-ink">${esc(d.title)}</p>
+                    <p class="text-[11px] font-semibold mt-0.5" style="color:${OUTCOME_COLOR[d.outcome] || 'var(--ink-secondary)'}">${esc(d.outcome_label || '')}</p>
+                </div>
+                <span class="text-lg font-black flex-shrink-0" style="color:${OUTCOME_COLOR[d.outcome] || 'var(--ink)'}">${d.score}</span>
+            </div>`).join('');
+        $('resultView').classList.remove('hidden');
+    };
+
+    $('btnResultNext').addEventListener('click', () => {
+        $('resultView').classList.add('hidden');
+        $('queueView').classList.remove('hidden');
+    });
+
+    load();
+</script>
