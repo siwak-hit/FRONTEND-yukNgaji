@@ -26,10 +26,26 @@ import Loading from '../../../components/Loading.astro';
             </div>
         </div>
 
+        <!-- Link layar murid (device kedua) -->
+        <div class="card card-pad mb-4">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="icon-chip" style="background-color: var(--info-soft); color: var(--info);"><i class="fa-solid fa-tv"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="caption font-bold text-ink">Layar Murid</p>
+                    <p class="text-[11px] text-tertiary">Buka link ini di HP/laptop yang dilihat anak</p>
+                </div>
+            </div>
+            <p id="liveUrl" class="text-[11px] font-mono break-all px-3 py-2 rounded-lg mb-2" style="background: var(--surface-sunken); color: var(--ink-secondary);">memuat...</p>
+            <div class="flex gap-2">
+                <button id="btnCopyLive" class="btn-soft !py-2 !px-3 text-xs flex-1"><i class="fa-solid fa-copy"></i> Salin link</button>
+                <a id="btnOpenLive" href="#" target="_blank" rel="noopener" class="btn-soft !py-2 !px-3 text-xs flex-1 text-center"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka</a>
+            </div>
+        </div>
+
         <div class="card card-pad !py-3 mb-5 flex items-center justify-between gap-3">
             <div class="min-w-0">
-                <p class="caption font-bold text-ink">Jeda antar perintah</p>
-                <p class="text-[11px] text-tertiary">Waktu buat membacakan perintah berikutnya</p>
+                <p class="caption font-bold text-ink">Waktu bersiap</p>
+                <p class="text-[11px] text-tertiary">Soal muncul duluan, timer jalan setelah hitungan ini</p>
             </div>
             <div class="flex gap-2 flex-shrink-0">
                 <button class="gap-btn chip" data-gap="3">3 dtk</button>
@@ -42,7 +58,7 @@ import Loading from '../../../components/Loading.astro';
         </div>
     </div>
 
-    <!-- ============ MODE UJIAN ============ -->
+    <!-- ============ PAPAN KENDALI GURU ============ -->
     <div id="playView" class="hidden fixed inset-0 z-50 flex flex-col" style="background: var(--canvas);">
         <header class="flex items-center gap-3 px-5 py-3 border-b" style="border-color: var(--hairline);">
             <button id="btnQuit" class="btn-icon !w-9 !h-9" aria-label="Keluar"><i class="fa-solid fa-xmark"></i></button>
@@ -50,42 +66,85 @@ import Loading from '../../../components/Loading.astro';
                 <p class="eyebrow">Sedang diuji</p>
                 <p id="pName" class="section-title truncate capitalize">-</p>
             </div>
-            <span id="pProgress" class="badge badge-info flex-shrink-0">1/1</span>
+            <span id="liveDot" class="badge badge-accent flex-shrink-0"><i class="fa-solid fa-circle text-[7px]"></i> Layar</span>
         </header>
 
-        <main class="flex-1 flex flex-col items-center justify-center text-center px-7">
-            <span id="pCategory" class="badge badge-warning capitalize mb-4">kategori</span>
-            <h2 id="pPrompt" class="text-2xl font-bold leading-snug" style="color: var(--ink); letter-spacing: var(--tracking-tight);">-</h2>
-
-            <div class="relative my-8" style="width:190px;height:190px;">
-                <svg viewBox="0 0 120 120" class="absolute inset-0 -rotate-90" style="width:100%;height:100%;">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-sunken)" stroke-width="10"></circle>
-                    <circle id="pRing" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="10"
-                            stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <span id="pTimer" class="font-black leading-none" style="font-size:3.4rem; color: var(--ink);">0</span>
-                    <span class="caption mt-1">detik</span>
-                </div>
+        <!-- Panel A: guru memilih perintah / kirim pesan ke layar murid -->
+        <div id="ctrlPick" class="flex-1 overflow-y-auto px-6 py-5 pb-28">
+            <div class="seg mb-4">
+                <button class="seg-btn is-active" data-tab="cmd"><i class="fa-solid fa-list-ul"></i> Perintah</button>
+                <button class="seg-btn" data-tab="msg"><i class="fa-solid fa-paper-plane"></i> Kirim ke Layar</button>
             </div>
 
-            <p id="pNext" class="caption">Perintah terakhir</p>
-        </main>
+            <div id="tabCmd">
+                <p class="field-label mb-2">Pilih perintah yang mau dimunculkan</p>
+                <div id="promptList" class="space-y-2.5"></div>
+                <p class="caption text-center mt-3">Perintah yang tidak dijalankan tidak ikut dinilai.</p>
+            </div>
 
-        <footer class="px-6 pb-8 pt-3">
-            <button id="btnEnough" class="btn btn-primary w-full !py-4 text-base"><i class="fa-solid fa-check"></i> Cukup</button>
-            <p class="caption text-center mt-2">Tekan kalau anak sudah selesai sebelum waktunya.</p>
-        </footer>
+            <div id="tabMsg" class="hidden">
+                <p class="field-label">Pesan</p>
+                <textarea id="msgText" class="field mb-3" rows="2" maxlength="120" placeholder="Contoh: Ayo semangat, tarik napas dulu!"></textarea>
 
-        <!-- Jeda: perintah berikutnya ditampilkan BESAR biar guru sempat membacakannya
-             sambil murid lihat hitung mundur → begitu mulai, anak tinggal jawab. -->
-        <div id="countdown" class="hidden absolute inset-0 z-20 flex flex-col items-center justify-center px-7 text-center" style="background: var(--canvas);">
-            <p id="cdName" class="eyebrow mb-3">Bersiap...</p>
-            <span id="cdCategory" class="badge badge-warning capitalize mb-3">kategori</span>
-            <h2 id="cdPrompt" class="text-2xl font-bold leading-snug" style="color: var(--ink); letter-spacing: var(--tracking-tight);"></h2>
-            <p class="caption mt-3"><i class="fa-solid fa-bullhorn"></i> Bacakan perintah ini sekarang</p>
-            <div id="cdNum" class="font-black leading-none mt-6" style="font-size:5rem; color: var(--accent);">3</div>
-            <p class="caption mt-1">timer mulai setelah hitungan selesai</p>
+                <p class="field-label">Jenis</p>
+                <div class="flex gap-2 mb-3">
+                    <button class="kind-btn chip is-active" data-kind="info"><i class="fa-solid fa-circle-info"></i> Biasa</button>
+                    <button class="kind-btn chip" data-kind="warn"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan</button>
+                </div>
+
+                <p class="field-label">Tampil selama</p>
+                <div class="flex gap-2 mb-4 flex-wrap">
+                    <button class="dur-btn chip" data-dur="2">2 dtk</button>
+                    <button class="dur-btn chip is-active" data-dur="3">3 dtk</button>
+                    <button class="dur-btn chip" data-dur="5">5 dtk</button>
+                    <button class="dur-btn chip" data-dur="10">10 dtk</button>
+                </div>
+
+                <button id="btnSendMsg" class="btn btn-primary w-full"><i class="fa-solid fa-paper-plane"></i> Kirim Pesan</button>
+
+                <div class="my-5 border-t" style="border-color: var(--divider);"></div>
+
+                <p class="field-label">Kejutan (foto / GIF)</p>
+                <input type="file" id="mediaFile" accept="image/*" class="hidden" />
+                <div class="flex gap-2 mb-3">
+                    <button id="btnPickMedia" class="btn-soft !py-2.5 !px-4 text-xs flex-1"><i class="fa-solid fa-image"></i> Pilih gambar</button>
+                    <button id="btnSendMedia" class="btn btn-primary !py-2.5 !px-4 text-xs flex-1" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Munculkan</button>
+                </div>
+                <img id="mediaPreview" class="hidden w-full rounded-xl mb-2" style="max-height:11rem;object-fit:contain;background:var(--surface-sunken);" alt="pratinjau" />
+                <p class="caption">Gambar tidak disimpan — hilang sendiri setelah tampil &amp; saat sesi anak ini ditutup.</p>
+            </div>
+        </div>
+
+        <!-- Tombol simpan: menempel di bawah, selalu kelihatan -->
+        <div id="saveBar" class="hidden absolute inset-x-0 bottom-0 px-6 py-4" style="background: var(--canvas); border-top: 1px solid var(--hairline);">
+            <button id="btnFinish" class="btn btn-primary w-full" disabled><i class="fa-solid fa-flag-checkered"></i> Selesai &amp; Simpan Nilai</button>
+        </div>
+
+        <!-- Panel B: perintah sedang berjalan -->
+        <div id="ctrlRun" class="hidden flex-1 flex flex-col">
+            <main class="flex-1 flex flex-col items-center justify-center text-center px-7">
+                <span id="pCategory" class="badge badge-warning capitalize mb-3">kategori</span>
+                <h2 id="pPrompt" class="text-2xl font-bold leading-snug" style="color: var(--ink); letter-spacing: var(--tracking-tight);">-</h2>
+
+                <div class="relative my-8" style="width:190px;height:190px;">
+                    <svg viewBox="0 0 120 120" class="absolute inset-0 -rotate-90" style="width:100%;height:100%;">
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-sunken)" stroke-width="10"></circle>
+                        <circle id="pRing" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="10"
+                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="pTimer" class="font-black leading-none" style="font-size:3.4rem; color: var(--ink);">0</span>
+                        <span id="pTimerCap" class="caption mt-1">detik</span>
+                    </div>
+                </div>
+
+                <p id="pPhase" class="caption"><i class="fa-solid fa-bullhorn"></i> Bacakan perintahnya sekarang</p>
+            </main>
+
+            <footer class="px-6 pb-8 pt-3">
+                <button id="btnEnough" class="btn btn-primary w-full !py-4 text-base"><i class="fa-solid fa-check"></i> Cukup</button>
+                <p class="caption text-center mt-2">Tekan kalau anak sudah selesai sebelum waktunya.</p>
+            </footer>
         </div>
 
         <!-- konfirmasi saat waktu habis -->
@@ -116,7 +175,7 @@ import Loading from '../../../components/Loading.astro';
             </div>
             <p class="field-label text-left mb-2">Rincian</p>
             <div id="rDetail" class="space-y-2 text-left"></div>
-            <button id="btnResultNext" class="btn btn-primary w-full mt-6">Kembali ke Antrian</button>
+            <button id="btnResultNext" class="btn btn-primary w-full mt-6">Bersiap ke Anak Berikutnya</button>
         </div>
     </div>
 
@@ -140,11 +199,15 @@ import Loading from '../../../components/Loading.astro';
     // Sesi dimuat SEKALI (sesi + antrian + perintah lengkap), sisanya jalan di memori.
     let session = null;
     let row = null;             // murid yang sedang diuji
-    let plan = [];              // perintah anak ini, sudah diacak
-    let step = 0;
-    let items = [];             // hasil mentah: {prompt_id, used_seconds, outcome}
-    let timerId = null, countdownId = null, endAt = 0, startedAt = 0;
-    // Jeda antar perintah: preferensi guru, diingat browser (bukan data sesi — bisa diubah kapan saja).
+    let plan = [];              // perintah anak ini (urutan bebas, guru yang pilih)
+    let cur = null;             // perintah yang sedang jalan
+    let curStart = 0;           // stempel waktu SERVER saat perintah dimulai
+    let items = [];             // hasil mentah urut kerjaan: {prompt_id, used_seconds, outcome}
+    let timerId = null;
+    let clockOffset = 0;        // selisih jam device ini vs server
+    const srvNow = () => Date.now() + clockOffset;
+
+    // Waktu bersiap sebelum timer asli jalan: preferensi guru, diingat browser.
     const GAP_KEY = 'oral_gap_seconds';
     let gapSeconds = 3;
 
@@ -156,10 +219,133 @@ import Loading from '../../../components/Loading.astro';
     document.querySelectorAll('.gap-btn').forEach(b => b.addEventListener('click', () => setGap(parseInt(b.dataset.gap), true)));
     setGap(parseInt(localStorage.getItem(GAP_KEY)) || 3);
 
+    // ---------------- LAYAR MURID ----------------
+    // Satu-satunya jembatan ke device kedua: guru menulis state, layar murid membaca tiap detik.
+    // Hitung mundurnya jalan lokal dari `startAt` (jam server), jadi telat polling tidak menggeser timer.
+    let liveBase = { phase: 'idle' };   // state terakhir yang dikirim — pesan/gambar ditempel di atasnya
+
+    const pushLive = async (state) => {
+        liveBase = state;
+        try {
+            const res = await fetch(`${API_URL}/api/oral/sessions/${sessionId}/live`, {
+                method: 'POST', headers: H, body: JSON.stringify({ state }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message);
+            clockOffset = json.data.now - Date.now();
+            liveBase = json.data.state;                 // simpan startAt hasil stempel server
+            $('liveDot').className = 'badge badge-accent flex-shrink-0';
+            return json.data.state;
+        } catch {
+            // Layar murid mungkin tak terpakai / internet putus — ujian tetap boleh jalan di HP guru.
+            $('liveDot').className = 'badge badge-danger flex-shrink-0';
+            return null;
+        }
+    };
+
+    const liveLink = () => `${window.location.origin}/tampil/${session.live_code}`;
+
+    $('btnCopyLive').addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(liveLink());
+            window.showToast?.('success', 'Tersalin', 'Buka link itu di device murid.');
+        } catch {
+            window.showToast?.('warning', 'Gagal menyalin', 'Ketik manual linknya ya.');
+        }
+    });
+
+    // ---------------- KIRIM PESAN / KEJUTAN KE LAYAR MURID ----------------
+    // Pesan & gambar ditempel ke state yang sedang tampil (tidak menimpa fase ujian),
+    // lalu DIHAPUS lagi setelah durasinya lewat — jadi base64-nya tak menetap di DB.
+    let msgKind = 'info', msgDur = 3, mediaData = null, wipeId = null;
+
+    const pickChip = (sel, val, attr) => document.querySelectorAll(sel).forEach(b =>
+        b.classList.toggle('is-active', b.dataset[attr] === String(val)));
+
+    document.querySelectorAll('.kind-btn').forEach(b => b.addEventListener('click', () => { msgKind = b.dataset.kind; pickChip('.kind-btn', msgKind, 'kind'); }));
+    document.querySelectorAll('.dur-btn').forEach(b => b.addEventListener('click', () => { msgDur = parseInt(b.dataset.dur); pickChip('.dur-btn', msgDur, 'dur'); }));
+    document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('is-active', x === b));
+        $('tabCmd').classList.toggle('hidden', b.dataset.tab !== 'cmd');
+        $('tabMsg').classList.toggle('hidden', b.dataset.tab !== 'msg');
+    }));
+
+    const showOnScreen = (extra) => {
+        const until = srvNow() + msgDur * 1000;
+        // `id` dipakai layar murid buat tahu ini gambar baru → diunduh sekali, bukan tiap polling.
+        pushLive({ ...liveBase, ...(extra.msg ? { msg: { ...extra.msg, until } } : { media: { data: extra.media, id: Date.now(), until } }) });
+        clearTimeout(wipeId);
+        wipeId = setTimeout(() => pushLive({ ...liveBase, msg: null, media: null }), msgDur * 1000 + 400);
+    };
+
+    $('btnSendMsg').addEventListener('click', () => {
+        const text = $('msgText').value.trim();
+        if (!text) return window.showToast?.('warning', 'Kosong', 'Tulis pesannya dulu.');
+        showOnScreen({ msg: { text, kind: msgKind } });
+        window.showToast?.('success', 'Terkirim', `Tampil ${msgDur} detik di layar murid.`);
+    });
+
+    // Foto dikecilkan dulu (dikirim tiap detik ke layar murid, jangan berat).
+    // GIF TIDAK diutak-atik biar tetap bergerak — cuma dibatasi ukurannya.
+    $('btnPickMedia').addEventListener('click', () => $('mediaFile').click());
+    $('mediaFile').addEventListener('change', async () => {
+        const file = $('mediaFile').files?.[0];
+        if (!file) return;
+        try {
+            mediaData = file.type === 'image/gif' ? await readAsData(file) : await shrink(file);
+            if (mediaData.length > 2_000_000) throw new Error('Gambarnya kebesaran, pilih yang lain ya.');
+            $('mediaPreview').src = mediaData;
+            $('mediaPreview').classList.remove('hidden');
+            $('btnSendMedia').disabled = false;
+        } catch (e) {
+            mediaData = null;
+            $('btnSendMedia').disabled = true;
+            window.showToast?.('danger', 'Gagal', e.message);
+        }
+    });
+
+    const readAsData = (file) => new Promise((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result);
+        r.onerror = () => no(new Error('File tidak terbaca.'));
+        r.readAsDataURL(file);
+    });
+
+    const shrink = async (file) => {
+        const img = new Image();
+        img.src = await readAsData(file);
+        await img.decode();
+        const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        return cv.toDataURL('image/jpeg', 0.72);
+    };
+
+    $('btnSendMedia').addEventListener('click', () => {
+        if (!mediaData) return;
+        showOnScreen({ media: mediaData });
+        window.showToast?.('success', 'Kejutan dikirim', `Tampil ${msgDur} detik.`);
+    });
+
+    // Dipanggil saat pindah anak / tutup papan kendali — gambar tak boleh nyangkut.
+    const clearMedia = () => {
+        clearTimeout(wipeId);
+        mediaData = null;
+        $('mediaFile').value = '';
+        $('mediaPreview').src = '';
+        $('mediaPreview').classList.add('hidden');
+        $('btnSendMedia').disabled = true;
+        $('msgText').value = '';
+    };
+
     // ---------------- ANTRIAN ----------------
     const renderQueue = () => {
         $('qTitle').textContent = session.title || `Sesi ${SUBJ[session.subject] || session.subject}`;
         $('qEyebrow').textContent = `${SUBJ[session.subject] || session.subject} · ${Math.round(session.per_student_seconds / 60)} menit/anak`;
+        $('liveUrl').textContent = liveLink();
+        $('btnOpenLive').href = liveLink();
 
         const done = session.queue.filter(q => q.status === 'done');
         $('qDone').textContent = done.length;
@@ -190,7 +376,7 @@ import Loading from '../../../components/Loading.astro';
         $('queueList').querySelectorAll('[data-start]').forEach(b => b.addEventListener('click', () => startStudent(b.dataset.start)));
         $('queueList').querySelectorAll('[data-detail]').forEach(b => b.addEventListener('click', () => {
             const q = session.queue.find(x => x.student_id === b.dataset.detail);
-            showResult(q.name, q.final_score, q.details || []);
+            showResult(q.name, q.final_score, q.details || [], false);
         }));
     };
 
@@ -207,66 +393,116 @@ import Loading from '../../../components/Loading.astro';
         }
     };
 
-    // ---------------- MODE UJIAN ----------------
-    const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-
+    // ---------------- PAPAN KENDALI ----------------
     const startStudent = (studentId) => {
         row = session.queue.find(q => q.student_id === studentId);
         if (!row || !row.prompts.length) { window.showToast?.('warning', 'Kosong', 'Murid ini belum punya perintah.'); return; }
-        plan = shuffle(row.prompts);       // urutan diacak tiap sesi main
-        step = 0; items = [];
+        plan = row.prompts.slice();
+        items = []; cur = null;
+        clearMedia();
+        document.querySelector('[data-tab="cmd"]').click();
         $('pName').textContent = row.name;
         $('queueView').classList.add('hidden');
+        $('resultView').classList.add('hidden');
         $('playView').classList.remove('hidden');
-        runCountdown();
+        showPicker();
     };
 
-    const runCountdown = () => {
-        const p = plan[step];
-        $('cdName').textContent = step === 0 ? `Giliran ${row.name} · perintah pertama` : `Perintah ${step + 1} dari ${plan.length}`;
-        $('cdCategory').textContent = p.category;
-        $('cdPrompt').textContent = p.title;
-        $('countdown').classList.remove('hidden');
-        let n = gapSeconds;
-        $('cdNum').textContent = n;
-        clearInterval(countdownId);
-        countdownId = setInterval(() => {
-            n--;
-            if (n <= 0) {
-                clearInterval(countdownId);
-                $('countdown').classList.add('hidden');
-                startPrompt();
-            } else {
-                $('cdNum').textContent = n;
-            }
-        }, 1000);
+    // Daftar perintah versi murid: yang BELUM dikerjakan cuma nomor + kategori (biar tak bocor),
+    // yang sudah selesai baru teksnya dibuka + dicentang.
+    const studentList = () => plan.map((p, i) => {
+        const it = items.find(x => x.prompt_id === p.id);
+        return { n: i + 1, category: p.category, duration: p.duration_seconds, done: !!it, title: it ? p.title : null };
+    });
+
+    // Layar murid: nama anak yang dipanggil + "tunggu aba-aba".
+    const showPicker = (note, celebrate) => {
+        cur = null;
+        clearInterval(timerId);
+        $('ctrlRun').classList.add('hidden');
+        $('ctrlPick').classList.remove('hidden');
+        $('saveBar').classList.remove('hidden');
+        renderPrompts();
+        pushLive({
+            phase: 'ready', name: row.name, note: note || null,
+            index: items.length, total: plan.length, list: studentList(),
+            celebrate: celebrate ? Date.now() : null,   // dipakai layar murid buat meledakkan confetti
+        });
     };
 
-    const startPrompt = () => {
-        const p = plan[step];
+    const renderPrompts = () => {
+        $('promptList').innerHTML = plan.map((p, i) => {
+            const it = items.find(x => x.prompt_id === p.id);
+            return `
+            <div class="card card-pad !py-3 flex items-center gap-3 ${it ? 'opacity-60' : ''}">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="badge badge-warning capitalize">${esc(p.category)}</span>
+                        <span class="caption">${p.duration_seconds} dtk</span>
+                    </div>
+                    <p class="caption text-ink">${esc(p.title)}</p>
+                </div>
+                ${it
+                    ? `<i class="fa-solid fa-circle-check text-lg flex-shrink-0" style="color: var(--accent);"></i>`
+                    : `<button data-run="${i}" class="btn btn-primary !py-2 !px-4 text-xs flex-shrink-0">Mulai <i class="fa-solid fa-play ml-1"></i></button>`}
+            </div>`;
+        }).join('');
+        $('promptList').querySelectorAll('[data-run]').forEach(b =>
+            b.addEventListener('click', () => runPrompt(plan[parseInt(b.dataset.run)], b)));
+        $('btnFinish').disabled = !items.length;
+        $('btnFinish').innerHTML = `<i class="fa-solid fa-flag-checkered"></i> Selesai &amp; Simpan Nilai${items.length ? ` (${items.length}/${plan.length})` : ''}`;
+    };
+
+    const runPrompt = async (p, btn) => {
+        const restore = window.btnBusy(btn, 'Menyiapkan...');
+        const state = await pushLive({
+            phase: 'run', name: row.name, category: p.category, title: p.title,
+            index: items.length + 1, total: plan.length,
+            prep: gapSeconds, duration: p.duration_seconds,
+        });
+        restore();
+        cur = p;
+        // Kalau push gagal (offline), jalan sendiri pakai jam lokal.
+        curStart = state?.startAt || srvNow();
+
         $('pCategory').textContent = p.category;
         $('pPrompt').textContent = p.title;
-        $('pProgress').textContent = `${step + 1}/${plan.length}`;
-        $('pNext').textContent = plan[step + 1] ? `Berikutnya: ${plan[step + 1].title}` : 'Ini perintah terakhir';
+        $('ctrlPick').classList.add('hidden');
+        $('saveBar').classList.add('hidden');
+        $('ctrlRun').classList.remove('hidden');
+        $('btnEnough').disabled = true;
         $('btnEnough').innerHTML = '<i class="fa-solid fa-check"></i> Cukup';
-        $('btnEnough').disabled = false;
 
-        startedAt = Date.now();
-        endAt = startedAt + p.duration_seconds * 1000;
-        paintTimer(p.duration_seconds, p.duration_seconds);
         clearInterval(timerId);
-        timerId = setInterval(() => {
-            const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
-            paintTimer(left, p.duration_seconds);
-            if (left <= 0) { clearInterval(timerId); askTimeUp(); }
-        }, 200);
+        tick();
+        timerId = setInterval(tick, 200);
+    };
+
+    const tick = () => {
+        const elapsed = (srvNow() - curStart) / 1000;
+        if (elapsed < gapSeconds) {                       // fase bersiap: anak membaca soalnya dulu
+            const left = Math.ceil(gapSeconds - elapsed);
+            $('pTimer').textContent = left;
+            $('pTimer').style.color = 'var(--ink-secondary)';
+            $('pTimerCap').textContent = 'bersiap';
+            $('pPhase').innerHTML = '<i class="fa-solid fa-bullhorn"></i> Bacakan perintahnya sekarang';
+            $('pRing').style.strokeDashoffset = String(RING * (1 - left / gapSeconds));
+            $('pRing').setAttribute('stroke', 'var(--ink-tertiary)');
+            return;
+        }
+        $('btnEnough').disabled = false;
+        $('pTimerCap').textContent = 'detik';
+        $('pPhase').innerHTML = '<i class="fa-solid fa-microphone"></i> Anak sedang menjawab';
+        const left = Math.max(0, Math.ceil(cur.duration_seconds - (elapsed - gapSeconds)));
+        paintTimer(left, cur.duration_seconds);
+        if (left <= 0) { clearInterval(timerId); askTimeUp(); }
     };
 
     const paintTimer = (left, total) => {
         $('pTimer').textContent = left;
         const ring = $('pRing');
         ring.style.strokeDashoffset = String(RING * (1 - left / total));
-        const warn = left <= Math.max(3, total * 0.2);
+        const warn = left <= 5;
         ring.setAttribute('stroke', warn ? 'var(--danger)' : 'var(--accent)');
         $('pTimer').style.color = warn ? 'var(--danger)' : 'var(--ink)';
     };
@@ -278,33 +514,52 @@ import Loading from '../../../components/Loading.astro';
     };
 
     const record = (outcome) => {
-        const p = plan[step];
-        const used = Math.min(p.duration_seconds, Math.round((Date.now() - startedAt) / 1000));
-        items.push({ prompt_id: p.id, used_seconds: outcome === 'early' ? used : p.duration_seconds, outcome });
-        step++;
-        if (step < plan.length) runCountdown();
-        else submitResult();
+        clearInterval(timerId);
+        const answered = (srvNow() - curStart) / 1000 - gapSeconds;
+        const used = outcome === 'early'
+            ? Math.min(cur.duration_seconds, Math.max(0, Math.round(answered)))
+            : cur.duration_seconds;
+        items.push({ prompt_id: cur.id, used_seconds: used, outcome });
+        // Confetti cuma buat yang selesai sebelum waktu habis — kena tenggat tidak dirayakan.
+        if (items.length >= plan.length) submitResult();
+        else showPicker(outcome === 'early' ? 'Mantap! Tunggu perintah berikutnya.' : 'Tunggu perintah berikutnya.', outcome === 'early');
     };
 
-    $('btnEnough').addEventListener('click', () => { clearInterval(timerId); record('early'); });
+    $('btnEnough').addEventListener('click', () => record('early'));
     $('btnTuYes').addEventListener('click', () => { $('modalTimeUp').classList.add('hidden'); record('timeout_done'); });
     $('btnTuNo').addEventListener('click', () => { $('modalTimeUp').classList.add('hidden'); record('timeout_undone'); });
 
+    $('btnFinish').addEventListener('click', () => {
+        const sisa = plan.length - items.length;
+        if (!sisa) return submitResult();
+        window.showConfirm('Simpan sekarang?', `Masih ada ${sisa} perintah yang belum dijalankan. Perintah itu tidak akan ikut dinilai.`, submitResult);
+    });
+
+    const backToQueue = () => {
+        clearInterval(timerId);
+        clearMedia();
+        $('modalTimeUp').classList.add('hidden');
+        $('saveBar').classList.add('hidden');
+        $('playView').classList.add('hidden');
+        $('resultView').classList.add('hidden');
+        $('queueView').classList.remove('hidden');
+        pushLive({ phase: 'idle' });
+    };
+
     $('btnQuit').addEventListener('click', () => {
-        window.showConfirm('Hentikan ujian?', `Hasil ${row?.name || 'murid ini'} belum tersimpan dan harus diulang dari awal.`, () => {
-            clearInterval(timerId); clearInterval(countdownId);
-            $('modalTimeUp').classList.add('hidden');
-            $('countdown').classList.add('hidden');
-            $('playView').classList.add('hidden');
-            $('queueView').classList.remove('hidden');
-        });
+        window.showConfirm('Hentikan ujian?', `Hasil ${row?.name || 'murid ini'} belum tersimpan dan harus diulang dari awal.`, backToQueue);
     });
 
     // ---------------- HASIL ----------------
     const submitResult = async () => {
         clearInterval(timerId);
-        window.btnBusy($('btnEnough'), 'Menyimpan nilai...');
-        $('pPrompt').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan nilai...';
+        cur = null;
+        $('ctrlRun').classList.add('hidden');
+        $('ctrlPick').classList.remove('hidden');
+        $('saveBar').classList.remove('hidden');
+        renderPrompts();
+        pushLive({ phase: 'ready', name: row.name, note: 'Menghitung nilaimu...', list: studentList(), index: items.length, total: plan.length });
+        const restore = window.btnBusy($('btnFinish'), 'Menyimpan nilai...');
         try {
             const res = await fetch(`${API_URL}/api/oral/sessions/${sessionId}/students/${row.student_id}/result`, {
                 method: 'POST', headers: H, body: JSON.stringify({ items }),
@@ -316,19 +571,19 @@ import Loading from '../../../components/Loading.astro';
             row.status = 'done';
             row.final_score = json.data.final_score;
             row.details = json.data.details;
+            restore();
             $('playView').classList.add('hidden');
             renderQueue();
-            showResult(row.name, row.final_score, row.details);
+            showResult(row.name, row.final_score, row.details, true);
         } catch (e) {
+            restore();
             window.showToast?.('danger', 'Gagal', e.message);
-            $('playView').classList.add('hidden');
-            $('queueView').classList.remove('hidden');
         }
     };
 
     const OUTCOME_COLOR = { early: 'var(--accent-strong)', timeout_done: 'var(--warning)', timeout_undone: 'var(--danger)' };
 
-    const showResult = (name, score, details) => {
+    const showResult = (name, score, details, toLive) => {
         $('rName').textContent = name;
         $('rScore').textContent = score;
         // Bonus ke nilai ujian tulis: +20% dari nilai lisan, dibatasi 100.
@@ -346,12 +601,10 @@ import Loading from '../../../components/Loading.astro';
                 <span class="text-lg font-black flex-shrink-0" style="color:${OUTCOME_COLOR[d.outcome] || 'var(--ink)'}">${d.score}</span>
             </div>`).join('');
         $('resultView').classList.remove('hidden');
+        if (toLive) pushLive({ phase: 'result', name, score, details });
     };
 
-    $('btnResultNext').addEventListener('click', () => {
-        $('resultView').classList.add('hidden');
-        $('queueView').classList.remove('hidden');
-    });
+    $('btnResultNext').addEventListener('click', backToQueue);
 
     load();
 </script>

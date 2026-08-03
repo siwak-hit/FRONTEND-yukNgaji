@@ -1,0 +1,303 @@
+---
+// Layar murid ujian lisan (device kedua). Publik — cukup kode acak di link, tanpa login.
+// Halaman ini TIDAK punya tombol kendali: semua diatur dari HP guru.
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Layar Ujian Lisan - yukNgaji">
+    <div id="liveRoot" class="fixed inset-0 z-[100] flex flex-col items-center justify-center text-center px-8" style="background: var(--canvas);">
+
+        <!-- menunggu / bersiap -->
+        <div id="vWait" class="flex flex-col items-center w-full">
+            <div id="wIcon" class="icon-chip mb-5" style="width:4.5rem;height:4.5rem;font-size:1.6rem;background-color: var(--accent-soft); color: var(--accent);">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <p id="wEyebrow" class="eyebrow mb-2">Ujian Lisan</p>
+            <h1 id="wTitle" class="font-black capitalize leading-tight" style="font-size: clamp(1.8rem, 6vw, 3.4rem); color: var(--ink);">Menghubungkan...</h1>
+            <p id="wNote" class="body-text mt-3 max-w-md"></p>
+
+            <!-- daftar perintah anak ini: dibuka sendiri oleh murid selama menunggu -->
+            <div id="wProgress" class="hidden w-full max-w-md mt-8">
+                <div class="flex items-center justify-between mb-1.5">
+                    <p class="caption font-bold text-ink"><span id="wDone">0</span>/<span id="wTotal">0</span> perintah selesai</p>
+                    <button id="btnList" class="caption font-bold" style="color: var(--accent-strong);">Lihat daftar <i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+                </div>
+                <div class="h-2.5 rounded-full overflow-hidden" style="background: var(--surface-sunken);">
+                    <div id="wBar" class="h-full transition-all" style="width:0%; background: var(--accent);"></div>
+                </div>
+                <div id="wList" class="hidden space-y-2 mt-4 text-left"></div>
+            </div>
+        </div>
+
+        <!-- perintah berjalan -->
+        <div id="vRun" class="hidden w-full max-w-3xl flex flex-col items-center">
+            <div class="flex items-center gap-3 mb-5">
+                <span id="rCategory" class="badge badge-warning capitalize">kategori</span>
+                <span id="rProgress" class="badge badge-info">1/1</span>
+            </div>
+            <h1 id="rPrompt" class="font-bold leading-snug" style="font-size: clamp(1.6rem, 5.5vw, 3rem); color: var(--ink); letter-spacing: var(--tracking-tight);">-</h1>
+
+            <div id="rTimerBox" class="relative mt-10" style="width:min(58vw,240px);aspect-ratio:1;">
+                <svg viewBox="0 0 120 120" class="absolute inset-0 -rotate-90" style="width:100%;height:100%;">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-sunken)" stroke-width="9"></circle>
+                    <circle id="rRing" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="9"
+                            stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span id="rNum" class="font-black leading-none" style="font-size: clamp(3rem, 13vw, 5.5rem); color: var(--ink);">0</span>
+                    <span id="rCap" class="caption mt-1">detik</span>
+                </div>
+            </div>
+
+            <p id="rHint" class="body-text mt-6">Baca &amp; siapkan jawabanmu</p>
+        </div>
+
+        <!-- nilai akhir -->
+        <div id="vScore" class="hidden w-full max-w-md">
+            <p class="eyebrow">Nilai Akhir</p>
+            <h2 id="sName" class="page-title capitalize mb-4">-</h2>
+            <div class="card card-pad mb-5">
+                <div id="sScore" class="font-black leading-none" style="font-size: clamp(4rem, 18vw, 7rem); color: var(--accent);">0</div>
+                <p class="caption mt-1">dari 100</p>
+            </div>
+            <div id="sDetail" class="space-y-2 text-left"></div>
+        </div>
+
+        <!-- overlay waktu habis -->
+        <div id="vTimeUp" class="hidden absolute inset-0 flex flex-col items-center justify-center" style="background: var(--danger-soft);">
+            <div class="icon-chip mb-4" style="width:5rem;height:5rem;font-size:1.9rem;background-color: var(--danger); color:#fff;">
+                <i class="fa-solid fa-hourglass-end"></i>
+            </div>
+            <h2 class="font-black" style="font-size: clamp(2rem, 8vw, 4rem); color: var(--danger);">Waktu Habis</h2>
+            <p class="body-text mt-2" style="color: var(--danger);">Tunggu perintah berikutnya dari guru...</p>
+        </div>
+
+        <!-- pesan dari guru -->
+        <div id="vMsg" class="hidden absolute inset-x-0 top-0 z-30 px-5 pt-5">
+            <div id="msgBox" class="card card-pad flex items-center gap-4 text-left" style="background: var(--info-soft); border-color: var(--info);">
+                <i id="msgIcon" class="fa-solid fa-circle-info flex-shrink-0" style="font-size:1.6rem; color: var(--info);"></i>
+                <p id="msgText" class="font-bold leading-snug" style="font-size: clamp(1.1rem, 3vw, 1.8rem); color: var(--info);"></p>
+            </div>
+        </div>
+
+        <!-- kejutan foto / gif -->
+        <div id="vMedia" class="hidden absolute inset-0 z-40 flex items-center justify-center" style="background: rgba(0,0,0,.82);">
+            <img id="mediaImg" alt="kejutan" style="max-width:92%; max-height:86%; border-radius: var(--r-lg);" />
+        </div>
+
+        <p id="conn" class="hidden absolute bottom-5 caption"><i class="fa-solid fa-wifi"></i> Menyambung ulang...</p>
+    </div>
+</Layout>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" is:inline></script>
+
+<script>
+    const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+    const code = window.location.pathname.split('/').pop();
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const RING = 2 * Math.PI * 52;
+
+    let state = { phase: 'init' };
+    let offset = 0;                 // selisih jam device ini vs server
+    let listOpen = false;           // pilihan murid, dipertahankan lintas render
+    let shownMedia = null, shownMsg = null;
+    const srvNow = () => Date.now() + offset;
+
+    const show = (id) => ['vWait', 'vRun', 'vScore'].forEach(v => $(v).classList.toggle('hidden', v !== id));
+
+    // --- 1) Ambil state tiap detik. Timer TIDAK ikut polling: dihitung lokal dari startAt. ---
+    const poll = async () => {
+        if (document.hidden) return;                  // layar ditutup = tak perlu jajah kuota server
+        try {
+            const res = await fetch(`${API_URL}/api/oral/live/${code}`, { cache: 'no-store' });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || 'Layar tidak ditemukan.');
+            offset = json.data.now - Date.now();
+            $('conn').classList.add('hidden');
+            const next = json.data.state || { phase: 'idle' };
+            if (JSON.stringify(next) === JSON.stringify(state)) return;
+            // Confetti hanya saat guru menekan "Cukup" (guru yang menyalakan penanda ini).
+            if (next.celebrate && next.celebrate !== state.celebrate) boom();
+            state = next;
+            render();
+        } catch (e) {
+            if (state.phase === 'init') { state = { phase: 'error', note: e.message }; render(); }
+            else $('conn').classList.remove('hidden');    // sekali putus, tampilan terakhir dibiarkan
+        }
+    };
+
+    const loadMedia = async (id) => {
+        try {
+            const res = await fetch(`${API_URL}/api/oral/live/${code}/media`, { cache: 'no-store' });
+            const json = await res.json();
+            if (res.ok && shownMedia === id) $('mediaImg').src = json.data.data;
+        } catch { /* biarkan — kejutan gagal muncul bukan alasan menghentikan ujian */ }
+    };
+
+    const boom = () => {
+        if (typeof confetti !== 'function') return;
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.45 } });
+        setTimeout(() => confetti({ particleCount: 60, spread: 110, origin: { y: 0.5 } }), 220);
+    };
+
+    // --- 2) Gambar ulang saat state BERUBAH saja (biar animasi tak kereset tiap polling) ---
+    const render = () => {
+        $('vTimeUp').classList.add('hidden');
+        if (state.phase === 'run') {
+            show('vRun');
+            $('rCategory').textContent = state.category || '';
+            $('rProgress').textContent = `${state.index || 1}/${state.total || 1}`;
+            $('rPrompt').textContent = state.title || '';
+            return;
+        }
+        if (state.phase === 'result') {
+            show('vScore');
+            $('sName').textContent = state.name || '';
+            $('sScore').textContent = state.score ?? 0;
+            $('sDetail').innerHTML = (state.details || []).map(d => `
+                <div class="card card-pad !py-2.5 flex items-center gap-3">
+                    <p class="caption text-ink min-w-0 flex-1 truncate">${esc(d.title)}</p>
+                    <span class="text-base font-black flex-shrink-0" style="color: var(--accent-strong);">${d.score}</span>
+                </div>`).join('');
+            return;
+        }
+        show('vWait');
+        if (state.phase === 'ready') {
+            $('wIcon').innerHTML = '<i class="fa-solid fa-microphone-lines"></i>';
+            $('wEyebrow').textContent = 'Giliran kamu';
+            $('wTitle').textContent = state.name || '';
+            $('wNote').textContent = state.note || 'Bersiap ya, tunggu aba-aba guru.';
+        } else if (state.phase === 'error') {
+            $('wIcon').innerHTML = '<i class="fa-solid fa-link-slash"></i>';
+            $('wEyebrow').textContent = 'Gagal';
+            $('wTitle').textContent = 'Link tidak valid';
+            $('wNote').textContent = state.note || '';
+        } else {
+            $('wIcon').innerHTML = '<i class="fa-solid fa-hourglass-half"></i>';
+            $('wEyebrow').textContent = 'Ujian Lisan';
+            $('wTitle').textContent = 'Menunggu guru...';
+            $('wNote').textContent = 'Layar ini akan berubah sendiri saat namamu dipanggil.';
+        }
+        renderList();
+    };
+
+    // Daftar perintah: yang belum dikerjakan sengaja hanya nomor + kategori (tak bocor),
+    // yang sudah selesai baru teksnya dibuka & dicentang.
+    const renderList = () => {
+        const list = state.list || [];
+        $('wProgress').classList.toggle('hidden', !list.length);
+        if (!list.length) return;
+        const done = list.filter(x => x.done).length;
+        $('wDone').textContent = done;
+        $('wTotal').textContent = list.length;
+        $('wBar').style.width = `${(done / list.length) * 100}%`;
+        $('wList').innerHTML = list.map(x => `
+            <div class="card card-pad !py-2.5 flex items-center gap-3 ${x.done ? '' : 'opacity-70'}">
+                <i class="fa-${x.done ? 'solid fa-circle-check' : 'regular fa-circle'} text-lg flex-shrink-0"
+                   style="color: ${x.done ? 'var(--accent)' : 'var(--ink-tertiary)'};"></i>
+                <div class="min-w-0 flex-1">
+                    <p class="caption font-bold text-ink">Perintah ${x.n} · <span class="capitalize">${esc(x.category)}</span></p>
+                    <p class="text-[11px] text-tertiary">${x.done ? esc(x.title) : `${x.duration} detik · belum dibuka`}</p>
+                </div>
+            </div>`).join('');
+        $('wList').classList.toggle('hidden', !listOpen);
+        $('btnList').innerHTML = listOpen
+            ? 'Tutup daftar <i class="fa-solid fa-chevron-up text-[10px]"></i>'
+            : 'Lihat daftar <i class="fa-solid fa-chevron-down text-[10px]"></i>';
+    };
+
+    $('btnList').addEventListener('click', () => { listOpen = !listOpen; renderList(); });
+
+    // --- 3) Detak lokal: pesan/kejutan, fase bersiap, timer asli, waktu habis. ---
+    const tick = () => {
+        const now = srvNow();
+
+        // Pesan guru — hilang sendiri saat `until` lewat, tak perlu perintah kedua dari guru.
+        const m = state.msg && now < state.msg.until ? state.msg : null;
+        $('vMsg').classList.toggle('hidden', !m);
+        $('liveRoot').classList.toggle('alarm', !!m && m.kind === 'warn');
+        const msgKey = m ? `${m.kind}|${m.text}` : null;
+        if (m && msgKey !== shownMsg) {
+            shownMsg = msgKey;
+            const warn = m.kind === 'warn';
+            $('msgText').textContent = m.text;
+            $('msgText').style.color = warn ? '#fff' : 'var(--info)';
+            $('msgText').className = `font-bold leading-snug${warn ? ' oral-pulse-text' : ''}`;
+            $('msgIcon').className = `fa-solid ${warn ? 'fa-triangle-exclamation' : 'fa-circle-info'} flex-shrink-0`;
+            $('msgIcon').style.color = warn ? '#fff' : 'var(--info)';
+            $('msgBox').style.background = warn ? 'rgba(0,0,0,.18)' : 'var(--info-soft)';
+            $('msgBox').style.borderColor = warn ? '#fff' : 'var(--info)';
+        }
+
+        if (!m) shownMsg = null;
+
+        // Gambar kejutan: state cuma bawa penanda, base64-nya diunduh sekali per gambar.
+        const md = state.media && now < state.media.until ? state.media : null;
+        if (md && shownMedia !== md.id) { shownMedia = md.id; loadMedia(md.id); }
+        if (!md) shownMedia = null;
+        $('vMedia').classList.toggle('hidden', !md);
+
+        if (state.phase !== 'run') return;
+        const elapsed = (now - state.startAt) / 1000;
+        const prep = state.prep || 0;
+        const box = $('rTimerBox');
+
+        if (elapsed < prep) {                                  // soal sudah tampil, anak boleh mikir dulu
+            const left = Math.ceil(prep - elapsed);
+            $('rNum').textContent = left;
+            $('rNum').style.color = 'var(--ink-secondary)';
+            $('rCap').textContent = 'bersiap';
+            $('rHint').textContent = 'Baca & siapkan jawabanmu';
+            $('rRing').setAttribute('stroke', 'var(--ink-tertiary)');
+            $('rRing').style.strokeDashoffset = String(RING * (1 - left / prep));
+            box.classList.remove('oral-pulse');
+            return;
+        }
+
+        const left = Math.max(0, Math.ceil(state.duration - (elapsed - prep)));
+        $('rNum').textContent = left;
+        $('rCap').textContent = 'detik';
+        $('rHint').textContent = 'Jawab sekarang!';
+        $('rRing').style.strokeDashoffset = String(RING * (1 - left / state.duration));
+        const warn = left <= 5 && left > 0;
+        $('rNum').style.color = warn ? 'var(--danger)' : 'var(--ink)';
+        $('rRing').setAttribute('stroke', warn ? 'var(--danger)' : 'var(--accent)');
+        box.classList.toggle('oral-pulse', warn);
+        $('vTimeUp').classList.toggle('hidden', left > 0);     // habis → overlay, tunggu guru lanjut
+    };
+
+    setInterval(poll, 1000);
+    setInterval(tick, 100);
+    poll();
+
+    // Device ini cuma dilihat, tak disentuh — jangan biarkan layarnya mati di tengah ujian.
+    const keepAwake = () => { const w = navigator.wakeLock; if (w) w.request('screen').catch(() => {}); };
+    keepAwake();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { keepAwake(); poll(); } });
+</script>
+
+<!-- global: sebagian elemen (daftar perintah, rincian nilai) dibuat lewat innerHTML,
+     jadi tak kebagian atribut scope Astro. -->
+<style is:global>
+    .oral-pulse { animation: oralPulse .8s ease-in-out infinite; }
+    @keyframes oralPulse {
+        0%, 100% { transform: scale(1); }
+        50%      { transform: scale(1.08); }
+    }
+
+    /* Pesan peringatan: seluruh layar jadi merah, teksnya berdenyut. */
+    #liveRoot.alarm { background: var(--danger) !important; }
+    #liveRoot.alarm h1,
+    #liveRoot.alarm h2,
+    #liveRoot.alarm p,
+    #liveRoot.alarm i,
+    #liveRoot.alarm span:not(.badge) { color: #fff !important; }
+    #liveRoot.alarm .card { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.35) !important; }
+
+    .oral-pulse-text { animation: oralPulseText .7s ease-in-out infinite; }
+    @keyframes oralPulseText {
+        0%, 100% { opacity: 1;   transform: scale(1); }
+        50%      { opacity: .55; transform: scale(1.04); }
+    }
+</style>
