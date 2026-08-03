@@ -15,18 +15,6 @@ import Layout from '../../layouts/Layout.astro';
             <p id="wEyebrow" class="eyebrow mb-2">Ujian Lisan</p>
             <h1 id="wTitle" class="font-black capitalize leading-tight" style="font-size: clamp(1.8rem, 6vw, 3.4rem); color: var(--ink);">Menghubungkan...</h1>
             <p id="wNote" class="body-text mt-3 max-w-md"></p>
-
-            <!-- daftar perintah anak ini: dibuka sendiri oleh murid selama menunggu -->
-            <div id="wProgress" class="hidden w-full max-w-md mt-8">
-                <div class="flex items-center justify-between mb-1.5">
-                    <p class="caption font-bold text-ink"><span id="wDone">0</span>/<span id="wTotal">0</span> perintah selesai</p>
-                    <button id="btnList" class="caption font-bold" style="color: var(--accent-strong);">Lihat daftar <i class="fa-solid fa-chevron-down text-[10px]"></i></button>
-                </div>
-                <div class="h-2.5 rounded-full overflow-hidden" style="background: var(--surface-sunken);">
-                    <div id="wBar" class="h-full transition-all" style="width:0%; background: var(--accent);"></div>
-                </div>
-                <div id="wList" class="hidden space-y-2 mt-4 text-left"></div>
-            </div>
         </div>
 
         <!-- perintah berjalan -->
@@ -60,6 +48,8 @@ import Layout from '../../layouts/Layout.astro';
                 <div id="sScore" class="font-black leading-none" style="font-size: clamp(4rem, 18vw, 7rem); color: var(--accent);">0</div>
                 <p class="caption mt-1">dari 100</p>
             </div>
+            <!-- Daftar perintah baru dibuka DI SINI (setelah nilai keluar), bukan pas menunggu. -->
+            <p id="sSummary" class="field-label text-left mb-2">Perintah yang dijalankan</p>
             <div id="sDetail" class="space-y-2 text-left"></div>
         </div>
 
@@ -72,12 +62,18 @@ import Layout from '../../layouts/Layout.astro';
             <p class="body-text mt-2" style="color: var(--danger);">Tunggu perintah berikutnya dari guru...</p>
         </div>
 
-        <!-- pesan dari guru -->
+        <!-- pesan biasa: banner biru di atas, isi layar tetap kelihatan -->
         <div id="vMsg" class="hidden absolute inset-x-0 top-0 z-30 px-5 pt-5">
-            <div id="msgBox" class="card card-pad flex items-center gap-4 text-left" style="background: var(--info-soft); border-color: var(--info);">
-                <i id="msgIcon" class="fa-solid fa-circle-info flex-shrink-0" style="font-size:1.6rem; color: var(--info);"></i>
+            <div class="card card-pad flex items-center gap-4 text-left" style="background: var(--info-soft); border-color: var(--info);">
+                <i class="fa-solid fa-circle-info flex-shrink-0" style="font-size:1.6rem; color: var(--info);"></i>
                 <p id="msgText" class="font-bold leading-snug" style="font-size: clamp(1.1rem, 3vw, 1.8rem); color: var(--info);"></p>
             </div>
+        </div>
+
+        <!-- pesan peringatan: layar diambil alih — merah, vignette, iblis, teks berdenyut -->
+        <div id="vWarn" class="hidden absolute inset-0 z-40 flex flex-col items-center justify-center px-8 text-center">
+            <div class="oral-devil" style="font-size: clamp(5rem, 22vw, 11rem); line-height:1;">😈</div>
+            <p id="warnText" class="oral-pulse-text font-black mt-6" style="font-size: clamp(1.5rem, 5vw, 3rem); color:#fff; text-shadow: 0 2px 12px rgba(0,0,0,.4);"></p>
         </div>
 
         <!-- kejutan foto / gif -->
@@ -100,7 +96,6 @@ import Layout from '../../layouts/Layout.astro';
 
     let state = { phase: 'init' };
     let offset = 0;                 // selisih jam device ini vs server
-    let listOpen = false;           // pilihan murid, dipertahankan lintas render
     let shownMedia = null, shownMsg = null;
     const srvNow = () => Date.now() + offset;
 
@@ -127,14 +122,6 @@ import Layout from '../../layouts/Layout.astro';
         }
     };
 
-    const loadMedia = async (id) => {
-        try {
-            const res = await fetch(`${API_URL}/api/oral/live/${code}/media`, { cache: 'no-store' });
-            const json = await res.json();
-            if (res.ok && shownMedia === id) $('mediaImg').src = json.data.data;
-        } catch { /* biarkan — kejutan gagal muncul bukan alasan menghentikan ujian */ }
-    };
-
     const boom = () => {
         if (typeof confetti !== 'function') return;
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.45 } });
@@ -153,11 +140,19 @@ import Layout from '../../layouts/Layout.astro';
         }
         if (state.phase === 'result') {
             show('vScore');
+            const det = state.details || [];
             $('sName').textContent = state.name || '';
             $('sScore').textContent = state.score ?? 0;
-            $('sDetail').innerHTML = (state.details || []).map(d => `
+            $('sSummary').textContent = state.total && state.total > det.length
+                ? `${det.length} dari ${state.total} perintah dijalankan`
+                : `${det.length} perintah dijalankan`;
+            $('sDetail').innerHTML = det.map((d, i) => `
                 <div class="card card-pad !py-2.5 flex items-center gap-3">
-                    <p class="caption text-ink min-w-0 flex-1 truncate">${esc(d.title)}</p>
+                    <i class="fa-solid fa-circle-check text-lg flex-shrink-0" style="color: var(--accent);"></i>
+                    <div class="min-w-0 flex-1">
+                        <p class="caption font-bold text-ink">Perintah ${i + 1} · <span class="capitalize">${esc(d.category)}</span></p>
+                        <p class="text-[11px] text-tertiary">${esc(d.title)}</p>
+                    </div>
                     <span class="text-base font-black flex-shrink-0" style="color: var(--accent-strong);">${d.score}</span>
                 </div>`).join('');
             return;
@@ -179,62 +174,28 @@ import Layout from '../../layouts/Layout.astro';
             $('wTitle').textContent = 'Menunggu guru...';
             $('wNote').textContent = 'Layar ini akan berubah sendiri saat namamu dipanggil.';
         }
-        renderList();
     };
-
-    // Daftar perintah: yang belum dikerjakan sengaja hanya nomor + kategori (tak bocor),
-    // yang sudah selesai baru teksnya dibuka & dicentang.
-    const renderList = () => {
-        const list = state.list || [];
-        $('wProgress').classList.toggle('hidden', !list.length);
-        if (!list.length) return;
-        const done = list.filter(x => x.done).length;
-        $('wDone').textContent = done;
-        $('wTotal').textContent = list.length;
-        $('wBar').style.width = `${(done / list.length) * 100}%`;
-        $('wList').innerHTML = list.map(x => `
-            <div class="card card-pad !py-2.5 flex items-center gap-3 ${x.done ? '' : 'opacity-70'}">
-                <i class="fa-${x.done ? 'solid fa-circle-check' : 'regular fa-circle'} text-lg flex-shrink-0"
-                   style="color: ${x.done ? 'var(--accent)' : 'var(--ink-tertiary)'};"></i>
-                <div class="min-w-0 flex-1">
-                    <p class="caption font-bold text-ink">Perintah ${x.n} · <span class="capitalize">${esc(x.category)}</span></p>
-                    <p class="text-[11px] text-tertiary">${x.done ? esc(x.title) : `${x.duration} detik · belum dibuka`}</p>
-                </div>
-            </div>`).join('');
-        $('wList').classList.toggle('hidden', !listOpen);
-        $('btnList').innerHTML = listOpen
-            ? 'Tutup daftar <i class="fa-solid fa-chevron-up text-[10px]"></i>'
-            : 'Lihat daftar <i class="fa-solid fa-chevron-down text-[10px]"></i>';
-    };
-
-    $('btnList').addEventListener('click', () => { listOpen = !listOpen; renderList(); });
 
     // --- 3) Detak lokal: pesan/kejutan, fase bersiap, timer asli, waktu habis. ---
     const tick = () => {
         const now = srvNow();
 
         // Pesan guru — hilang sendiri saat `until` lewat, tak perlu perintah kedua dari guru.
+        // Biasa = banner biru (isi layar tetap terlihat). Peringatan = layar diambil alih iblis.
         const m = state.msg && now < state.msg.until ? state.msg : null;
-        $('vMsg').classList.toggle('hidden', !m);
-        $('liveRoot').classList.toggle('alarm', !!m && m.kind === 'warn');
+        const warn = !!m && m.kind === 'warn';
+        $('vMsg').classList.toggle('hidden', !m || warn);
+        $('vWarn').classList.toggle('hidden', !warn);
         const msgKey = m ? `${m.kind}|${m.text}` : null;
         if (m && msgKey !== shownMsg) {
             shownMsg = msgKey;
-            const warn = m.kind === 'warn';
-            $('msgText').textContent = m.text;
-            $('msgText').style.color = warn ? '#fff' : 'var(--info)';
-            $('msgText').className = `font-bold leading-snug${warn ? ' oral-pulse-text' : ''}`;
-            $('msgIcon').className = `fa-solid ${warn ? 'fa-triangle-exclamation' : 'fa-circle-info'} flex-shrink-0`;
-            $('msgIcon').style.color = warn ? '#fff' : 'var(--info)';
-            $('msgBox').style.background = warn ? 'rgba(0,0,0,.18)' : 'var(--info-soft)';
-            $('msgBox').style.borderColor = warn ? '#fff' : 'var(--info)';
+            (warn ? $('warnText') : $('msgText')).textContent = m.text;
         }
-
         if (!m) shownMsg = null;
 
-        // Gambar kejutan: state cuma bawa penanda, base64-nya diunduh sekali per gambar.
+        // Foto kejutan: URL file statis, layar murid tinggal menampilkannya.
         const md = state.media && now < state.media.until ? state.media : null;
-        if (md && shownMedia !== md.id) { shownMedia = md.id; loadMedia(md.id); }
+        if (md && shownMedia !== md.url) { shownMedia = md.url; $('mediaImg').src = md.url; }
         if (!md) shownMedia = null;
         $('vMedia').classList.toggle('hidden', !md);
 
@@ -260,10 +221,10 @@ import Layout from '../../layouts/Layout.astro';
         $('rCap').textContent = 'detik';
         $('rHint').textContent = 'Jawab sekarang!';
         $('rRing').style.strokeDashoffset = String(RING * (1 - left / state.duration));
-        const warn = left <= 5 && left > 0;
-        $('rNum').style.color = warn ? 'var(--danger)' : 'var(--ink)';
-        $('rRing').setAttribute('stroke', warn ? 'var(--danger)' : 'var(--accent)');
-        box.classList.toggle('oral-pulse', warn);
+        const mepet = left <= 5 && left > 0;
+        $('rNum').style.color = mepet ? 'var(--danger)' : 'var(--ink)';
+        $('rRing').setAttribute('stroke', mepet ? 'var(--danger)' : 'var(--accent)');
+        box.classList.toggle('oral-pulse', mepet);
         $('vTimeUp').classList.toggle('hidden', left > 0);     // habis → overlay, tunggu guru lanjut
     };
 
@@ -286,14 +247,14 @@ import Layout from '../../layouts/Layout.astro';
         50%      { transform: scale(1.08); }
     }
 
-    /* Pesan peringatan: seluruh layar jadi merah, teksnya berdenyut. */
-    #liveRoot.alarm { background: var(--danger) !important; }
-    #liveRoot.alarm h1,
-    #liveRoot.alarm h2,
-    #liveRoot.alarm p,
-    #liveRoot.alarm i,
-    #liveRoot.alarm span:not(.badge) { color: #fff !important; }
-    #liveRoot.alarm .card { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.35) !important; }
+    /* Pesan peringatan: layar diambil alih — merah bervignette + iblis, isi layar ketutup.
+       Begitu `until` lewat, overlay disembunyikan lagi dan tampilan kembali seperti semula. */
+    #vWarn { background: radial-gradient(circle at 50% 42%, #ff5f5f 0%, #cf1111 40%, #2a0000 100%); }
+    .oral-devil { animation: oralDevil 1.1s ease-in-out infinite; filter: drop-shadow(0 6px 18px rgba(0,0,0,.45)); }
+    @keyframes oralDevil {
+        0%, 100% { transform: rotate(-6deg) scale(1); }
+        50%      { transform: rotate(6deg) scale(1.12); }
+    }
 
     .oral-pulse-text { animation: oralPulseText .7s ease-in-out infinite; }
     @keyframes oralPulseText {
